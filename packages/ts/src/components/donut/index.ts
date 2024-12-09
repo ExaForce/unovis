@@ -161,13 +161,19 @@ export class Donut<Datum> extends ComponentCore<Datum[], DonutConfigInterface<Da
       .call(removeArc, duration)
 
     // Label
+    let labelTranslate = translate
+    if (isHalfDonutTop) {
+      labelTranslate = `translate(${translateX},${translateY + 20})`
+    } else if (isHalfDonutBottom) {
+      labelTranslate = `translate(${translateX},${translateY - 20})`
+    }
     this.centralLabel
-      .attr('transform', translate)
+      .attr('transform', labelTranslate)
       .attr('dy', config.centralSubLabel ? '-0.55em' : null)
       .text(config.centralLabel ?? null)
 
     this.centralSubLabel
-      .attr('transform', translate)
+      .attr('transform', labelTranslate)
       .attr('dy', config.centralLabel ? '0.55em' : null)
       .text(config.centralSubLabel ?? null)
 
