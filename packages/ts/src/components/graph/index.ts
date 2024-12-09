@@ -11,7 +11,7 @@ import { ComponentCore } from 'core/component'
 import { GraphDataModel } from 'data-models/graph'
 
 // Types
-import { GraphInputLink, GraphInputNode } from 'types/graph'
+import { GraphInputLink, GraphInputNode, GraphInputData } from 'types/graph'
 import { Spacing } from 'types/spacing'
 
 // Utils
@@ -43,7 +43,7 @@ export class Graph<
   N extends GraphInputNode,
   L extends GraphInputLink,
 > extends ComponentCore<
-  {nodes: N[]; links?: L[]},
+  GraphInputData<N, L>,
   GraphConfigInterface<N, L>
   > {
   static selectors = {
@@ -58,6 +58,7 @@ export class Graph<
     dimmedNode: nodeSelectors.greyedOutNode,
     link: linkSelectors.gLink,
     linkLine: linkSelectors.link,
+    linkLabel: linkSelectors.linkLabelGroup,
     dimmedLink: linkSelectors.greyedOutLink,
     panel: panelSelectors.gPanel,
     panelRect: panelSelectors.panel,
@@ -161,9 +162,9 @@ export class Graph<
     this._getLinkArrowDefId = this._getLinkArrowDefId.bind(this)
   }
 
-  setData (data: {nodes: N[]; links?: L[]}): void {
+  setData (data: GraphInputData<N, L>): void {
     const { config } = this
-    if (isEqual(this.datamodel.data, data)) return
+    if (!config.shouldDataUpdate(this.datamodel.data, data)) return
 
     this.datamodel.nodeSort = config.nodeSort
     this.datamodel.data = data
@@ -294,13 +295,6 @@ export class Graph<
       // Zoom
       if (disableZoom) this.g.on('.zoom', null)
       else this.g.call(this._zoomBehavior).on('dblclick.zoom', null)
-
-      // While the graph is animating we disable pointer events on the graph group
-      if (animDuration) { this._graphGroup.attr('pointer-events', 'none') }
-      smartTransition(this._graphGroup, animDuration)
-        .on('end interrupt', () => {
-          this._graphGroup.attr('pointer-events', null)
-        })
 
       // We need to set up events and attributes again because the rendering might have been delayed by the layout
       // calculation and they were not set up properly (see the render function of `ComponentCore`)
@@ -643,7 +637,7 @@ export class Graph<
   private _onLinkMouseOver (d: GraphLink<N, L>): void {
     if (this._isDragging) return
 
-    d._state.hovered = true
+    if (this.config.linkHighlightOnHover) d._state.hovered = true
     this._updateNodesLinksPartial()
   }
 

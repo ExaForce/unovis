@@ -175,6 +175,7 @@ export class Donut<Datum> extends ComponentCore<Datum[], DonutConfigInterface<Da
     // Label
     this.centralLabel
       .attr('transform', labelTranslate)
+      .attr('transform', translate)
       .attr('dy', config.centralSubLabel ? '-0.55em' : null)
       .text(config.centralLabel ?? null)
 
