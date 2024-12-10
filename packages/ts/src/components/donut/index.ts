@@ -8,7 +8,8 @@ import { SeriesDataModel } from 'data-models/series'
 // Utils
 import { smartTransition } from 'utils/d3'
 import { isNumber, clamp, getNumber } from 'utils/data'
-import { wrapSVGText } from 'utils/text'
+import { estimateTextSize, wrapSVGText } from 'utils/text'
+import { getCSSVariableValueInPixels } from 'utils/misc'
 
 // Types
 import { Spacing } from 'types/spacing'
@@ -110,13 +111,21 @@ export class Donut<Datum> extends ComponentCore<Datum[], DonutConfigInterface<Da
     const translateX = this._width / 2 + (isHalfDonutLeft ? outerRadius / 2 : isHalfDonutRight ? -outerRadius / 2 : 0)
     const translate = `translate(${translateX},${translateY})`
 
-    const {
-      halfDonutLabelOffsetY,
-      halfDonutLabelOffsetX,
-    } = config
+    // svgTextSelection: Selection<SVGTextElement, any, SVGElement, any>,
+    // fontSize: number,
+    // dy = 0.32,
+    // fastMode = true,
+    // fontWidthToHeightRatio?: number
+    // const {
+    //   halfDonutLabelOffsetY,
+    //   halfDonutLabelOffsetX,
+    // } = config
 
-    const labelTranslateY = isHalfDonutTop ? -halfDonutLabelOffsetY : isHalfDonutBottom ? halfDonutLabelOffsetY : 0
+    // TODO compute these from labelSize
+    const halfDonutLabelOffsetX = 0
+    const halfDonutLabelOffsetY = 0
     const labelTranslateX = isHalfDonutLeft ? -halfDonutLabelOffsetX : isHalfDonutRight ? halfDonutLabelOffsetX : 0
+    const labelTranslateY = isHalfDonutTop ? -halfDonutLabelOffsetY : isHalfDonutBottom ? halfDonutLabelOffsetY : 0
     const labelTranslate = `translate(${translateX + labelTranslateX},${translateY + labelTranslateY})`
 
     this.arcGroup.attr('transform', translate)
@@ -181,6 +190,17 @@ export class Donut<Datum> extends ComponentCore<Datum[], DonutConfigInterface<Da
       .text(config.centralSubLabel ?? null)
 
     if (config.centralSubLabelWrap) wrapSVGText(this.centralSubLabel, innerRadius * 1.9)
+
+
+    const fastEstimatesMode = true // Fast but inaccurate
+    const fontWidthToHeightRatio = 0.52
+    const centralLabelFontSize = getCSSVariableValueInPixels('--vis-donut-central-label-font-size', this.element)
+
+    // TODO figure out why this is returning `null`
+    // console.log('centralLabelFontSize', centralLabelFontSize)
+    const labelSize = estimateTextSize(this.centralLabel, centralLabelFontSize, 0, fastEstimatesMode, fontWidthToHeightRatio)
+    // TODO figure out why this is returning {width: 0, height: 0}
+    // console.log('labelSize', labelSize)
 
     // Background
     this.arcBackground.attr('class', s.background)
