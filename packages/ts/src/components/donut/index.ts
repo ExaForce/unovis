@@ -110,6 +110,10 @@ export class Donut<Datum> extends ComponentCore<Datum[], DonutConfigInterface<Da
     const translateX = this._width / 2 + (isHalfDonutLeft ? outerRadius / 2 : isHalfDonutRight ? -outerRadius / 2 : 0)
     const translate = `translate(${translateX},${translateY})`
 
+    const labelTranslateX = (config.centralLabelsOffsetX || 0) + translateX
+    const labelTranslateY = (config.centralLabelsOffsetY || 0) + translateY
+    const labelTranslate = `translate(${labelTranslateX},${labelTranslateY})`
+
     this.arcGroup.attr('transform', translate)
 
     this.arcGen
@@ -162,12 +166,12 @@ export class Donut<Datum> extends ComponentCore<Datum[], DonutConfigInterface<Da
 
     // Label
     this.centralLabel
-      .attr('transform', translate)
+      .attr('transform', labelTranslate)
       .attr('dy', config.centralSubLabel ? '-0.55em' : null)
       .text(config.centralLabel ?? null)
 
     this.centralSubLabel
-      .attr('transform', translate)
+      .attr('transform', labelTranslate)
       .attr('dy', config.centralLabel ? '0.55em' : null)
       .text(config.centralSubLabel ?? null)
 
