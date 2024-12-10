@@ -4,7 +4,7 @@ import { Transition } from 'd3-transition'
 import toPx from 'to-px'
 
 // Utils
-import { throttle, getValue, getNumber, getBoolean } from 'utils/data'
+import { throttle, getValue, getNumber, getBoolean, ensureArray } from 'utils/data'
 import { smartTransition } from 'utils/d3'
 import { getCSSVariableValueInPixels } from 'utils/misc'
 import { estimateStringPixelLength } from 'utils/text'
@@ -60,12 +60,6 @@ export function createLinks<N extends GraphInputNode, L extends GraphInputLink> 
     .data(range(0, 6)).enter()
     .append('circle')
     .attr('class', linkSelectors.flowCircle)
-
-  const linkLabelGroup = selection.append('g')
-    .attr('class', linkSelectors.linkLabelGroup)
-
-  linkLabelGroup.append('rect')
-    .attr('class', linkSelectors.linkLabelBackground)
 }
 
 /** Updates the links partially according to their `_state` */
@@ -121,9 +115,9 @@ export function updateLinks<N extends GraphInputNode, L extends GraphInputLink> 
     const flowGroup = linkGroup.select(`.${linkSelectors.flowGroup}`)
     const linkColor = getLinkColor(d, config)
     const linkShiftTransform = getLinkShiftTransform(d, config.linkNeighborSpacing)
-    const linkLabelDatum = getValue<GraphLink<N, L>, GraphCircleLabel>(d, linkLabel, d._indexGlobal)
-    const linkLabelText = linkLabelDatum ? linkLabelDatum.text?.toString() : undefined
-
+    const linkLabelData = ensureArray(
+      getValue<GraphLink<N, L>, GraphCircleLabel | GraphCircleLabel[]>(d, linkLabel, d._indexGlobal)
+    )
     const x1 = getX(d.source)
     const y1 = getY(d.source)
     const x2 = getX(d.target)
@@ -164,7 +158,7 @@ export function updateLinks<N extends GraphInputNode, L extends GraphInputLink> 
     const linkPathElement = linkSupport.node()
     const pathLength = linkPathElement.getTotalLength()
     if (linkArrowStyle) {
-      const arrowPos = pathLength * (linkLabelText ? 0.65 : 0.5)
+      const arrowPos = pathLength * (linkLabelData.length ? 0.65 : 0.5)
       const p1 = linkPathElement.getPointAtLength(arrowPos)
       const p2 = linkPathElement.getPointAtLength(arrowPos + 1) // A point very close to p1
 
@@ -195,29 +189,53 @@ export function updateLinks<N extends GraphInputNode, L extends GraphInputLink> 
       .style('opacity', scale < ZoomLevel.Level2 ? 0 : 1)
 
     // Labels
-    const linkLabelGroup = linkGroup.select<SVGGElement>(`.${linkSelectors.linkLabelGroup}`)
+    const linkLabelGroups = linkGroup
+      .selectAll<SVGGElement, GraphCircleLabel>(`.${linkSelectors.linkLabelGroup}`)
+      .data(linkLabelData, (d: GraphCircleLabel) => d.text)
 
-    if (linkLabelText) {
+    const linkLabelGroupsEnter = linkLabelGroups.enter().append('g').attr('class', linkSelectors.linkLabelGroup)
+    linkLabelGroupsEnter.each((linkLabelDatum, i, elements) => {
+      const linkLabelGroup = select<SVGGElement, GraphCircleLabel>(elements[i])
+      linkLabelGroup.append('rect').attr('class', linkSelectors.linkLabelBackground)
+
+      const linkLabelText = linkLabelDatum ? linkLabelDatum.text?.toString() : undefined
+      const shouldRenderUseElement = isInternalHref(linkLabelText)
+      linkLabelGroup.select<SVGTextElement>(`.${linkSelectors.linkLabelContent}`).remove()
+      linkLabelGroup
+        .append(shouldRenderUseElement ? 'use' : 'text')
+        .attr('class', linkSelectors.linkLabelContent)
+    })
+    linkLabelGroupsEnter.style('opacity', 0)
+
+    const linksLabelsGroupMerged = linkLabelGroups.merge(linkLabelGroupsEnter)
+    let linkLabelShiftCumulative = 0
+    linksLabelsGroupMerged.each((linkLabelDatum, i, elements) => {
+      const element = elements[i]
+      const linkLabelGroup = select<SVGGElement, GraphCircleLabel>(element)
+      const linkLabelText = linkLabelDatum ? linkLabelDatum.text?.toString() : undefined
+      const shouldRenderUseElement = isInternalHref(linkLabelText)
+      const linkLabelContent = linkLabelGroup.select<SVGTextElement | SVGUseElement>(`.${linkSelectors.linkLabelContent}`)
+      const linkLabelFontSize = toPx(linkLabelDatum.fontSize) ?? getCSSVariableValueInPixels('var(--vis-graph-link-label-font-size)', linkLabelContent.node())
+
+      const shouldBeRenderedAsCircle = linkLabelText.length <= 2 || shouldRenderUseElement
+      const linkLabelPaddingVertical = 4
+      const linkLabelPaddingHorizontal = shouldBeRenderedAsCircle ? linkLabelPaddingVertical : 8
+      const linkLabelWidthPx = estimateStringPixelLength(linkLabelText, linkLabelFontSize)
+      const linkLabelBackgroundBorderRadius = linkLabelDatum.radius ?? (shouldBeRenderedAsCircle ? linkLabelFontSize : 4)
+      const linkLabelBackgroundWidth = (shouldBeRenderedAsCircle ? linkLabelFontSize : linkLabelWidthPx) + linkLabelPaddingHorizontal * 2
+      const linkLabelBackgroundHeight = linkLabelFontSize + linkLabelPaddingVertical * 2
+
       const linkMarkerWidth = linkArrowStyle ? LINK_MARKER_WIDTH * 2 : 0
       const linkLabelShift = getBoolean(d, linkLabelShiftFromCenter, d._indexGlobal) ? -linkMarkerWidth + 4 : 0
-      const linkLabelPos = linkPathElement.getPointAtLength(pathLength / 2 + linkLabelShift)
+      const linkLabelPos = linkPathElement.getPointAtLength(pathLength / 2 + linkLabelShift + linkLabelShiftCumulative + linkLabelBackgroundWidth / 2)
       const linkLabelTranslate = `translate(${linkLabelPos.x}, ${linkLabelPos.y})`
       const linkLabelBackground = linkLabelGroup.select<SVGRectElement>(`.${linkSelectors.linkLabelBackground}`)
-      let linkLabelContent = linkLabelGroup.select<SVGTextElement | SVGUseElement>(`.${linkSelectors.linkLabelContent}`)
 
-      // If the label was hidden or didn't have text before, we need to set the initial position
-      if (!linkLabelContent.size() || !linkLabelContent.text() || linkLabelContent.attr('hidden')) {
+      // If the label was not displayed before, we set the initial transform
+      if (!linkLabelContent.attr('transform')) {
         linkLabelGroup.attr('transform', linkLabelTranslate)
       }
 
-      // Update the label content DOM element (text vs use)
-      const shouldRenderUseElement = isInternalHref(linkLabelText)
-      linkLabelGroup.select<SVGTextElement>(`.${linkSelectors.linkLabelContent}`).remove()
-      linkLabelContent = linkLabelGroup
-        .append(shouldRenderUseElement ? 'use' : 'text')
-        .attr('class', linkSelectors.linkLabelContent)
-
-      const linkLabelFontSize = toPx(linkLabelDatum.fontSize) ?? getCSSVariableValueInPixels('var(--vis-graph-link-label-font-size)', linkLabelContent.node())
       const linkLabelColor = linkLabelDatum.textColor ?? getLinkLabelTextColor(linkLabelDatum)
       if (shouldRenderUseElement) {
         linkLabelContent
@@ -242,22 +260,20 @@ export function updateLinks<N extends GraphInputNode, L extends GraphInputLink> 
         .attr('transform', linkLabelTranslate)
         .style('opacity', 1)
 
-      const shouldBeRenderedAsCircle = linkLabelText.length <= 2 || shouldRenderUseElement
-      const linkLabelPaddingVertical = 4
-      const linkLabelPaddingHorizontal = shouldBeRenderedAsCircle ? linkLabelPaddingVertical : 8
-      const linkLabelWidthPx = estimateStringPixelLength(linkLabelText, linkLabelFontSize)
-      const linkLabelBackgroundBorderRadius = linkLabelDatum.radius ?? (shouldBeRenderedAsCircle ? linkLabelFontSize : 4)
-      const linkLabelBackgroundWidth = (shouldBeRenderedAsCircle ? linkLabelFontSize : linkLabelWidthPx)
       linkLabelBackground
-        .attr('x', -linkLabelBackgroundWidth / 2 - linkLabelPaddingHorizontal)
-        .attr('y', -linkLabelFontSize / 2 - linkLabelPaddingVertical)
-        .attr('width', linkLabelBackgroundWidth + linkLabelPaddingHorizontal * 2)
-        .attr('height', linkLabelFontSize + linkLabelPaddingVertical * 2)
+        .attr('x', -linkLabelBackgroundWidth / 2)
+        .attr('y', -linkLabelBackgroundHeight / 2)
+        .attr('width', linkLabelBackgroundWidth)
+        .attr('height', linkLabelBackgroundHeight)
         .attr('rx', linkLabelBackgroundBorderRadius)
         .style('fill', linkLabelDatum.color)
-    } else {
-      linkLabelGroup.attr('hidden', true)
-    }
+
+      linkLabelShiftCumulative += linkLabelBackgroundWidth
+    })
+
+    smartTransition(linkLabelGroups.exit(), duration)
+      .style('opacity', 0)
+      .remove()
   })
 
   // Pointer Events
