@@ -68,4 +68,6 @@ export const DonutDefaultConfig: DonutConfigInterface<unknown> = {
   emptySegmentAngle: 0.5 * Math.PI / 180,
   showBackground: true,
   backgroundAngleRange: undefined,
+  halfDonutLabelOffsetX: 20,
+  halfDonutLabelOffsetY: 60
 }

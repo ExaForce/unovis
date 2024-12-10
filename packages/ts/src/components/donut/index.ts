@@ -38,9 +38,6 @@ export const [
   DONUT_HALF_ANGLE_RANGE_LEFT,
 ] = DONUT_HALF_ANGLE_RANGES
 
-const DONUT_HALF_LABEL_OFFSET_Y_DEFAULT = 20
-const DONUT_HALF_LABEL_OFFSET_X_DEFAULT = 60
-
 export class Donut<Datum> extends ComponentCore<Datum[], DonutConfigInterface<Datum>> {
   static selectors = s
   protected _defaultConfig = DonutDefaultConfig as DonutConfigInterface<Datum>
@@ -114,8 +111,8 @@ export class Donut<Datum> extends ComponentCore<Datum[], DonutConfigInterface<Da
     const translate = `translate(${translateX},${translateY})`
 
     const {
-      halfDonutLabelOffsetY = DONUT_HALF_LABEL_OFFSET_Y_DEFAULT,
-      halfDonutLabelOffsetX = DONUT_HALF_LABEL_OFFSET_X_DEFAULT,
+      halfDonutLabelOffsetY,
+      halfDonutLabelOffsetX,
     } = config
 
     const labelTranslateY = isHalfDonutTop ? -halfDonutLabelOffsetY : isHalfDonutBottom ? halfDonutLabelOffsetY : 0
