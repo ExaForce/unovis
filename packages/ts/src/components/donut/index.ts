@@ -97,6 +97,7 @@ export class Donut<Datum> extends ComponentCore<Datum[], DonutConfigInterface<Da
     )
     const isVerticalHalfDonut = isHalfDonutTop || isHalfDonutBottom
     const isHorizontalHalfDonut = isHalfDonutRight || isHalfDonutLeft
+    const isHalfDonut = isVerticalHalfDonut || isHorizontalHalfDonut
 
     // Compute the bounding box of the donut,
     // considering it may be a half-donut
@@ -162,16 +163,44 @@ export class Donut<Datum> extends ComponentCore<Datum[], DonutConfigInterface<Da
 
     // Label
     this.centralLabel
-      .attr('transform', translate)
       .attr('dy', config.centralSubLabel ? '-0.55em' : null)
       .text(config.centralLabel ?? null)
 
     this.centralSubLabel
-      .attr('transform', translate)
       .attr('dy', config.centralLabel ? '0.55em' : null)
       .text(config.centralSubLabel ?? null)
 
     if (config.centralSubLabelWrap) wrapSVGText(this.centralSubLabel, innerRadius * 1.9)
+
+    // Default to position labels at the center
+    let labelTranslate = translate
+
+    // Special case label placement for half donut
+    if (isHalfDonut) {
+      // Measure the text
+      const centralLabelSize = this.centralLabel.node().getBoundingClientRect()
+      const centralSubLabelSize = this.centralSubLabel.node().getBoundingClientRect()
+
+      // Offset labels to align with half donut edges
+      const halfDonutLabelOffsetX = Math.max(centralLabelSize.width, centralSubLabelSize.width) / 2
+      const labelTranslateX = isHalfDonutLeft
+        ? -halfDonutLabelOffsetX
+        : isHalfDonutRight
+          ? halfDonutLabelOffsetX
+          : 0
+
+      const labelTranslateY = isHalfDonutTop
+        ? -centralSubLabelSize.height
+        : isHalfDonutBottom
+          ? centralLabelSize.height
+          : 0
+
+      labelTranslate = `translate(${translateX + labelTranslateX},${translateY + labelTranslateY})`
+    }
+
+    // Apply label placement
+    this.centralLabel.attr('transform', labelTranslate)
+    this.centralSubLabel.attr('transform', labelTranslate)
 
     // Background
     this.arcBackground.attr('class', s.background)
