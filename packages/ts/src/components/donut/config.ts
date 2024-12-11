@@ -44,10 +44,10 @@ export interface DonutConfigInterface<Datum> extends ComponentConfigInterface {
   backgroundAngleRange?: [number, number];
 
   /** Central labels horizontal offset in pixels. Default: `undefined` */
-  centralLabelsOffsetX?: undefined;
+  centralLabelsOffsetX?: number;
 
   /** Central labels vertical offset in pixels. Default: `undefined` */
-  centralLabelsOffsetY?: undefined;
+  centralLabelsOffsetY?: number;
 }
 
 export const DonutDefaultConfig: DonutConfigInterface<unknown> = {
