@@ -8,7 +8,8 @@ import { SeriesDataModel } from 'data-models/series'
 // Utils
 import { smartTransition } from 'utils/d3'
 import { isNumber, clamp, getNumber } from 'utils/data'
-import { wrapSVGText } from 'utils/text'
+import { estimateTextSize, wrapSVGText } from 'utils/text'
+import { getCSSVariableValueInPixels } from 'utils/misc'
 
 // Types
 import { Spacing } from 'types/spacing'
@@ -97,6 +98,7 @@ export class Donut<Datum> extends ComponentCore<Datum[], DonutConfigInterface<Da
     )
     const isVerticalHalfDonut = isHalfDonutTop || isHalfDonutBottom
     const isHorizontalHalfDonut = isHalfDonutRight || isHalfDonutLeft
+    const isHalfDonut = isVerticalHalfDonut || isHorizontalHalfDonut
 
     // Compute the bounding box of the donut,
     // considering it may be a half-donut
@@ -162,16 +164,48 @@ export class Donut<Datum> extends ComponentCore<Datum[], DonutConfigInterface<Da
 
     // Label
     this.centralLabel
-      .attr('transform', translate)
       .attr('dy', config.centralSubLabel ? '-0.55em' : null)
       .text(config.centralLabel ?? null)
 
     this.centralSubLabel
-      .attr('transform', translate)
       .attr('dy', config.centralLabel ? '0.55em' : null)
       .text(config.centralSubLabel ?? null)
 
     if (config.centralSubLabelWrap) wrapSVGText(this.centralSubLabel, innerRadius * 1.9)
+
+    // Default to position labels at the center
+    let labelTranslate = translate
+
+    // Special case label placement for half donut
+    if (isHalfDonut) {
+      // Estimate text size
+      const fastEstimatesMode = true // Fast but inaccurate
+      const fontWidthToHeightRatio = 0.52
+      const centralLabelFontSize = getCSSVariableValueInPixels('var(--vis-donut-central-label-font-size)', this.element)
+      const centralLabelSize = estimateTextSize(this.centralLabel, centralLabelFontSize, 0, fastEstimatesMode, fontWidthToHeightRatio)
+      const centralSubLabelFontSize = getCSSVariableValueInPixels('var(--vis-donut-central-sub-label-font-size)', this.element)
+      const centralSubLabelSize = estimateTextSize(this.centralSubLabel, centralSubLabelFontSize, 0, fastEstimatesMode, fontWidthToHeightRatio)
+
+      // Offset labels to align with half donut edges
+      const halfDonutLabelOffsetX = Math.max(centralLabelSize.width, centralSubLabelSize.width) / 2
+      const labelTranslateX = isHalfDonutLeft
+        ? -halfDonutLabelOffsetX
+        : isHalfDonutRight
+          ? halfDonutLabelOffsetX
+          : 0
+
+      const labelTranslateY = isHalfDonutTop
+        ? -centralSubLabelSize.height
+        : isHalfDonutBottom
+          ? centralLabelSize.height
+          : 0
+
+      labelTranslate = `translate(${translateX + labelTranslateX},${translateY + labelTranslateY})`
+    }
+
+    // Apply label placement
+    this.centralLabel.attr('transform', labelTranslate)
+    this.centralSubLabel.attr('transform', labelTranslate)
 
     // Background
     this.arcBackground.attr('class', s.background)
