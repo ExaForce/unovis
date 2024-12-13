@@ -36,16 +36,16 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@docusaurus/core": "^3.0.1",
-    "@docusaurus/plugin-debug": "^3.0.1",
-    "@docusaurus/plugin-sitemap": "^3.0.1",
-    "@docusaurus/preset-classic": "^3.0.1",
-    "@docusaurus/theme-mermaid": "^3.0.1",
+    "@docusaurus/core": "^3.6.3",
+    "@docusaurus/plugin-debug": "^3.6.3",
+    "@docusaurus/plugin-sitemap": "^3.6.3",
+    "@docusaurus/preset-classic": "^3.6.3",
+    "@docusaurus/theme-mermaid": "^3.6.3",
     "@mdx-js/react": "^3.0.0",
     "@stackblitz/sdk": "1.8.0",
     "clsx": "^1.1.1",
     "docusaurus-plugin-react-docgen-typescript": "^1.2.1",
-    "nodemon": "^2.0.16",
+    "nodemon": "^3.1.9",
     "prism-react-renderer": "^1.1.0",
     "react-docgen-typescript": "^2.0.0",
     "react-markdown": "^8.0.1"
