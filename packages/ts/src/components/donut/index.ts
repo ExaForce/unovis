@@ -22,21 +22,11 @@ import { DonutDefaultConfig, DonutConfigInterface } from './config'
 // Modules
 import { createArc, updateArc, removeArc } from './modules/arc'
 
+// Constants
+import { DONUT_HALF_ANGLE_RANGES } from './constants'
+
 // Styles
 import * as s from './style'
-
-// Constants that support half donuts
-export const DONUT_HALF_ANGLE_RANGES = Array.from({ length: 4 }, (_, i): [number, number] => {
-  const offset = -Math.PI / 2 + i * Math.PI / 2
-  return [offset, offset + Math.PI]
-})
-
-export const [
-  DONUT_HALF_ANGLE_RANGE_TOP,
-  DONUT_HALF_ANGLE_RANGE_RIGHT,
-  DONUT_HALF_ANGLE_RANGE_BOTTOM,
-  DONUT_HALF_ANGLE_RANGE_LEFT,
-] = DONUT_HALF_ANGLE_RANGES
 
 export class Donut<Datum> extends ComponentCore<Datum[], DonutConfigInterface<Datum>> {
   static selectors = s
@@ -205,3 +195,4 @@ export class Donut<Datum> extends ComponentCore<Datum[], DonutConfigInterface<Da
       }))
   }
 }
+
