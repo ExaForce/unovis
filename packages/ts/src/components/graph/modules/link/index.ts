@@ -259,6 +259,7 @@ export function updateLinks<N extends GraphInputNode, L extends GraphInputLink> 
           .attr('width', linkLabelDatum._fontSizePx)
           .attr('height', linkLabelDatum._fontSizePx)
           .style('fill', linkLabelColor)
+          .style('color', linkLabelColor) // Setting `color` to be passed to SVGs that use `currentColor`
       } else {
         linkLabelContent
           .text(linkLabelText)
@@ -266,6 +267,7 @@ export function updateLinks<N extends GraphInputNode, L extends GraphInputLink> 
           .style('font-size', linkLabelDatum._fontSizePx)
           .style('fill', linkLabelColor)
       }
+
 
       linkLabelGroup.attr('hidden', null)
         .style('cursor', linkLabelDatum.cursor)
