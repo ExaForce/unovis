@@ -144,6 +144,7 @@ export function updateNodePositions<N extends GraphInputNode, L extends GraphInp
 ): Selection$Transition<SVGGElement, GraphNode<N, L>, SVGGElement, unknown> {
   return smartTransition(selection, duration)
     .attr('transform', d => `translate(${getX(d)}, ${getY(d)}) scale(1)`)
+    .attr('opacity', 1)
 }
 
 export function updateNodes<N extends GraphInputNode, L extends GraphInputLink> (
@@ -160,7 +161,6 @@ export function updateNodes<N extends GraphInputNode, L extends GraphInputLink> 
   } = config
 
   const nodeGroupsUpdate = updateNodePositions(selection, duration)
-    .attr('opacity', 1)
 
   // If there's a custom render function, use it
   if (config.nodeUpdateCustomRenderFunction) {
