@@ -33,9 +33,9 @@
     "lib/styles/index.js"
   ],
   "scripts": {
-    "build": "sha=$(tar cf - ./src | shasum); if [[ $(echo $sha) == $(< .srcsha) ]] && [[ -d \"./lib\" ]]; then echo \"Lib Build Exists\"; else npm run forcebuild; echo $sha > .srcsha; fi",
+    "build": "sha=$(tar cf - ./src | shasum); if [[ $(echo $sha) == $(< .srcsha) ]] && [[ -d \"./lib\" ]]; then echo \"Lib Build Exists\"; else npm run forcebuild; echo $sha > .srcsha; fi; cp ./{LICENSE,README.md,package.json} ./lib",
     "forcebuild": "vite build",
-    "publish:dist": "rm -rf lib/.cache; cp ./{LICENSE,README.md,package.json} ./lib; cd ./lib; npm publish",
+    "publish:dist": "rm -rf lib/.cache; cd ./lib; npm publish",
     "type:check": "tsc --noEmit"
   },
   "devDependencies": {
