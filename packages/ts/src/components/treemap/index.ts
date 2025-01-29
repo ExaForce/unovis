@@ -153,13 +153,9 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
         if (typeof d.data === 'number') {
           const index = d.data
           // Leaf node case
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
           return config.value(data[index])
         } else {
           // Internal node case
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
           return d.data[0]
         }
       })
