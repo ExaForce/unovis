@@ -14,6 +14,7 @@ import {
   GraphDagreLayoutSetting,
   GenericAccessor,
   GraphElkLayoutSettings,
+  GraphNode,
   NumericAccessor,
   GraphLinkStyle,
   GraphLinkArrowStyle,
@@ -23,12 +24,12 @@ import {
   GraphLink,
   GraphNodeShape,
   TrimMode,
-  GraphNode,
   GraphNodeSelectionHighlightMode,
   GraphPanelConfig,
   GraphInputData,
   GraphDataModel,
 } from '@unovis/ts'
+import { ElkShape } from 'elkjs'
 import { Selection } from 'd3-selection'
 import { D3DragEvent } from 'd3-drag'
 import { D3ZoomEvent, ZoomTransform } from 'd3-zoom'
@@ -181,6 +182,12 @@ export class VisGraphComponent<N extends GraphInputNode, L extends GraphInputLin
    * E.g.: `[n => n.group, n => n.subGroup]`.
    * Default: `undefined` */
   @Input() layoutElkNodeGroups?: StringAccessor<N>[]
+
+  /** A function to be called per graph node to get the ELK shape object.
+   * This enables you to provide custom node dimensions (through the `width` and `height` properties)
+   * and coordinates (through the `x` and `y` properties) if needed.
+   * Default: `undefined` */
+  @Input() layoutElkGetNodeShape?: (d: GraphNode<N, L>, i: number) => ElkShape
 
   /** Link width accessor function ot constant value. Default: `1` */
   @Input() linkWidth?: NumericAccessor<L>
@@ -404,8 +411,8 @@ export class VisGraphComponent<N extends GraphInputNode, L extends GraphInputLin
   }
 
   private getConfig (): GraphConfigInterface<N, L> {
-    const { duration, events, attributes, zoomScaleExtent, disableZoom, zoomEventFilter, disableDrag, disableBrush, zoomThrottledUpdateNodeThreshold, layoutType, layoutAutofit, layoutAutofitTolerance, layoutNonConnectedAside, layoutNodeGroup, layoutGroupOrder, layoutParallelNodesPerColumn, layoutParallelNodeSubGroup, layoutParallelSubGroupsPerRow, layoutParallelGroupSpacing, layoutParallelSortConnectionsByGroup, forceLayoutSettings, dagreLayoutSettings, layoutElkSettings, layoutElkNodeGroups, linkWidth, linkStyle, linkBandWidth, linkArrow, linkStroke, linkDisabled, linkFlow, linkFlowAnimDuration, linkFlowParticleSize, linkLabel, linkLabelShiftFromCenter, linkNeighborSpacing, linkCurvature, linkHighlightOnHover, linkSourcePointOffset, linkTargetPointOffset, selectedLinkId, nodeSize, nodeStrokeWidth, nodeShape, nodeGaugeValue, nodeGaugeFill, nodeGaugeAnimDuration, nodeIcon, nodeIconSize, nodeLabel, nodeLabelTrim, nodeLabelTrimMode, nodeLabelTrimLength, nodeSubLabel, nodeSubLabelTrim, nodeSubLabelTrimMode, nodeSubLabelTrimLength, nodeSideLabels, nodeBottomIcon, nodeDisabled, nodeFill, nodeStroke, nodeSort, nodeEnterPosition, nodeEnterScale, nodeExitPosition, nodeExitScale, nodeEnterCustomRenderFunction, nodeUpdateCustomRenderFunction, nodePartialUpdateCustomRenderFunction, nodeExitCustomRenderFunction, nodeOnZoomCustomRenderFunction, nodeSelectionHighlightMode, selectedNodeId, selectedNodeIds, panels, onNodeDragStart, onNodeDrag, onNodeDragEnd, onZoom, onZoomStart, onZoomEnd, onLayoutCalculated, onNodeSelectionBrush, onNodeSelectionDrag, onRenderComplete, shouldDataUpdate } = this
-    const config = { duration, events, attributes, zoomScaleExtent, disableZoom, zoomEventFilter, disableDrag, disableBrush, zoomThrottledUpdateNodeThreshold, layoutType, layoutAutofit, layoutAutofitTolerance, layoutNonConnectedAside, layoutNodeGroup, layoutGroupOrder, layoutParallelNodesPerColumn, layoutParallelNodeSubGroup, layoutParallelSubGroupsPerRow, layoutParallelGroupSpacing, layoutParallelSortConnectionsByGroup, forceLayoutSettings, dagreLayoutSettings, layoutElkSettings, layoutElkNodeGroups, linkWidth, linkStyle, linkBandWidth, linkArrow, linkStroke, linkDisabled, linkFlow, linkFlowAnimDuration, linkFlowParticleSize, linkLabel, linkLabelShiftFromCenter, linkNeighborSpacing, linkCurvature, linkHighlightOnHover, linkSourcePointOffset, linkTargetPointOffset, selectedLinkId, nodeSize, nodeStrokeWidth, nodeShape, nodeGaugeValue, nodeGaugeFill, nodeGaugeAnimDuration, nodeIcon, nodeIconSize, nodeLabel, nodeLabelTrim, nodeLabelTrimMode, nodeLabelTrimLength, nodeSubLabel, nodeSubLabelTrim, nodeSubLabelTrimMode, nodeSubLabelTrimLength, nodeSideLabels, nodeBottomIcon, nodeDisabled, nodeFill, nodeStroke, nodeSort, nodeEnterPosition, nodeEnterScale, nodeExitPosition, nodeExitScale, nodeEnterCustomRenderFunction, nodeUpdateCustomRenderFunction, nodePartialUpdateCustomRenderFunction, nodeExitCustomRenderFunction, nodeOnZoomCustomRenderFunction, nodeSelectionHighlightMode, selectedNodeId, selectedNodeIds, panels, onNodeDragStart, onNodeDrag, onNodeDragEnd, onZoom, onZoomStart, onZoomEnd, onLayoutCalculated, onNodeSelectionBrush, onNodeSelectionDrag, onRenderComplete, shouldDataUpdate }
+    const { duration, events, attributes, zoomScaleExtent, disableZoom, zoomEventFilter, disableDrag, disableBrush, zoomThrottledUpdateNodeThreshold, layoutType, layoutAutofit, layoutAutofitTolerance, layoutNonConnectedAside, layoutNodeGroup, layoutGroupOrder, layoutParallelNodesPerColumn, layoutParallelNodeSubGroup, layoutParallelSubGroupsPerRow, layoutParallelGroupSpacing, layoutParallelSortConnectionsByGroup, forceLayoutSettings, dagreLayoutSettings, layoutElkSettings, layoutElkNodeGroups, layoutElkGetNodeShape, linkWidth, linkStyle, linkBandWidth, linkArrow, linkStroke, linkDisabled, linkFlow, linkFlowAnimDuration, linkFlowParticleSize, linkLabel, linkLabelShiftFromCenter, linkNeighborSpacing, linkCurvature, linkHighlightOnHover, linkSourcePointOffset, linkTargetPointOffset, selectedLinkId, nodeSize, nodeStrokeWidth, nodeShape, nodeGaugeValue, nodeGaugeFill, nodeGaugeAnimDuration, nodeIcon, nodeIconSize, nodeLabel, nodeLabelTrim, nodeLabelTrimMode, nodeLabelTrimLength, nodeSubLabel, nodeSubLabelTrim, nodeSubLabelTrimMode, nodeSubLabelTrimLength, nodeSideLabels, nodeBottomIcon, nodeDisabled, nodeFill, nodeStroke, nodeSort, nodeEnterPosition, nodeEnterScale, nodeExitPosition, nodeExitScale, nodeEnterCustomRenderFunction, nodeUpdateCustomRenderFunction, nodePartialUpdateCustomRenderFunction, nodeExitCustomRenderFunction, nodeOnZoomCustomRenderFunction, nodeSelectionHighlightMode, selectedNodeId, selectedNodeIds, panels, onNodeDragStart, onNodeDrag, onNodeDragEnd, onZoom, onZoomStart, onZoomEnd, onLayoutCalculated, onNodeSelectionBrush, onNodeSelectionDrag, onRenderComplete, shouldDataUpdate } = this
+    const config = { duration, events, attributes, zoomScaleExtent, disableZoom, zoomEventFilter, disableDrag, disableBrush, zoomThrottledUpdateNodeThreshold, layoutType, layoutAutofit, layoutAutofitTolerance, layoutNonConnectedAside, layoutNodeGroup, layoutGroupOrder, layoutParallelNodesPerColumn, layoutParallelNodeSubGroup, layoutParallelSubGroupsPerRow, layoutParallelGroupSpacing, layoutParallelSortConnectionsByGroup, forceLayoutSettings, dagreLayoutSettings, layoutElkSettings, layoutElkNodeGroups, layoutElkGetNodeShape, linkWidth, linkStyle, linkBandWidth, linkArrow, linkStroke, linkDisabled, linkFlow, linkFlowAnimDuration, linkFlowParticleSize, linkLabel, linkLabelShiftFromCenter, linkNeighborSpacing, linkCurvature, linkHighlightOnHover, linkSourcePointOffset, linkTargetPointOffset, selectedLinkId, nodeSize, nodeStrokeWidth, nodeShape, nodeGaugeValue, nodeGaugeFill, nodeGaugeAnimDuration, nodeIcon, nodeIconSize, nodeLabel, nodeLabelTrim, nodeLabelTrimMode, nodeLabelTrimLength, nodeSubLabel, nodeSubLabelTrim, nodeSubLabelTrimMode, nodeSubLabelTrimLength, nodeSideLabels, nodeBottomIcon, nodeDisabled, nodeFill, nodeStroke, nodeSort, nodeEnterPosition, nodeEnterScale, nodeExitPosition, nodeExitScale, nodeEnterCustomRenderFunction, nodeUpdateCustomRenderFunction, nodePartialUpdateCustomRenderFunction, nodeExitCustomRenderFunction, nodeOnZoomCustomRenderFunction, nodeSelectionHighlightMode, selectedNodeId, selectedNodeIds, panels, onNodeDragStart, onNodeDrag, onNodeDragEnd, onZoom, onZoomStart, onZoomEnd, onLayoutCalculated, onNodeSelectionBrush, onNodeSelectionDrag, onRenderComplete, shouldDataUpdate }
     const keys = Object.keys(config) as (keyof GraphConfigInterface<N, L>)[]
     keys.forEach(key => { if (config[key] === undefined) delete config[key] })
 
