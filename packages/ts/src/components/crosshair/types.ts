@@ -1,4 +1,4 @@
-import { NumericAccessor } from 'types/accessor'
+import { NumericAccessor } from '@unovis/ts/types/accessor'
 
 export type CrosshairCircle = {
   y: number;

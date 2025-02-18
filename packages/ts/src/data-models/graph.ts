@@ -1,7 +1,7 @@
-import { isNumber, isUndefined, cloneDeep, isFunction, without, isString, isObject, isEqual } from 'utils/data'
+import { isNumber, isUndefined, cloneDeep, isFunction, without, isString, isObject, isEqual } from '@unovis/ts/utils/data'
 
 // Types
-import { GraphInputLink, GraphInputNode, GraphLinkCore, GraphNodeCore } from 'types/graph'
+import { GraphInputLink, GraphInputNode, GraphLinkCore, GraphNodeCore } from '@unovis/ts/types/graph'
 
 // Core Data Model
 import { CoreDataModel } from './core'

@@ -1,15 +1,15 @@
 import { Selection } from 'd3-selection'
 
 // Core
-import { ComponentCore } from 'core/component'
-import { SeriesDataModel } from 'data-models/series'
+import { ComponentCore } from '@unovis/ts/core/component'
+import { SeriesDataModel } from '@unovis/ts/data-models/series'
 
 // Utils
-import { filterDataByRange, getExtent, isArray } from 'utils/data'
+import { filterDataByRange, getExtent, isArray } from '@unovis/ts/utils/data'
 
 // Types
-import { NumericAccessor } from 'types/accessor'
-import { ContinuousScale, Scale, ScaleDimension } from 'types/scale'
+import { NumericAccessor } from '@unovis/ts/types/accessor'
+import { ContinuousScale, Scale, ScaleDimension } from '@unovis/ts/types/scale'
 
 // Config
 import { XYComponentDefaultConfig, XYComponentConfigInterface } from './config'

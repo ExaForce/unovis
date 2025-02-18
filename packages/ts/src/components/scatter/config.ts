@@ -1,11 +1,11 @@
 // Core
-import { XYComponentConfigInterface, XYComponentDefaultConfig } from 'core/xy-component/config'
+import { XYComponentConfigInterface, XYComponentDefaultConfig } from '@unovis/ts/core/xy-component/config'
 
 // Types
-import { Scale, ContinuousScale } from 'types/scale'
-import { SymbolType } from 'types/symbol'
-import { ColorAccessor, GenericAccessor, NumericAccessor, StringAccessor } from 'types/accessor'
-import { Position } from 'types/position'
+import { Scale, ContinuousScale } from '@unovis/ts/types/scale'
+import { SymbolType } from '@unovis/ts/types/symbol'
+import { ColorAccessor, GenericAccessor, NumericAccessor, StringAccessor } from '@unovis/ts/types/accessor'
+import { Position } from '@unovis/ts/types/position'
 
 export interface ScatterConfigInterface<Datum> extends XYComponentConfigInterface<Datum> {
   /** Point color accessor function. Default: `d => d.color` */

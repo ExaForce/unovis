@@ -1,12 +1,12 @@
 import { select, Selection } from 'd3-selection'
 
 // Utils
-import { getColor } from 'utils/color'
-import { getString } from 'utils/data'
-import { smartTransition } from 'utils/d3'
+import { getColor } from '@unovis/ts/utils/color'
+import { getString } from '@unovis/ts/utils/data'
+import { smartTransition } from '@unovis/ts/utils/d3'
 
 // Types
-import { Spacing } from 'types/spacing'
+import { Spacing } from '@unovis/ts/types/spacing'
 
 // Local Types
 import { SankeyEnterTransitionType, SankeyExitTransitionType, SankeyInputLink, SankeyInputNode, SankeyNode, SankeyNodeAlign } from '../types'

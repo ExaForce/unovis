@@ -1,5 +1,5 @@
 // Local Types
-import { GenericAccessor } from 'types/accessor'
+import { GenericAccessor } from '@unovis/ts/types/accessor'
 import { BulletLegendItemInterface, BulletShape, BulletLegendOrientation } from './types'
 
 export interface BulletLegendConfigInterface {

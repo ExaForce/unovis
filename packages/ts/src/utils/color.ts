@@ -1,12 +1,12 @@
 import { color } from 'd3-color'
 
 // Core
-import { getCSSColorVariable } from 'styles/colors'
+import { getCSSColorVariable } from '@unovis/ts/styles/colors'
 
 // Utils
-import { ColorAccessor, StringAccessor } from 'types/accessor'
-import { getString, isNumber } from 'utils/data'
-import { isStringCSSVariable, getCSSVariableValue } from 'utils/misc'
+import { ColorAccessor, StringAccessor } from '@unovis/ts/types/accessor'
+import { getString, isNumber } from '@unovis/ts/utils/data'
+import { isStringCSSVariable, getCSSVariableValue } from '@unovis/ts/utils/misc'
 
 type RGBColor = { r: number; g: number; b: number }
 

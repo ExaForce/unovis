@@ -1,16 +1,16 @@
 // Core
-import { XYComponentCore } from 'core/xy-component'
-import { ContainerDefaultConfig, ContainerConfigInterface } from 'core/container/config'
+import { XYComponentCore } from '@unovis/ts/core/xy-component'
+import { ContainerDefaultConfig, ContainerConfigInterface } from '@unovis/ts/core/container/config'
 
 // Components
-import { Annotations } from 'components/annotations'
-import { Tooltip } from 'components/tooltip'
-import { Axis } from 'components/axis'
-import { Crosshair } from 'components/crosshair'
+import { Annotations } from '@unovis/ts/components/annotations'
+import { Tooltip } from '@unovis/ts/components/tooltip'
+import { Axis } from '@unovis/ts/components/axis'
+import { Crosshair } from '@unovis/ts/components/crosshair'
 
 // Types
-import { ContinuousScale } from 'types/scale'
-import { Direction } from 'types/direction'
+import { ContinuousScale } from '@unovis/ts/types/scale'
+import { Direction } from '@unovis/ts/types/direction'
 
 export interface XYContainerConfigInterface<Datum> extends ContainerConfigInterface {
   /** An array of visualization components. Default: `[]` */

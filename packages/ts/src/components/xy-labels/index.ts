@@ -1,9 +1,9 @@
 // Core
-import { XYComponentCore } from 'core/xy-component'
+import { XYComponentCore } from '@unovis/ts/core/xy-component'
 
 // Utils
-import { getValue, isNumber, isNumberWithinRange } from 'utils/data'
-import { rectIntersect } from 'utils/misc'
+import { getValue, isNumber, isNumberWithinRange } from '@unovis/ts/utils/data'
+import { rectIntersect } from '@unovis/ts/utils/misc'
 
 // Local Types
 import { XYLabelCluster, XYLabel, XYLabelPositioning } from './types'

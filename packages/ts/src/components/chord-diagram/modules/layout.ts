@@ -3,10 +3,10 @@ import { HierarchyNode, hierarchy } from 'd3-hierarchy'
 import { pie } from 'd3-shape'
 
 // Utils
-import { getNumber, groupBy } from 'utils/data'
+import { getNumber, groupBy } from '@unovis/ts/utils/data'
 
 // Types
-import { NumericAccessor } from 'types/accessor'
+import { NumericAccessor } from '@unovis/ts/types/accessor'
 
 // Local Types
 import { ChordNode, ChordRibbon, ChordLinkDatum, ChordHierarchyNode, ChordLeafNode } from '../types'

@@ -2,16 +2,16 @@ import { Selection, pointer } from 'd3-selection'
 import { easeLinear } from 'd3-ease'
 
 // Core
-import { XYComponentCore } from 'core/xy-component'
-import { Tooltip } from 'components/tooltip'
+import { XYComponentCore } from '@unovis/ts/core/xy-component'
+import { Tooltip } from '@unovis/ts/components/tooltip'
 
 // Utils
-import { isNumber, isArray, getNumber, clamp, getStackedValues, getNearest, isFunction } from 'utils/data'
-import { smartTransition } from 'utils/d3'
-import { getColor } from 'utils/color'
+import { isNumber, isArray, getNumber, clamp, getStackedValues, getNearest, isFunction } from '@unovis/ts/utils/data'
+import { smartTransition } from '@unovis/ts/utils/d3'
+import { getColor } from '@unovis/ts/utils/color'
 
 // Types
-import { Position } from 'types/position'
+import { Position } from '@unovis/ts/types/position'
 
 // Local Types
 import { CrosshairAccessors, CrosshairCircle } from './types'

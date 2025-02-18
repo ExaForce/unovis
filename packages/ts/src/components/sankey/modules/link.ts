@@ -3,9 +3,9 @@ import { Transition } from 'd3-transition'
 import { interpolateNumber } from 'd3-interpolate'
 
 // Utils
-import { getColor } from 'utils/color'
-import { getString } from 'utils/data'
-import { smartTransition } from 'utils/d3'
+import { getColor } from '@unovis/ts/utils/color'
+import { getString } from '@unovis/ts/utils/data'
+import { smartTransition } from '@unovis/ts/utils/d3'
 
 // Local Types
 import { SankeyInputLink, SankeyInputNode, SankeyLink } from '../types'

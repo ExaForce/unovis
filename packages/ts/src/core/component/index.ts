@@ -2,15 +2,15 @@ import { select, Selection, ValueFn } from 'd3-selection'
 import { Transition } from 'd3-transition'
 
 // Core
-import { CoreDataModel } from 'data-models/core'
+import { CoreDataModel } from '@unovis/ts/data-models/core'
 
 // Utils
-import { merge, throttle } from 'utils/data'
-import { guid } from 'utils/misc'
+import { merge, throttle } from '@unovis/ts/utils/data'
+import { guid } from '@unovis/ts/utils/misc'
 
 // Types
-import { ComponentType, Sizing } from 'types/component'
-import { Spacing } from 'types/spacing'
+import { ComponentType, Sizing } from '@unovis/ts/types/component'
+import { Spacing } from '@unovis/ts/types/spacing'
 
 // Local Types
 import { VisEventCallback, VisEventType } from './types'

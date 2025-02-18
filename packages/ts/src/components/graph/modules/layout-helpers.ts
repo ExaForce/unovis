@@ -1,10 +1,10 @@
 // Types
 import type { ElkNode } from 'elkjs/lib/elk.bundled.js'
-import { GraphInputLink, GraphInputNode } from 'types/graph'
-import { GenericAccessor } from 'types/accessor'
+import { GraphInputLink, GraphInputNode } from '@unovis/ts/types/graph'
+import { GenericAccessor } from '@unovis/ts/types/accessor'
 
 // Utils
-import { getValue, isPlainObject, merge } from 'utils/data'
+import { getValue, isPlainObject, merge } from '@unovis/ts/utils/data'
 
 // Local Types
 import { GraphNode, GraphElkLayoutSettings } from '../types'

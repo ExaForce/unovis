@@ -1,19 +1,19 @@
 import { min, max } from 'd3-array'
 
 // Core
-import { XYComponentCore } from 'core/xy-component'
+import { XYComponentCore } from '@unovis/ts/core/xy-component'
 
 // Utils
-import { isNumber, isArray, isEmpty, clamp, getStackedExtent, getString, getNumber, getStackedData, getExtent } from 'utils/data'
-import { roundedRectPath } from 'utils/path'
-import { smartTransition } from 'utils/d3'
-import { getColor } from 'utils/color'
+import { isNumber, isArray, isEmpty, clamp, getStackedExtent, getString, getNumber, getStackedData, getExtent } from '@unovis/ts/utils/data'
+import { roundedRectPath } from '@unovis/ts/utils/path'
+import { smartTransition } from '@unovis/ts/utils/d3'
+import { getColor } from '@unovis/ts/utils/color'
 
 // Types
-import { ContinuousScale } from 'types/scale'
-import { NumericAccessor } from 'types/accessor'
-import { Spacing } from 'types/spacing'
-import { Orientation } from 'types/position'
+import { ContinuousScale } from '@unovis/ts/types/scale'
+import { NumericAccessor } from '@unovis/ts/types/accessor'
+import { Spacing } from '@unovis/ts/types/spacing'
+import { Orientation } from '@unovis/ts/types/position'
 
 // Local Types
 import { StackedBarDataRecord } from './types'

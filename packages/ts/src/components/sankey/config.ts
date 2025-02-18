@@ -1,13 +1,13 @@
 // Config
-import { ComponentConfigInterface, ComponentDefaultConfig } from 'core/component/config'
+import { ComponentConfigInterface, ComponentDefaultConfig } from '@unovis/ts/core/component/config'
 
 // Utils
-import { getNumber } from 'utils/data'
+import { getNumber } from '@unovis/ts/utils/data'
 
 // Types
-import { ColorAccessor, GenericAccessor, NumericAccessor, StringAccessor } from 'types/accessor'
-import { TrimMode, VerticalAlign, FitMode } from 'types/text'
-import { Position } from 'types/position'
+import { ColorAccessor, GenericAccessor, NumericAccessor, StringAccessor } from '@unovis/ts/types/accessor'
+import { TrimMode, VerticalAlign, FitMode } from '@unovis/ts/types/text'
+import { Position } from '@unovis/ts/types/position'
 import {
   SankeyInputLink,
   SankeyInputNode,

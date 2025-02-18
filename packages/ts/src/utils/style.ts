@@ -1,7 +1,7 @@
 import { injectGlobal } from '@emotion/css'
 
-import { kebabCaseToCamel } from 'utils/text'
-import type { KebabToCamelCase, RemovePrefix } from 'utils/type'
+import { kebabCaseToCamel } from '@unovis/ts/utils/text'
+import type { KebabToCamelCase, RemovePrefix } from '@unovis/ts/utils/type'
 
 export function getCssVarNames<
   T extends Record<string, unknown>,

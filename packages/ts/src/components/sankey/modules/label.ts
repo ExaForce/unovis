@@ -1,16 +1,16 @@
 import { Selection } from 'd3-selection'
 
 // Utils
-import { estimateTextSize, trimSVGText, wrapSVGText } from 'utils/text'
-import { smartTransition } from 'utils/d3'
-import { getString, getValue } from 'utils/data'
-import { getColor } from 'utils/color'
-import { getCSSVariableValueInPixels } from 'utils/misc'
+import { estimateTextSize, trimSVGText, wrapSVGText } from '@unovis/ts/utils/text'
+import { smartTransition } from '@unovis/ts/utils/d3'
+import { getString, getValue } from '@unovis/ts/utils/data'
+import { getColor } from '@unovis/ts/utils/color'
+import { getCSSVariableValueInPixels } from '@unovis/ts/utils/misc'
 
 // Types
-import { GenericAccessor } from 'types/accessor'
-import { FitMode, VerticalAlign } from 'types/text'
-import { Position } from 'types/position'
+import { GenericAccessor } from '@unovis/ts/types/accessor'
+import { FitMode, VerticalAlign } from '@unovis/ts/types/text'
+import { Position } from '@unovis/ts/types/position'
 
 // Local Types
 import { SankeyInputLink, SankeyInputNode, SankeyNode, SankeySubLabelPlacement } from '../types'

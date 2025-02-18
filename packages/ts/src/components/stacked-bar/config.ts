@@ -1,8 +1,8 @@
-import { XYComponentConfigInterface, XYComponentDefaultConfig } from 'core/xy-component/config'
+import { XYComponentConfigInterface, XYComponentDefaultConfig } from '@unovis/ts/core/xy-component/config'
 
 // Types
-import { ColorAccessor, StringAccessor } from 'types/accessor'
-import { Orientation } from 'types/position'
+import { ColorAccessor, StringAccessor } from '@unovis/ts/types/accessor'
+import { Orientation } from '@unovis/ts/types/position'
 
 export interface StackedBarConfigInterface<Datum> extends XYComponentConfigInterface<Datum> {
   /** Bar color accessor function. Default: `d => d.color` */

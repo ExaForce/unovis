@@ -1,16 +1,16 @@
 // Global CSS variables (side effects import)
-import 'styles/index'
+import '@unovis/ts/styles/index'
 
 // Core
-import { ContainerCore } from 'core/container'
-import { ComponentCore } from 'core/component'
-import { ComponentConfigInterface } from 'core/component/config'
+import { ContainerCore } from '@unovis/ts/core/container'
+import { ComponentCore } from '@unovis/ts/core/component'
+import { ComponentConfigInterface } from '@unovis/ts/core/component/config'
 
 // Utils
-import { smartTransition } from 'utils/d3'
+import { smartTransition } from '@unovis/ts/utils/d3'
 
 // Types
-import { Sizing, ExtendedSizeComponent } from 'types/component'
+import { Sizing, ExtendedSizeComponent } from '@unovis/ts/types/component'
 
 // Config
 import { SingleContainerDefaultConfig, SingleContainerConfigInterface } from './config'

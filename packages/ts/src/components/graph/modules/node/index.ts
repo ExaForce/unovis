@@ -3,16 +3,16 @@ import { Transition } from 'd3-transition'
 import { arc } from 'd3-shape'
 
 // Types
-import { GraphInputLink, GraphInputNode } from 'types/graph'
-import { TrimMode } from 'types/text'
+import { GraphInputLink, GraphInputNode } from '@unovis/ts/types/graph'
+import { TrimMode } from '@unovis/ts/types/text'
 
 // Utils
-import { trimString } from 'utils/text'
-import { polygon } from 'utils/path'
-import { smartTransition } from 'utils/d3'
-import { getBoolean, getNumber, getString, getValue, throttle } from 'utils/data'
-import { getColor } from 'utils/color'
-import { isStringSvg } from 'utils/svg'
+import { trimString } from '@unovis/ts/utils/text'
+import { polygon } from '@unovis/ts/utils/path'
+import { smartTransition } from '@unovis/ts/utils/d3'
+import { getBoolean, getNumber, getString, getValue, throttle } from '@unovis/ts/utils/data'
+import { getColor } from '@unovis/ts/utils/color'
+import { isStringSvg } from '@unovis/ts/utils/svg'
 
 // Local Types
 import { GraphNode, GraphCircleLabel, GraphNodeAnimationState, GraphNodeAnimatedElement, GraphNodeShape } from '../../types'

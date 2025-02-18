@@ -1,20 +1,20 @@
 import { select } from 'd3-selection'
 
-import { ComponentCore } from 'core/component'
-import { ComponentType } from 'types/component'
+import { ComponentCore } from '@unovis/ts/core/component'
+import { ComponentType } from '@unovis/ts/types/component'
 
 // Utils
-import { ResizeObserver } from 'utils/resize-observer'
-import { getNumber, throttle } from 'utils/data'
-import { getDataLatLngBounds } from 'utils/map'
-import { getColor } from 'utils/color'
+import { ResizeObserver } from '@unovis/ts/utils/resize-observer'
+import { getNumber, throttle } from '@unovis/ts/utils/data'
+import { getDataLatLngBounds } from '@unovis/ts/utils/map'
+import { getColor } from '@unovis/ts/utils/color'
 
 // Components
-import { LeafletMap } from 'components/leaflet-map'
+import { LeafletMap } from '@unovis/ts/components/leaflet-map'
 
 // Types
-import { Bounds } from 'components/leaflet-map/types'
-import { GenericDataRecord } from 'types/data'
+import { Bounds } from '@unovis/ts/components/leaflet-map/types'
+import { GenericDataRecord } from '@unovis/ts/types/data'
 
 // Config
 import { LeafletFlowMapDefaultConfig, LeafletFlowMapConfigInterface } from './config'

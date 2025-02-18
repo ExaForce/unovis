@@ -4,13 +4,13 @@ import type { ElkNode } from 'elkjs/lib/elk.bundled.js'
 import type { graphlib, Node } from 'dagre'
 
 // Core
-import { GraphDataModel } from 'data-models/graph'
+import { GraphDataModel } from '@unovis/ts/data-models/graph'
 
 // Utils
-import { without, clamp, groupBy, unique, sortBy, getString, getNumber, getValue, merge, isFunction, isNil } from 'utils/data'
+import { without, clamp, groupBy, unique, sortBy, getString, getNumber, getValue, merge, isFunction, isNil } from '@unovis/ts/utils/data'
 
 // Types
-import { GraphInputLink, GraphInputNode } from 'types/graph'
+import { GraphInputLink, GraphInputNode } from '@unovis/ts/types/graph'
 
 // Local Types
 import { GraphNode, GraphLink, GraphForceSimulationNode } from '../types'

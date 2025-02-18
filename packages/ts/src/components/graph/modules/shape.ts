@@ -1,12 +1,12 @@
 import { Selection, select } from 'd3-selection'
 
 // Types
-import { NumericAccessor, StringAccessor } from 'types/accessor'
+import { NumericAccessor, StringAccessor } from '@unovis/ts/types/accessor'
 
 // Utils
-import { polygon } from 'utils/path'
-import { getString } from 'utils/data'
-import { isStringSvg, sanitizeSvgString } from 'utils/svg'
+import { polygon } from '@unovis/ts/utils/path'
+import { getString } from '@unovis/ts/utils/data'
+import { isStringSvg, sanitizeSvgString } from '@unovis/ts/utils/svg'
 
 // Types
 

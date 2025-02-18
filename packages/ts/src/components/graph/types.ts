@@ -1,7 +1,7 @@
 // Types
-import { Position } from 'types/position'
-import { GraphInputLink, GraphInputNode, GraphNodeCore, GraphLinkCore } from 'types/graph'
-import { Spacing } from 'types/spacing'
+import { Position } from '@unovis/ts/types/position'
+import { GraphInputLink, GraphInputNode, GraphNodeCore, GraphLinkCore } from '@unovis/ts/types/graph'
+import { Spacing } from '@unovis/ts/types/spacing'
 
 export type GraphNode<
   N extends GraphInputNode = GraphInputNode,

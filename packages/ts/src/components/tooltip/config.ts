@@ -1,8 +1,8 @@
 /* eslint-disable no-irregular-whitespace */
-import { ComponentCore } from 'core/component'
+import { ComponentCore } from '@unovis/ts/core/component'
 
 // Types
-import { Position } from 'types/position'
+import { Position } from '@unovis/ts/types/position'
 
 export interface TooltipConfigInterface {
   /** An array of visualization components to interact with. Default: `[]` */

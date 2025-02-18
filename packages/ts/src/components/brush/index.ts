@@ -2,14 +2,14 @@ import { BrushBehavior, brushX, D3BrushEvent } from 'd3-brush'
 import { Selection } from 'd3-selection'
 
 // Core
-import { XYComponentCore } from 'core/xy-component'
+import { XYComponentCore } from '@unovis/ts/core/xy-component'
 
 // Utils
-import { isNumber, clamp } from 'utils/data'
-import { smartTransition } from 'utils/d3'
+import { isNumber, clamp } from '@unovis/ts/utils/data'
+import { smartTransition } from '@unovis/ts/utils/d3'
 
 // Types
-import { Arrangement } from 'types/position'
+import { Arrangement } from '@unovis/ts/types/position'
 
 // Config
 import { BrushDefaultConfig, BrushConfigInterface } from './config'

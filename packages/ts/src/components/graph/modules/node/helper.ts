@@ -4,13 +4,13 @@ import { max, mean } from 'd3-array'
 import { Arc } from 'd3-shape'
 
 // Types
-import { ColorAccessor, NumericAccessor } from 'types/accessor'
-import { GraphInputLink, GraphInputNode } from 'types/graph'
+import { ColorAccessor, NumericAccessor } from '@unovis/ts/types/accessor'
+import { GraphInputLink, GraphInputNode } from '@unovis/ts/types/graph'
 
 // Utils
-import { scoreRectPath } from 'utils/path'
-import { isEmpty, isNil, getNumber, getString } from 'utils/data'
-import { getColor, getHexValue, hexToBrightness } from 'utils/color'
+import { scoreRectPath } from '@unovis/ts/utils/path'
+import { isEmpty, isNil, getNumber, getString } from '@unovis/ts/utils/data'
+import { getColor, getHexValue, hexToBrightness } from '@unovis/ts/utils/color'
 
 // Local Types
 import { GraphNode, GraphCircleLabel, GraphNodeAnimatedElement, GraphNodeAnimationState, GraphNodeShape } from '../../types'

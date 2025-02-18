@@ -1,11 +1,11 @@
 // Utils
-import { cloneDeep, isNumber, isObject, isString } from 'utils/data'
+import { cloneDeep, isNumber, isObject, isString } from '@unovis/ts/utils/data'
 
 // Core Data Model
-import { CoreDataModel } from 'data-models/core'
+import { CoreDataModel } from '@unovis/ts/data-models/core'
 
 // Types
-import { MapLink } from 'types/map'
+import { MapLink } from '@unovis/ts/types/map'
 
 export type MapGraphData<AreaDatum, PointDatum, LinkDatum> = {
   areas?: AreaDatum[];

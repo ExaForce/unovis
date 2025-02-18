@@ -3,14 +3,19 @@ import { sum } from 'd3-array'
 import striptags from 'striptags'
 
 // Types
-import { TextAlign, TrimMode, UnovisText, UnovisTextFrameOptions, UnovisTextOptions, UnovisWrappedText, VerticalAlign } from 'types/text'
+import { TextAlign, TrimMode, UnovisText, UnovisTextFrameOptions, UnovisTextOptions, UnovisWrappedText, VerticalAlign } from '@unovis/ts/types/text'
 
 // Utils
-import { flatten, isArray, merge } from 'utils/data'
-import { getTextAnchorFromTextAlign } from 'types/svg'
+import { flatten, isArray, merge } from '@unovis/ts/utils/data'
+import { getTextAnchorFromTextAlign } from '@unovis/ts/types/svg'
 
 // Styles
-import { getFontWidthToHeightRatio, UNOVIS_TEXT_DEFAULT, UNOVIS_TEXT_SEPARATOR_DEFAULT, UNOVIS_TEXT_HYPHEN_CHARACTER_DEFAULT } from 'styles/index'
+import {
+  getFontWidthToHeightRatio,
+  UNOVIS_TEXT_DEFAULT,
+  UNOVIS_TEXT_SEPARATOR_DEFAULT,
+  UNOVIS_TEXT_HYPHEN_CHARACTER_DEFAULT,
+} from '@unovis/ts/styles/index'
 
 /**
  * Converts a kebab-case string to camelCase.

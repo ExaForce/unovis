@@ -1,11 +1,11 @@
 import { select, Selection } from 'd3-selection'
 
 // Utils
-import { trimString } from 'utils/text'
-import { smartTransition } from 'utils/d3'
+import { trimString } from '@unovis/ts/utils/text'
+import { smartTransition } from '@unovis/ts/utils/d3'
 
 // Types
-import { GraphInputLink, GraphInputNode } from 'types/graph'
+import { GraphInputLink, GraphInputNode } from '@unovis/ts/types/graph'
 
 // Local Types
 import { GraphNode, GraphLink, GraphPanel } from '../../types'

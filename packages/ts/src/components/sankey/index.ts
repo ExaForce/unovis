@@ -4,19 +4,19 @@ import { extent, max, sum } from 'd3-array'
 import { scaleLinear } from 'd3-scale'
 
 // Core
-import { ComponentCore } from 'core/component'
-import { GraphDataModel } from 'data-models/graph'
+import { ComponentCore } from '@unovis/ts/core/component'
+import { GraphDataModel } from '@unovis/ts/data-models/graph'
 
 // Types
-import { ExtendedSizeComponent, Sizing } from 'types/component'
-import { Position } from 'types/position'
-import { Spacing } from 'types/spacing'
-import { VerticalAlign } from 'types/text'
+import { ExtendedSizeComponent, Sizing } from '@unovis/ts/types/component'
+import { Position } from '@unovis/ts/types/position'
+import { Spacing } from '@unovis/ts/types/spacing'
+import { VerticalAlign } from '@unovis/ts/types/text'
 
 // Utils
-import { smartTransition } from 'utils/d3'
-import { getNumber, getString, groupBy, isNumber } from 'utils/data'
-import { getCSSVariableValueInPixels } from 'utils/misc'
+import { smartTransition } from '@unovis/ts/utils/d3'
+import { getNumber, getString, groupBy, isNumber } from '@unovis/ts/utils/data'
+import { getCSSVariableValueInPixels } from '@unovis/ts/utils/misc'
 
 // Config
 import { SankeyDefaultConfig, SankeyConfigInterface } from './config'

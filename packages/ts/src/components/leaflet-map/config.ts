@@ -1,12 +1,12 @@
 /* eslint-disable no-irregular-whitespace */
 
 // Core
-import { ComponentDefaultConfig, ComponentConfigInterface } from 'core/component/config'
-import { Tooltip } from 'components/tooltip'
+import { ComponentDefaultConfig, ComponentConfigInterface } from '@unovis/ts/core/component/config'
+import { Tooltip } from '@unovis/ts/components/tooltip'
 
 // Types
-import { ColorAccessor, GenericAccessor, NumericAccessor, StringAccessor } from 'types/accessor'
-import { GenericDataRecord } from 'types/data'
+import { ColorAccessor, GenericAccessor, NumericAccessor, StringAccessor } from '@unovis/ts/types/accessor'
+import { GenericDataRecord } from '@unovis/ts/types/data'
 
 // Local Types
 import {

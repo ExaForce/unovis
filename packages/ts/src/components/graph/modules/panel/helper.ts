@@ -1,13 +1,13 @@
 import { Selection } from 'd3-selection'
 
 // Types
-import { NumericAccessor, BooleanAccessor } from 'types/accessor'
-import { Position } from 'types/position'
-import { GraphInputLink, GraphInputNode } from 'types/graph'
-import { Spacing } from 'types/spacing'
+import { NumericAccessor, BooleanAccessor } from '@unovis/ts/types/accessor'
+import { Position } from '@unovis/ts/types/position'
+import { GraphInputLink, GraphInputNode } from '@unovis/ts/types/graph'
+import { Spacing } from '@unovis/ts/types/spacing'
 
 // Utils
-import { getBoolean, isPlainObject } from 'utils/data'
+import { getBoolean, isPlainObject } from '@unovis/ts/utils/data'
 
 // Local Types
 import { GraphNode, GraphPanel, GraphPanelConfig } from '../../types'

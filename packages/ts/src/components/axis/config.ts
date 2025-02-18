@@ -1,9 +1,9 @@
-import { XYComponentConfigInterface, XYComponentDefaultConfig } from 'core/xy-component/config'
+import { XYComponentConfigInterface, XYComponentDefaultConfig } from '@unovis/ts/core/xy-component/config'
 
 // Types
-import { AxisType } from 'components/axis/types'
-import { Position } from 'types/position'
-import { FitMode, TrimMode, TextAlign } from 'types/text'
+import { AxisType } from '@unovis/ts/components/axis/types'
+import { Position } from '@unovis/ts/types/position'
+import { FitMode, TrimMode, TextAlign } from '@unovis/ts/types/text'
 
 // We extend partial XY config interface because x and y properties are optional for Axis
 export interface AxisConfigInterface<Datum> extends Partial<XYComponentConfigInterface<Datum>> {

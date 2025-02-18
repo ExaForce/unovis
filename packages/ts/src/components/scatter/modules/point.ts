@@ -1,16 +1,16 @@
 import { select, Selection } from 'd3-selection'
 import { symbol } from 'd3-shape'
 import { color } from 'd3-color'
-import { Position } from 'types/position'
-import { Symbol, SymbolType } from 'types/symbol'
+import { Position } from '@unovis/ts/types/position'
+import { Symbol, SymbolType } from '@unovis/ts/types/symbol'
 
 // Utils
-import { smartTransition } from 'utils/d3'
-import { getCSSVariableValue, isStringCSSVariable } from 'utils/misc'
-import { hexToBrightness } from 'utils/color'
+import { smartTransition } from '@unovis/ts/utils/d3'
+import { getCSSVariableValue, isStringCSSVariable } from '@unovis/ts/utils/misc'
+import { hexToBrightness } from '@unovis/ts/utils/color'
 
 // Types
-import { ContinuousScale } from 'types/scale'
+import { ContinuousScale } from '@unovis/ts/types/scale'
 
 // Config
 import { ScatterConfigInterface } from '../config'

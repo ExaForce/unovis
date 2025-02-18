@@ -2,16 +2,16 @@ import { Selection } from 'd3-selection'
 import { pie, arc } from 'd3-shape'
 
 // Core
-import { ComponentCore } from 'core/component'
-import { SeriesDataModel } from 'data-models/series'
+import { ComponentCore } from '@unovis/ts/core/component'
+import { SeriesDataModel } from '@unovis/ts/data-models/series'
 
 // Utils
-import { smartTransition } from 'utils/d3'
-import { isNumber, clamp, getNumber } from 'utils/data'
-import { wrapSVGText } from 'utils/text'
+import { smartTransition } from '@unovis/ts/utils/d3'
+import { isNumber, clamp, getNumber } from '@unovis/ts/utils/data'
+import { wrapSVGText } from '@unovis/ts/utils/text'
 
 // Types
-import { Spacing } from 'types/spacing'
+import { Spacing } from '@unovis/ts/types/spacing'
 
 // Local Types
 import { DonutArcDatum, DonutArcAnimState, DonutDatum } from './types'

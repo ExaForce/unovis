@@ -1,8 +1,8 @@
 // Core
 
 // Types
-import { Sizing } from 'types/component'
-import { Spacing } from 'types/spacing'
+import { Sizing } from '@unovis/ts/types/component'
+import { Spacing } from '@unovis/ts/types/spacing'
 
 export interface ContainerConfigInterface {
   /** Animation duration of all the components within the container. Default: `undefined` */

@@ -4,15 +4,15 @@ import { D3ZoomEvent, ZoomTransform } from 'd3-zoom'
 import { Selection } from 'd3-selection'
 
 // Utils
-import { isEqual } from 'utils/data'
+import { isEqual } from '@unovis/ts/utils/data'
 
 // Config
-import { ComponentConfigInterface, ComponentDefaultConfig } from 'core/component/config'
+import { ComponentConfigInterface, ComponentDefaultConfig } from '@unovis/ts/core/component/config'
 
 // Types
-import { TrimMode } from 'types/text'
-import { GraphInputLink, GraphInputNode, GraphInputData } from 'types/graph'
-import { BooleanAccessor, ColorAccessor, NumericAccessor, StringAccessor, GenericAccessor } from 'types/accessor'
+import { TrimMode } from '@unovis/ts/types/text'
+import { GraphInputLink, GraphInputNode, GraphInputData } from '@unovis/ts/types/graph'
+import { BooleanAccessor, ColorAccessor, NumericAccessor, StringAccessor, GenericAccessor } from '@unovis/ts/types/accessor'
 
 // Local Types
 import {

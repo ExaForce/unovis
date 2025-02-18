@@ -3,14 +3,14 @@ import { min, max } from 'd3-array'
 import Supercluster, { ClusterFeature, PointFeature } from 'supercluster'
 
 // Utils
-import { clamp, getString, getNumber } from 'utils/data'
-import { getColor } from 'utils/color'
-import { polygon, circlePath } from 'utils/path'
-import { getHTMLTransform } from 'utils/html'
+import { clamp, getString, getNumber } from '@unovis/ts/utils/data'
+import { getColor } from '@unovis/ts/utils/color'
+import { polygon, circlePath } from '@unovis/ts/utils/path'
+import { getHTMLTransform } from '@unovis/ts/utils/html'
 
 // Types
-import { ColorAccessor, NumericAccessor, StringAccessor } from 'types/accessor'
-import { GenericDataRecord } from 'types/data'
+import { ColorAccessor, NumericAccessor, StringAccessor } from '@unovis/ts/types/accessor'
+import { GenericDataRecord } from '@unovis/ts/types/data'
 
 // Local Types
 import {

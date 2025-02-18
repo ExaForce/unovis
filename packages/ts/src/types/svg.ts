@@ -1,4 +1,4 @@
-import { TextAlign } from 'types/text'
+import { TextAlign } from '@unovis/ts/types/text'
 
 export type TransformValues = {
   translate: {

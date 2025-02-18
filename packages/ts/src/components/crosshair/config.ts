@@ -1,10 +1,10 @@
-import { XYComponentConfigInterface, XYComponentDefaultConfig } from 'core/xy-component/config'
-import { Tooltip } from 'components/tooltip'
+import { XYComponentConfigInterface, XYComponentDefaultConfig } from '@unovis/ts/core/xy-component/config'
+import { Tooltip } from '@unovis/ts/components/tooltip'
 
 // Types
-import { NumericAccessor, ColorAccessor } from 'types/accessor'
-import { ContinuousScale } from 'types/scale'
-import { WithOptional } from 'types/misc'
+import { NumericAccessor, ColorAccessor } from '@unovis/ts/types/accessor'
+import { ContinuousScale } from '@unovis/ts/types/scale'
+import { WithOptional } from '@unovis/ts/types/misc'
 import { CrosshairCircle } from './types'
 
 // We extend partial XY config interface because x and y properties are optional for Crosshair

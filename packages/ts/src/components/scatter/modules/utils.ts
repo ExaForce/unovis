@@ -1,14 +1,14 @@
 import { select, Selection } from 'd3-selection'
-import { Position } from 'types/position'
+import { Position } from '@unovis/ts/types/position'
 
 // Utils
-import { rectIntersect } from 'utils/misc'
-import { estimateStringPixelLength } from 'utils/text'
-import { getValue } from 'utils/data'
+import { rectIntersect } from '@unovis/ts/utils/misc'
+import { estimateStringPixelLength } from '@unovis/ts/utils/text'
+import { getValue } from '@unovis/ts/utils/data'
 
 // Types
-import { ContinuousScale } from 'types/scale'
-import { Rect } from 'types/misc'
+import { ContinuousScale } from '@unovis/ts/types/scale'
+import { Rect } from '@unovis/ts/types/misc'
 
 // Local Types
 import { ScatterPoint, ScatterPointGroupNode } from '../types'

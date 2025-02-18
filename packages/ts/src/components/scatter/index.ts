@@ -2,20 +2,20 @@ import { Selection, select } from 'd3-selection'
 import { max, min } from 'd3-array'
 
 // Core
-import { XYComponentCore } from 'core/xy-component'
+import { XYComponentCore } from '@unovis/ts/core/xy-component'
 
 // Utils
-import { isNumber, getExtent, getNumber, getString, isArray, flatten, getValue } from 'utils/data'
-import { getColor } from 'utils/color'
-import { smartTransition } from 'utils/d3'
-import { getCSSVariableValueInPixels } from 'utils/misc'
+import { isNumber, getExtent, getNumber, getString, isArray, flatten, getValue } from '@unovis/ts/utils/data'
+import { getColor } from '@unovis/ts/utils/color'
+import { smartTransition } from '@unovis/ts/utils/d3'
+import { getCSSVariableValueInPixels } from '@unovis/ts/utils/misc'
 
 // Types
-import { Spacing } from 'types/spacing'
-import { SymbolType } from 'types/symbol'
-import { NumericAccessor } from 'types/accessor'
-import { Position } from 'types/position'
-import { ContinuousScale } from 'types/scale'
+import { Spacing } from '@unovis/ts/types/spacing'
+import { SymbolType } from '@unovis/ts/types/symbol'
+import { NumericAccessor } from '@unovis/ts/types/accessor'
+import { Position } from '@unovis/ts/types/position'
+import { ContinuousScale } from '@unovis/ts/types/scale'
 
 // Local Types
 import { ScatterPointGroupNode, ScatterPoint } from './types'

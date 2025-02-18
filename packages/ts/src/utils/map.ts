@@ -1,10 +1,10 @@
 import { min, max } from 'd3-array'
 
 // Types
-import { NumericAccessor } from 'types/accessor'
+import { NumericAccessor } from '@unovis/ts/types/accessor'
 
 // Utils
-import { getNumber } from 'utils/data'
+import { getNumber } from '@unovis/ts/utils/data'
 
 export function getDataLatLngBounds<D> (
   data: D[],

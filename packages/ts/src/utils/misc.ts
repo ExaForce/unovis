@@ -1,6 +1,6 @@
-import { StringAccessor } from 'types/accessor'
-import { LengthUnit, Rect } from 'types/misc'
-import { getString, isString } from 'utils/data'
+import { StringAccessor } from '@unovis/ts/types/accessor'
+import { LengthUnit, Rect } from '@unovis/ts/types/misc'
+import { getString, isString } from '@unovis/ts/utils/data'
 import toPx from 'to-px'
 
 export function guid (): string {
