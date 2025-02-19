@@ -51,7 +51,7 @@
     "gallery": "vite"
   },
   "peerDependencies": {
-    "@unovis/ts": "1.5.1-exf.16",
+    "@unovis/ts": "1.5.1-exf.18",
     "vue": "^3"
   },
   "devDependencies": {
