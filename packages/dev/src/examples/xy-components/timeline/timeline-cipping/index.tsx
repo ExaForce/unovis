@@ -28,7 +28,7 @@ export const component = (props: ExampleViewerDurationProps): JSX.Element => {
       <VisTimeline
         x={(d: TimeDataRecord) => d.timestamp}
         rowHeight={20}
-        lineWidth={null}
+        lineWidth={10}
         lineCap
         showLabels
         labelTextAlign={TextAlign.Left}
