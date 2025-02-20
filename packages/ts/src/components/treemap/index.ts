@@ -1,7 +1,7 @@
 import { Selection, select } from 'd3-selection'
 import { hierarchy, treemap } from 'd3-hierarchy'
-import { group, max, extent } from 'd3-array'
-import { scaleLinear, scaleSqrt } from 'd3-scale'
+import { group, max, extent, quantile } from 'd3-array'
+import { scaleLinear, scaleThreshold } from 'd3-scale'
 import { hsl } from 'd3-color'
 import { wrapSVGText } from 'utils/text'
 import { ComponentCore } from 'core/component'
@@ -109,18 +109,25 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
 
     // Set up the brightness increase scale based on depth
     const maxDepth = max(descendants, d => d.depth)
-    // Get value extent only from leaf nodes
-    const [minValue, maxValue] = extent(descendants.filter(d => !d.children), d => d.value)
 
     const brightnessIncrease = scaleLinear()
       .domain([1, maxDepth])
       .range([0, 1])
 
-    // Create font size scale for leaf nodes using sqrt scale
-    const fontSizeScale = scaleSqrt()
-      .domain([minValue || 1, maxValue || 1])
-      .range([config.tileLabelMinFontSize, config.tileLabelMaxFontSize])
-      .clamp(true)
+    // Get all leaf node values
+    const leafValues = descendants.filter(d => !d.children).map(d => d.value)
+
+    // Calculate tertiles (33rd and 67th percentiles)
+    const fontSizeScale = scaleThreshold<number, number>()
+      .domain([
+        quantile(leafValues, 1 / 3), // 33rd percentile
+        quantile(leafValues, 2 / 3), // 67th percentile
+      ])
+      .range([
+        config.tileLabelSmallFontSize,
+        config.tileLabelMediumFontSize,
+        config.tileLabelLargeFontSize,
+      ])
 
     // Set fill color and opacity for each node
     treemapData
