@@ -237,7 +237,7 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
       .attr('href', (d, i) => getString(d, config.lineEndIcon, i))
       .attr('x', (d, i) => {
         const lineLength = this._getLineLength(d, i)
-        const iconSize = getNumber(d, config.lineStartIconSize, i) ?? this._getLineHeight(d, i, rowHeight)
+        const iconSize = getNumber(d, config.lineEndIconSize, i) ?? this._getLineHeight(d, i, rowHeight)
         const iconArrangement = getValue(d, config.lineEndIconArrangement, i)
         const offset = iconArrangement === Arrangement.Inside ? -iconSize
           : iconArrangement === Arrangement.Center ? -iconSize / 2
