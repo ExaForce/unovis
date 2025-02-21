@@ -228,6 +228,7 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
             : -iconSize
         return offset
       })
+      .attr('y', (d, i) => -(getNumber(d, config.lineStartIconSize, i) - this._getLineHeight(d, i, rowHeight)) / 2)
       .attr('width', (d, i) => getNumber(d, config.lineStartIconSize, i) ?? this._getLineHeight(d, i, rowHeight))
       .attr('height', (d, i) => getNumber(d, config.lineStartIconSize, i) ?? this._getLineHeight(d, i, rowHeight))
       .style('color', (d, i) => getString(d, config.lineStartIconColor, i))
@@ -243,6 +244,7 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
             : 0
         return lineLength + offset
       })
+      .attr('y', (d, i) => -(getNumber(d, config.lineEndIconSize, i) - this._getLineHeight(d, i, rowHeight)) / 2)
       .attr('width', (d, i) => getNumber(d, config.lineEndIconSize, i) ?? this._getLineHeight(d, i, rowHeight))
       .attr('height', (d, i) => getNumber(d, config.lineEndIconSize, i) ?? this._getLineHeight(d, i, rowHeight))
       .style('color', (d, i) => getString(d, config.lineEndIconColor, i))
