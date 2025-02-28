@@ -1,6 +1,6 @@
 import { Selection, select } from 'd3-selection'
 import { hierarchy, treemap } from 'd3-hierarchy'
-import { group, max, extent, quantile } from 'd3-array'
+import { group, max, extent } from 'd3-array'
 import { scaleLinear, scaleThreshold } from 'd3-scale'
 import { hsl } from 'd3-color'
 import { wrapSVGText } from 'utils/text'
@@ -114,14 +114,17 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
       .domain([1, maxDepth])
       .range([0, 1])
 
-    // Get all leaf node values
+    // Get all leaf node values and calculate their square roots
+    // (since area is proportional to value)
     const leafValues = descendants.filter(d => !d.children).map(d => d.value)
+    const maxLeafValue = Math.sqrt(max(leafValues)) || 0
 
-    // Calculate tertiles (33rd and 67th percentiles)
+    // Divide the range into three equal intervals based on the square root of values
+    // This accounts for the fact that area is proportional to value
     const fontSizeScale = scaleThreshold<number, number>()
       .domain([
-        quantile(leafValues, 1 / 3), // 33rd percentile
-        quantile(leafValues, 2 / 3), // 67th percentile
+        maxLeafValue / 3, // First third of the max value
+        (maxLeafValue * 2) / 3, // Second third of the max value
       ])
       .range([
         config.tileLabelSmallFontSize,
@@ -264,7 +267,7 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
 
         // Apply font size scaling only to leaf nodes if enabled
         if (!d.children && config.enableTileLabelFontSizeVariation) {
-          text.style('font-size', `${fontSizeScale(d.value)}px`)
+          text.style('font-size', `${fontSizeScale(Math.sqrt(d.value))}px`)
         }
 
         // Apply text wrapping to leaf nodes
