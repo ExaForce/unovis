@@ -462,6 +462,7 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
     this._linesGroup.attr('transform', `translate(0,${-this._scrollDistance})`)
     this._rowsGroup.attr('transform', `translate(0,${-this._scrollDistance})`)
     this._labelsGroup.attr('transform', `translate(0,${-this._scrollDistance})`)
+    this._arrowsGroup.attr('transform', `translate(0,${-this._scrollDistance})`)
     const scrollBarPosition = (this._scrollDistance / this._maxScroll * (yHeight - this._scrollbarHeight)) || 0
     this._scrollBarHandle.attr('y', scrollBarPosition)
   }
