@@ -11,6 +11,7 @@ import { Crosshair } from 'components/crosshair'
 // Types
 import { ContinuousScale } from 'types/scale'
 import { Direction } from 'types/direction'
+import { Spacing } from 'types/spacing'
 
 export interface XYContainerConfigInterface<Datum> extends ContainerConfigInterface {
   /** An array of visualization components. Default: `[]` */
@@ -89,6 +90,16 @@ export interface XYContainerConfigInterface<Datum> extends ContainerConfigInterf
   scaleByDomain?: boolean;
   /** Annotations component. Default: `undefined` */
   annotations?: Annotations | undefined;
+  /** Callback function to be called when the chart rendering is complete. Default: `undefined` */
+  onRenderComplete?: (
+    svgNode: SVGSVGElement,
+    margin: Spacing,
+    bleed: Spacing,
+    containerWidth: number,
+    containerHeight: number,
+    componentWidth: number,
+    componentHeight: number,
+  ) => void;
 }
 
 
