@@ -280,6 +280,7 @@ export class XYContainer<Datum> extends ContainerCore {
     config.annotations?.render()
 
     this._firstRender = false
+    config.onRenderComplete?.(this.svg.node(), margin, this.containerWidth, this.containerHeight, this.width, this.height)
   }
 
   private _updateScales<T extends XYComponentCore<Datum>> (...components: T[]): void {
