@@ -84,6 +84,10 @@ export class ComponentCore<
     if (isFinite(containerHeight)) this._containerHeight = containerHeight
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  public preRender (): void {
+  }
+
   render (duration = this.config.duration): void {
     this._render(duration)
 

@@ -214,13 +214,16 @@ export class XYContainer<Datum> extends ContainerCore {
       this._setAutoMargin()
     }
 
-    // Pass size to the components
+    // Pass size to the components and pre-render them
+    // Keep in mind that at the pre-render step the scales are not set yet
     const components = clean([...this.components, config.xAxis, config.yAxis, config.crosshair, config.annotations])
     for (const c of components) {
       c.setSize(this.width, this.height, this.containerWidth, this.containerHeight)
     }
 
     // Update Scales of all the components at once to calculate required paddings and sync them
+    // IMPORTANT: This step also pre-renders the components after setting the scales ranges for the first time.
+    // We need to do this before calculating the bleed, because the bleed depends on the scales ranges.
     this._updateScales(...this.components, config.xAxis, config.yAxis, config.crosshair)
   }
 
@@ -349,6 +352,7 @@ export class XYContainer<Datum> extends ContainerCore {
       c.setSize(this.width, this.height, this.containerWidth, this.containerHeight)
       c.setScaleRange(ScaleDimension.X, config.xRange ?? xRange)
       c.setScaleRange(ScaleDimension.Y, config.yRange ?? yRange)
+      c.preRender()
     }
 
     // Get and combine bleed

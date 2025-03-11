@@ -99,6 +99,7 @@ export class SingleContainer<Data> extends ContainerCore {
   protected _preRender (): void {
     super._preRender()
     this.component.setSize(this.width, this.height, this.containerWidth, this.containerHeight)
+    this.component.preRender()
     this.config.annotations?.setSize(this.width, this.height, this.containerWidth, this.containerHeight)
   }
 
