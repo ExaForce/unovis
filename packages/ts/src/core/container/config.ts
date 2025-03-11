@@ -31,15 +31,6 @@ export interface ContainerConfigInterface {
    * `aria-label` attribute to the div element containing your chart. Default: `undefined`.
   */
   ariaLabel?: string | null | undefined;
-  /** Callback function to be called when the chart rendering is complete. Default: `undefined` */
-  onRenderComplete?: (
-    svgNode: SVGSVGElement,
-    margin: Spacing,
-    containerWidth: number,
-    containerHeight: number,
-    componentWidth: number,
-    componentHeight: number,
-  ) => void;
 }
 
 export const ContainerDefaultConfig: ContainerConfigInterface = {
