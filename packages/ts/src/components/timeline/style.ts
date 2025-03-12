@@ -137,3 +137,11 @@ export const label = css`
   text-anchor: end;
   user-select: none;
 `
+
+export const rowIcons = css`
+  label: row-icons;
+`
+
+export const rowIcon = css`
+  label: row-icon;
+`
