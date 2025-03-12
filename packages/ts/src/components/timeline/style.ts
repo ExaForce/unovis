@@ -44,7 +44,6 @@ export const globalStyles = injectGlobal`
     --vis-timeline-label-color: var(--vis-dark-timeline-label-color);
     --vis-timeline-arrow-color: var(--vis-dark-timeline-arrow-color);
     --vis-timeline-line-hover-stroke-color: var(--vis-dark-timeline-line-hover-stroke-color);
-
   }
 `
 

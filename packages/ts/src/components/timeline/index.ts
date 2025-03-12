@@ -193,16 +193,19 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
 
     const rowIconsEnter = rowIcons.enter().append('use')
       .attr('class', s.rowIcon)
+      .style('opacity', 0)
 
-    rowIconsEnter.merge(rowIcons)
+    smartTransition(rowIconsEnter.merge(rowIcons), duration)
       .attr('href', l => l.iconHref)
       .attr('x', 0)
       .attr('y', l => yStart + (yOrdinalScale(l.label) + 0.5) * rowHeight - l.iconSize / 2)
       .attr('width', l => l.iconSize)
       .attr('height', l => l.iconSize)
       .style('color', l => l.iconColor)
+      .style('opacity', 1)
 
-    rowIcons.exit()
+    smartTransition(rowIcons.exit(), duration)
+      .style('opacity', 0)
       .remove()
 
     // Labels
@@ -567,10 +570,10 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
     const grouped = groupBy(data, (d, i) => getString(d, this.config.lineRow ?? this.config.type) || `${i + 1}`)
 
     const rowLabels: TimelineRowLabel<Datum>[] = Object.entries(grouped).map(([key, items], i) => {
-      const icon = this.config.rowIcon?.(key, i)
+      const icon = this.config.rowIcon?.(key, items, i)
       return {
         label: key,
-        formattedLabel: this.config.rowLabelFormatter?.(key, i) ?? key,
+        formattedLabel: this.config.rowLabelFormatter?.(key, items, i) ?? key,
         iconHref: icon?.href,
         iconSize: icon?.size,
         iconColor: icon?.color,

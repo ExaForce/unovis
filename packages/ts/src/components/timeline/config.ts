@@ -70,9 +70,9 @@ export interface TimelineConfigInterface<Datum> extends WithOptional<XYComponent
   /** Row label style as an object with the `{ [property-name]: value }` format. Default: `undefined` */
   rowLabelStyle?: GenericAccessor<Record<string, string>, TimelineRowLabel<Datum>>;
   /** Row label formatter function. Default: `undefined` */
-  rowLabelFormatter?: (key: string, i: number) => string;
+  rowLabelFormatter?: (key: string, items: Datum[], i: number) => string;
   /** Provide an icon href to be displayed before the row label. Default: `undefined` */
-  rowIcon?: (key: string, i: number) => TimelineRowIcon | undefined;
+  rowIcon?: (key: string, items: Datum[], i: number) => TimelineRowIcon | undefined;
   /** Fixed label width in pixels. Labels longer than the specified value will be trimmed. Default: `undefined`. Falls back to deprecated `labelWidth`. */
   rowLabelWidth?: number;
   /** Maximum label width in pixels. Labels longer than the specified value will be trimmed. Default: `undefined`. Falls back to deprecated `maxLabelWidth`. */
