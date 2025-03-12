@@ -20,7 +20,7 @@ export const globalStyles = injectGlobal`
     --vis-timeline-cursor: default;
     --vis-timeline-line-color: var(--vis-color-main);
     --vis-timeline-line-stroke-width: 0;
-    --vis-timeline-line-hover-stroke-width: 1.5;
+    --vis-timeline-line-hover-stroke-width: 0;
     --vis-timeline-line-hover-stroke-color: #6C778C;
 
     // The line stroke color variable is not defined by default
