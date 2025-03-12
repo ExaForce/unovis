@@ -193,6 +193,8 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
 
     const rowIconsEnter = rowIcons.enter().append('use')
       .attr('class', s.rowIcon)
+      .attr('x', 0)
+      .attr('y', l => yStart + (yOrdinalScale(l.label) + 0.5) * rowHeight - l.iconSize / 2)
       .style('opacity', 0)
 
     smartTransition(rowIconsEnter.merge(rowIcons), duration)
