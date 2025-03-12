@@ -189,11 +189,13 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
 
     // Row Icons
     const rowIcons = this._rowIconsGroup.selectAll<SVGUseElement, TimelineRowLabel<Datum>>(`.${s.rowIcon}`)
-      .data(rowLabels, l => l?.label)
+      .data(rowLabels.filter(d => d.iconSize), l => l?.label)
 
     const rowIconsEnter = rowIcons.enter().append('use')
       .attr('class', s.rowIcon)
       .attr('x', 0)
+      .attr('width', l => l.iconSize)
+      .attr('height', l => l.iconSize)
       .attr('y', l => yStart + (yOrdinalScale(l.label) + 0.5) * rowHeight - l.iconSize / 2)
       .style('opacity', 0)
 
