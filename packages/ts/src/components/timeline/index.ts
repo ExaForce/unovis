@@ -1,6 +1,6 @@
 import { select, Selection } from 'd3-selection'
 import { Transition } from 'd3-transition'
-import { max, maxIndex } from 'd3-array'
+import { max, maxIndex, minIndex } from 'd3-array'
 import { scaleOrdinal, ScaleOrdinal } from 'd3-scale'
 import { drag, D3DragEvent } from 'd3-drag'
 
@@ -63,7 +63,8 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
   private _scrollbarHeight = 0
   private _labelMargin = 5
   private _labelWidth = 0 // Will be overridden in `get bleed ()`
-  private _lineIconBleed: [number, number] = [0, 0]
+  private _rowIconBleed: [number, number] = [0, 0]
+  private _lineBleed: [number, number] = [0, 0]
 
   /** We define a dedicated clipping path for this component because it needs to behave
    * differently than the regular XYContainer's clipPath */
@@ -140,26 +141,44 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
       }
     }
 
+    const firstItemIdx = minIndex(data, (d, i) => getNumber(d, config.x, i))
+    const firstItem = data[firstItemIdx]
+    const lastItemIdx = maxIndex(data, (d, i) => getNumber(d, config.x, i) + (getNumber(d, config.lineLength ?? config.length, i) ?? 0))
+    const lastItem = data[lastItemIdx]
+
+    // Small segments bleed
+    const lineBleed = [0, 0] as [number, number]
+    if (config.showEmptySegments && config.lineCap) {
+      const firstItemStart = getNumber(firstItem, config.x, firstItemIdx)
+      const firstItemEnd = getNumber(firstItem, config.x, firstItemIdx) + (getNumber(firstItem, config.lineLength ?? config.length, firstItemIdx) ?? 0)
+      const lastItemStart = getNumber(lastItem, config.x, lastItemIdx)
+      const lastItemEnd = getNumber(lastItem, config.x, lastItemIdx) + (getNumber(lastItem, config.lineLength ?? config.length, lastItemIdx) ?? 0)
+      const fullTimeRange = lastItemEnd - firstItemStart
+      const firstItemHeight = this._getLineHeight(firstItem, firstItemIdx, rowHeight)
+      const lastItemHeight = this._getLineHeight(lastItem, lastItemIdx, rowHeight)
+
+      if ((firstItemEnd - firstItemStart) / fullTimeRange * this._width < firstItemHeight) lineBleed[0] = firstItemHeight / 2
+      if ((lastItemEnd - lastItemStart) / fullTimeRange * this._width < lastItemHeight) lineBleed[1] = lastItemHeight / 2
+    }
+    this._lineBleed = lineBleed
+
     // Icon bleed
     const iconBleed = [0, 0] as [number, number]
     if (config.lineStartIcon) {
-      const firstItemIdx = maxIndex(data, (d, i) => getNumber(d, config.x, i))
-      const firstItem = data[firstItemIdx]
       iconBleed[0] = getIconBleed(firstItem, firstItemIdx, config.lineStartIcon, config.lineStartIconSize, config.lineStartIconArrangement, rowHeight)
     }
 
     if (config.lineEndIcon) {
-      const lastItemIdx = maxIndex(data, (d, i) => getNumber(d, config.x, i) + (getNumber(d, config.lineLength ?? config.length, i) ?? 0))
-      const lastItem = data[lastItemIdx]
       iconBleed[1] = getIconBleed(lastItem, lastItemIdx, config.lineEndIcon, config.lineEndIconSize, config.lineEndIconArrangement, rowHeight)
     }
 
-    this._lineIconBleed = iconBleed
+    this._rowIconBleed = iconBleed
+
     return {
       top: 0,
       bottom: 0,
-      left: this._labelWidth + iconBleed[0] + (hasIcons ? maxIconSize : 0),
-      right: this._scrollBarWidth + this._scrollBarMargin + iconBleed[1],
+      left: this._labelWidth + iconBleed[0] + (hasIcons ? maxIconSize : 0) + lineBleed[0],
+      right: this._scrollBarWidth + this._scrollBarMargin + iconBleed[1] + lineBleed[1],
     }
   }
 
@@ -220,7 +239,8 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
       : config.rowLabelTextAlign === TextAlign.Left ? this._labelWidth
         : this._labelMargin
 
-    const labelXStart = xRange[0] - this._lineIconBleed[0] - labelOffset
+    const xStart = xRange[0] - this._rowIconBleed[0] - this._lineBleed[0]
+    const labelXStart = xStart - labelOffset
     const labelsEnter = labels.enter().append('text')
       .attr('class', s.label)
       .attr('x', labelXStart)
@@ -253,8 +273,7 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
       .remove()
 
     // Row background rects
-    const xStart = xRange[0] - this._lineIconBleed[0]
-    const timelineWidth = xRange[1] - xRange[0] + this._lineIconBleed[0] + this._lineIconBleed[1]
+    const timelineWidth = xRange[1] - xRange[0] + this._rowIconBleed[0] + this._rowIconBleed[1] + this._lineBleed[1]
     const numRows = Math.max(Math.floor(yHeight / rowHeight), numRowLabels)
     const recordTypes = Array(numRows).fill(null).map((_, i) => rowLabels[i])
     const rects = this._rowsGroup.selectAll<SVGRectElement, number>(`.${s.row}`)
