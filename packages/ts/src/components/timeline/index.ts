@@ -1,6 +1,6 @@
 import { select, Selection } from 'd3-selection'
 import { Transition } from 'd3-transition'
-import { max, maxIndex, minIndex } from 'd3-array'
+import { max, min, minIndex } from 'd3-array'
 import { scaleOrdinal, ScaleOrdinal } from 'd3-scale'
 import { drag, D3DragEvent } from 'd3-drag'
 
@@ -141,21 +141,29 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
       }
     }
 
-    const firstItemIdx = minIndex(data, (d, i) => getNumber(d, config.x, i))
+    // There can be multiple start / end items with the same timestamp, so we need to find the shortest one
+    const minTimestamp = min(data, (d, i) => getNumber(d, config.x, i))
+    const dataMin = data.filter((d, i) => getNumber(d, config.x, i) === minTimestamp)
+    const dataMinShortestItemIdx = minIndex(dataMin, (d, i) => this._getLineDuration(d, i))
+    const firstItemIdx = data.findIndex(d => d === dataMin[dataMinShortestItemIdx])
     const firstItem = data[firstItemIdx]
-    const lastItemIdx = maxIndex(data, (d, i) => getNumber(d, config.x, i) + (getNumber(d, config.lineLength ?? config.length, i) ?? 0))
+
+    const maxTimestamp = max(data, (d, i) => getNumber(d, config.x, i) + this._getLineDuration(d, i))
+    const dataMax = data.filter((d, i) => getNumber(d, config.x, i) + this._getLineDuration(d, i) === maxTimestamp)
+    const dataMaxShortestItemIdx = minIndex(dataMax, (d, i) => this._getLineDuration(d, i))
+    const lastItemIdx = data.findIndex(d => d === dataMax[dataMaxShortestItemIdx])
     const lastItem = data[lastItemIdx]
 
     // Small segments bleed
     const lineBleed = [0, 0] as [number, number]
     if (config.showEmptySegments && config.lineCap) {
       const firstItemStart = getNumber(firstItem, config.x, firstItemIdx)
-      const firstItemEnd = getNumber(firstItem, config.x, firstItemIdx) + (getNumber(firstItem, config.lineLength ?? config.length, firstItemIdx) ?? 0)
+      const firstItemEnd = getNumber(firstItem, config.x, firstItemIdx) + this._getLineDuration(firstItem, firstItemIdx)
       const lastItemStart = getNumber(lastItem, config.x, lastItemIdx)
-      const lastItemEnd = getNumber(lastItem, config.x, lastItemIdx) + (getNumber(lastItem, config.lineLength ?? config.length, lastItemIdx) ?? 0)
+      const lastItemEnd = getNumber(lastItem, config.x, lastItemIdx) + this._getLineDuration(lastItem, lastItemIdx)
       const fullTimeRange = lastItemEnd - firstItemStart
-      const firstItemHeight = this._getLineHeight(firstItem, firstItemIdx, rowHeight)
-      const lastItemHeight = this._getLineHeight(lastItem, lastItemIdx, rowHeight)
+      const firstItemHeight = this._getLineWidth(firstItem, firstItemIdx, rowHeight)
+      const lastItemHeight = this._getLineWidth(lastItem, lastItemIdx, rowHeight)
 
       if ((firstItemEnd - firstItemStart) / fullTimeRange * this._width < firstItemHeight) lineBleed[0] = firstItemHeight / 2
       if ((lastItemEnd - lastItemStart) / fullTimeRange * this._width < lastItemHeight) lineBleed[1] = lastItemHeight / 2
@@ -273,7 +281,7 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
       .remove()
 
     // Row background rects
-    const timelineWidth = xRange[1] - xRange[0] + this._rowIconBleed[0] + this._rowIconBleed[1] + this._lineBleed[1]
+    const timelineWidth = xRange[1] - xRange[0] + this._rowIconBleed[0] + this._rowIconBleed[1] + this._lineBleed[0] + this._lineBleed[1]
     const numRows = Math.max(Math.floor(yHeight / rowHeight), numRowLabels)
     const recordTypes = Array(numRows).fill(null).map((_, i) => rowLabels[i])
     const rects = this._rowsGroup.selectAll<SVGRectElement, number>(`.${s.row}`)
@@ -445,9 +453,14 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
     return lineLength
   }
 
-  private _getLineHeight (d: Datum, i: number, rowHeight: number): number {
+  private _getLineWidth (d: Datum, i: number, rowHeight: number): number {
     const { config } = this
     return getNumber(d, config.lineWidth, i) ?? Math.max(Math.floor(rowHeight / 2), 1)
+  }
+
+  private _getLineDuration (d: Datum, i: number): number {
+    const { config } = this
+    return getNumber(d, config.lineLength ?? config.length, i) ?? 0
   }
 
   private _prepareLinesData (data: Datum[], rowOrdinalScale: ScaleOrdinal<string, number>, rowHeight: number): (Datum & TimelineLineRenderState)[] {
@@ -460,7 +473,7 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
         this._getRecordKey(d, i), getNumber(d, config.x, i),
       ].join('-')
 
-      const lineHeight = this._getLineHeight(d, i, rowHeight)
+      const lineHeight = this._getLineWidth(d, i, rowHeight)
       const lineLength = this._getLineLength(d, i)
 
       if (lineLength < 0) {
@@ -511,8 +524,8 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
 
       const y1 = rowOrdinalScale(this._getRecordKey(startingLine, startingLineIndex)) * rowHeight + rowHeight / 2
       const y2 = rowOrdinalScale(this._getRecordKey(endingLine, endingLineIndex)) * rowHeight + rowHeight / 2
-      const startingLineHeight = this._getLineHeight(startingLine, startingLineIndex, rowHeight)
-      const endingLineHeight = this._getLineHeight(endingLine, endingLineIndex, rowHeight)
+      const startingLineHeight = this._getLineWidth(startingLine, startingLineIndex, rowHeight)
+      const endingLineHeight = this._getLineWidth(endingLine, endingLineIndex, rowHeight)
 
       const arrowY1 = y1 + startingLineHeight / 2 + (l.lineSourceMarginPx ?? 1)
       const arrowY2 = y2 - endingLineHeight / 2 - (l.lineTargetMarginPx ?? 1)
