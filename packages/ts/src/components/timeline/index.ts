@@ -39,6 +39,12 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
   public config: TimelineConfigInterface<Datum> = this._defaultConfig
 
   events = {
+    [Timeline.selectors.background]: {
+      wheel: this._onMouseWheel.bind(this),
+    },
+    [Timeline.selectors.label]: {
+      wheel: this._onMouseWheel.bind(this),
+    },
     [Timeline.selectors.rows]: {
       wheel: this._onMouseWheel.bind(this),
     },
@@ -134,7 +140,7 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
           .call(trimSVGText, config.rowMaxLabelWidth ?? config.maxLabelWidth)
 
         const labelWidth = label.node().getBBox().width
-        this._labelsGroup.empty()
+        label.remove()
 
         const tolerance = 1.15 // Some characters are wider than others so we add a little of extra space to take that into account
         this._labelWidth = labelWidth ? tolerance * labelWidth + this._labelMargin : 0
@@ -156,7 +162,7 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
 
     // Small segments bleed
     const lineBleed = [1, 1] as [number, number]
-    if (config.showEmptySegments && config.lineCap) {
+    if (config.showEmptySegments && config.lineCap && firstItem && lastItem) {
       const firstItemStart = getNumber(firstItem, config.x, firstItemIdx)
       const firstItemEnd = getNumber(firstItem, config.x, firstItemIdx) + this._getLineDuration(firstItem, firstItemIdx)
       const lastItemStart = getNumber(lastItem, config.x, lastItemIdx)
@@ -172,11 +178,11 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
 
     // Icon bleed
     const iconBleed = [0, 0] as [number, number]
-    if (config.lineStartIcon) {
+    if (config.lineStartIcon && firstItem) {
       iconBleed[0] = getIconBleed(firstItem, firstItemIdx, config.lineStartIcon, config.lineStartIconSize, config.lineStartIconArrangement, rowHeight)
     }
 
-    if (config.lineEndIcon) {
+    if (config.lineEndIcon && lastItem) {
       iconBleed[1] = getIconBleed(lastItem, lastItemIdx, config.lineEndIcon, config.lineEndIconSize, config.lineEndIconArrangement, rowHeight)
     }
 
@@ -435,7 +441,8 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
     this._updateScrollPosition(0)
 
     // Clip path
-    this._clipPath.select('rect')
+    const clipPathRect = this._clipPath.select('rect')
+    smartTransition(clipPathRect, clipPathRect.attr('width') ? duration : 0)
       .attr('x', xStart)
       .attr('width', timelineWidth)
       .attr('height', this._height)
@@ -535,21 +542,24 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
       // Points array
       const sourceMargin = a.lineSourceMarginPx ?? TIMELINE_DEFAULT_ARROW_MARGIN
       const targetMargin = a.lineTargetMarginPx ?? TIMELINE_DEFAULT_ARROW_MARGIN
-      const y1 = sourceLineY < targetLineY ? sourceLineY + sourceLineWidth / 2 : sourceLineY - sourceLineWidth / 2
-      const y2 = sourceLineY < targetLineY ? targetLineY - targetLineWidth / 2 : targetLineY + targetLineWidth / 2
-      const points = [[x1, y1 + sourceMargin]] as [number, number][]
+      const y1 = sourceLineY < targetLineY ? sourceLineY + sourceLineWidth / 2 + sourceMargin : sourceLineY - sourceLineWidth / 2 - sourceMargin
+      const y2 = sourceLineY < targetLineY ? targetLineY - targetLineWidth / 2 - targetMargin : targetLineY + targetLineWidth / 2 + targetMargin
+      const points = [[x1, y1]] as [number, number][]
       const threshold = 5
       if (Math.abs(x2 - x1) > threshold) {
         if ((x1 < x2) && !isX2OutsideTargetLineStart) {
+          points.push([x1, (y1 + targetLineY) / 2]) // A dummy point to enable smooth transitions when arrows change
           points.push([x1, targetLineY])
           points.push([x2 - targetMargin, targetLineY])
         } else {
-          points.push([x1, y1 + Math.sign(targetLineY - sourceLineY) * (rowHeight / 2 - sourceMargin)])
-          points.push([x2, y1 + Math.sign(targetLineY - sourceLineY) * (rowHeight / 2 - sourceMargin)])
-          points.push([x2, y2 - targetMargin])
+          points.push([x1, y2 - Math.sign(targetLineY - sourceLineY) * (rowHeight / 4)])
+          points.push([x2, y2 - Math.sign(targetLineY - sourceLineY) * (rowHeight / 4)])
+          points.push([x2, y2])
         }
       } else {
-        points.push([x1, y2 - targetMargin])
+        points.push([x1, y1 + (y2 - y1) / 4]) // A dummy point to enable smooth transitions
+        points.push([x1, y1 + 3 * (y2 - y1) / 4]) // A dummy point to enable smooth transitions
+        points.push([x1, y2])
       }
 
       return {
