@@ -546,21 +546,26 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
       const targetMargin = a.lineTargetMarginPx ?? TIMELINE_DEFAULT_ARROW_MARGIN
       const y1 = sourceLineY < targetLineY ? sourceLineY + sourceLineWidth / 2 + sourceMargin : sourceLineY - sourceLineWidth / 2 - sourceMargin
       const y2 = sourceLineY < targetLineY ? targetLineY - targetLineWidth / 2 - targetMargin : targetLineY + targetLineWidth / 2 + targetMargin
+      const arrowHeadLength = a.arrowHeadLength ?? TIMELINE_DEFAULT_ARROW_HEAD_LENGTH
+      const isForwardArrow = x1 < x2 && !isX2OutsideTargetLineStart
+      const threshold = arrowHeadLength + (isForwardArrow ? -targetMargin : 0)
+
       const points = [[x1, y1]] as [number, number][]
-      const threshold = a.arrowHeadLength ?? TIMELINE_DEFAULT_ARROW_HEAD_LENGTH
       if (Math.abs(x2 - x1) > threshold) {
-        if ((x1 < x2) && !isX2OutsideTargetLineStart) {
+        if (isForwardArrow) {
           points.push([x1, (y1 + targetLineY) / 2]) // A dummy point to enable smooth transitions when arrows change
           points.push([x1, targetLineY])
           points.push([x2 - targetMargin, targetLineY])
         } else {
-          points.push([x1, y2 - Math.sign(targetLineY - sourceLineY) * (rowHeight / 4)])
-          points.push([x2, y2 - Math.sign(targetLineY - sourceLineY) * (rowHeight / 4)])
+          const verticalOffset = Math.sign(targetLineY - sourceLineY) * (rowHeight / 4)
+          points.push([x1, y2 - verticalOffset])
+          points.push([x2, y2 - verticalOffset])
           points.push([x2, y2])
         }
       } else {
-        points.push([x1, y1 + (y2 - y1) / 4]) // A dummy point to enable smooth transitions
-        points.push([x1, y1 + 3 * (y2 - y1) / 4]) // A dummy point to enable smooth transitions
+        const quarterOffset = (y2 - y1) / 4
+        points.push([x1, y1 + quarterOffset]) // A dummy point to enable smooth transitions
+        points.push([x1, y1 + 3 * quarterOffset]) // A dummy point to enable smooth transitions
         points.push([x1, y2])
       }
 
