@@ -179,11 +179,11 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
     // Icon bleed
     const iconBleed = [0, 0] as [number, number]
     if (config.lineStartIcon) {
-      iconBleed[0] = max(data, (d, i) => getIconBleed(d, i, config.lineStartIcon, config.lineStartIconSize, config.lineStartIconArrangement, rowHeight))
+      iconBleed[0] = max(data, (d, i) => getIconBleed(d, i, config.lineStartIcon, config.lineStartIconSize, config.lineStartIconArrangement, rowHeight)) || 0
     }
 
     if (config.lineEndIcon) {
-      iconBleed[1] = max(data, (d, i) => getIconBleed(d, i, config.lineEndIcon, config.lineEndIconSize, config.lineEndIconArrangement, rowHeight))
+      iconBleed[1] = max(data, (d, i) => getIconBleed(d, i, config.lineEndIcon, config.lineEndIconSize, config.lineEndIconArrangement, rowHeight)) || 0
     }
 
     this._rowIconBleed = iconBleed
