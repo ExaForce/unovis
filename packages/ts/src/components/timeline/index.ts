@@ -548,7 +548,7 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
       const y2 = sourceLineY < targetLineY ? targetLineY - targetLineWidth / 2 - targetMargin : targetLineY + targetLineWidth / 2 + targetMargin
       const arrowHeadLength = a.arrowHeadLength ?? TIMELINE_DEFAULT_ARROW_HEAD_LENGTH
       const isForwardArrow = x1 < x2 && !isX2OutsideTargetLineStart
-      const threshold = arrowHeadLength + (isForwardArrow ? -targetMargin : 0)
+      const threshold = arrowHeadLength + (isForwardArrow ? targetMargin : 0)
 
       const points = [[x1, y1]] as [number, number][]
       if (Math.abs(x2 - x1) > threshold) {
