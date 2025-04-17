@@ -111,11 +111,17 @@ export class VisAreaComponent<Datum> implements AreaConfigInterface<Datum>, Afte
   /** Optional area cursor. String or accessor function. Default: `null` */
   @Input() cursor?: StringAccessor<Datum[]>
 
-  /** If an area is smaller than 1px, extend it to have 1px height.
+  /** If an area is smaller than 1px, extend it to have 1px height. Default: `false` */
+  @Input() minHeight1Px?: boolean
+
+  /** Minimum height of the area, use carefully.
    * This setting is useful when some of the area values are zeros or very small so visually they become
    * practically invisible, but you want to show that the data behind them exists and they're not just empty segments.
-   * Default: `false` */
-  @Input() minHeight1Px?: boolean
+   * Default: `undefined` */
+  @Input() minHeight?: number
+
+  /** Whether to stack min height areas or not. Default: `undefined` */
+  @Input() stackMinHeight?: boolean
   @Input() data: Datum[]
 
   component: Area<Datum> | undefined
@@ -137,8 +143,8 @@ export class VisAreaComponent<Datum> implements AreaConfigInterface<Datum>, Afte
   }
 
   private getConfig (): AreaConfigInterface<Datum> {
-    const { duration, events, attributes, x, y, id, color, xScale, yScale, excludeFromDomainCalculation, curveType, baseline, opacity, cursor, minHeight1Px } = this
-    const config = { duration, events, attributes, x, y, id, color, xScale, yScale, excludeFromDomainCalculation, curveType, baseline, opacity, cursor, minHeight1Px }
+    const { duration, events, attributes, x, y, id, color, xScale, yScale, excludeFromDomainCalculation, curveType, baseline, opacity, cursor, minHeight1Px, minHeight, stackMinHeight } = this
+    const config = { duration, events, attributes, x, y, id, color, xScale, yScale, excludeFromDomainCalculation, curveType, baseline, opacity, cursor, minHeight1Px, minHeight, stackMinHeight }
     const keys = Object.keys(config) as (keyof AreaConfigInterface<Datum>)[]
     keys.forEach(key => { if (config[key] === undefined) delete config[key] })
 
