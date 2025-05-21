@@ -8,15 +8,15 @@ export const title = 'Dynamic Layout'
 export const subTitle = 'Select Layout From Dropdown'
 
 export const component = (props: ExampleViewerDurationProps): React.ReactNode => {
-  const [data, setData] = useState(generateNodeLinkData(50))
+  const [data, setData] = useState(generateNodeLinkData(100))
   const layouts = Object.values(GraphLayoutType)
-  const initial = GraphLayoutType.Circular
+  const initial = GraphLayoutType.Parallel
   const [layout, setLayout] = useState<string>(initial)
 
   // Generate new data every 2 seconds
   useEffect(() => {
     setTimeout(() => {
-      const newData = generateNodeLinkData(10 + Math.floor(randomNumberGenerator() * 50))
+      const newData = generateNodeLinkData(10 + Math.floor(randomNumberGenerator() * 150))
 
       // Adding some random x, y values to the nodes for `GraphLayoutType.Precalculated`
       newData.nodes.forEach(n => {
@@ -25,20 +25,32 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
       })
 
       setData(newData)
-    }, 2000)
+    }, 10000)
   }, [data])
 
   const forceLayoutSettings = useMemo(() => ({
     fixNodePositionAfterSimulation: true,
   }), [])
 
+  console.log(data.nodes)
   return (
     <>
       <select onChange={e => setLayout(e.target.value)} defaultValue={initial}>
         {layouts.map(l => <option key={l} value={l}>{l}</option>)}
       </select>
       <VisSingleContainer data={data} height={900}>
-        <VisGraph layoutType={layout} forceLayoutSettings={forceLayoutSettings} duration={props.duration}/>
+        <VisGraph
+          layoutType={layout}
+          forceLayoutSettings={forceLayoutSettings}
+          duration={props.duration}
+          layoutParallelNodeSubGroup={n => n.subgroup}
+          layoutNodeGroup={n => n.group}
+          layoutParallelNodesPerColumn={3} 
+          layoutParallelSubGroupsPerRow={2}
+          layoutParallelGroupSpacing={80}
+          layoutParallelNodeSpacing={35}
+          layoutParallelSubGroupSpacing={30}
+        />
       </VisSingleContainer>
     </>
   )

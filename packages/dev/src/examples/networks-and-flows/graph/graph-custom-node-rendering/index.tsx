@@ -44,7 +44,7 @@ export const component = (): React.ReactNode => {
 
   // Modifying layout after the calculation
   const onLayoutCalculated = useCallback((nodes: GraphNode<CustomGraphNode, CustomGraphLink>[], links: GraphLink<CustomGraphNode, CustomGraphLink>[]) => {
-    nodes[0].x = 100
+    // nodes[0].x = 100
   }, [])
 
 

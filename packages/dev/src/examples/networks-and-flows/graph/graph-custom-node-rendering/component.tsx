@@ -121,6 +121,8 @@ function CustomGraphComponent<N extends CustomGraphNode, L extends CustomGraphLi
         selectedNodeId={selectedNodeId}
         events={events}
         zoomScaleExtent={useMemo(() => [0.5, 3], [])}
+        layoutParallelNodeSpacing={useMemo(() => [150, 100], [])}
+        layoutParallelGroupSpacing={600}
         {...props}
       />
     </VisSingleContainer>
