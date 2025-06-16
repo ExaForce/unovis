@@ -417,8 +417,7 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
       .remove()
 
     // Scroll Bar
-    const contentBBox = this._rowsGroup.node().getBBox() // We determine content size using the rects group because lines are animated
-    const absoluteContentHeight = contentBBox.height
+    const absoluteContentHeight = recordTypes.length * rowHeight
     this._scrollbarHeight = yHeight * yHeight / absoluteContentHeight || 0
     this._maxScroll = Math.max(absoluteContentHeight - yHeight, 0)
 
