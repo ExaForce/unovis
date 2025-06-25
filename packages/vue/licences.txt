@@ -1,6 +1,6 @@
 name                            license period  license type  installed version  author
 ----                            --------------  ------------  -----------------  ------
-@antfu/eslint-config            perpetual       MIT           3.9.1              Anthony Fu <anthonyfu117@hotmail.com> (https://github.com/antfu/)
+@antfu/eslint-config            perpetual       MIT           3.16.0             Anthony Fu <anthonyfu117@hotmail.com> (https://github.com/antfu/)
 @rollup/plugin-node-resolve     perpetual       MIT           13.3.0             Rich Harris <richard.a.harris@gmail.com>
 @vitejs/plugin-vue              perpetual       MIT           5.2.0              Evan You
 @vue/tsconfig                   perpetual       MIT           0.4.0              Haoqun Jiang <npm@haoqun.me>
