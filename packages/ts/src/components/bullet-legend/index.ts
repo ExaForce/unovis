@@ -1,10 +1,14 @@
 import { select, Selection } from 'd3-selection'
+import toPx from 'to-px'
 
 // Utils
 import { merge } from 'utils/data'
 
 // Config
 import { BulletLegendDefaultConfig, BulletLegendConfigInterface } from './config'
+
+// Constants
+import { DEFAULT_BULLET_SIZE } from './constants'
 
 // Local Types
 import { BulletLegendItemInterface, BulletLegendOrientation } from './types'
@@ -25,7 +29,7 @@ export class BulletLegend {
   prevConfig: BulletLegendConfigInterface
   protected _container: HTMLElement
 
-  private _colorAccessor = (d: BulletLegendItemInterface): string => d.color
+  private _colorAccessor = (d: BulletLegendItemInterface): string|string[] => d.color
 
   constructor (element: HTMLElement, config?: BulletLegendConfigInterface) {
     this._container = element
@@ -66,7 +70,13 @@ export class BulletLegend {
       .call(createBullets)
 
     legendItemsMerged.select<SVGElement>(`.${s.bullet}`)
-      .style('width', config.bulletSize)
+      .style('width', (d: BulletLegendItemInterface) => {
+        const colors = Array.isArray(d.color) ? d.color : [d.color]
+        const numColors = colors.length
+        const baseSize = config.bulletSize ? toPx(config.bulletSize) : DEFAULT_BULLET_SIZE
+        const spacing = config.bulletSpacing
+        return `${baseSize * numColors + spacing * (numColors - 1)}px`
+      })
       .style('height', config.bulletSize)
       .style('box-sizing', 'content-box')
       .call(updateBullets, this.config, this._colorAccessor)
