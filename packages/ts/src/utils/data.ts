@@ -312,7 +312,7 @@ export function getNearest<Datum> (
   data: Datum[],
   value: number,
   accessor: NumericAccessor<Datum>,
-  direction: FindNearestDirection
+  direction?: FindNearestDirection
 ): Datum {
   if (data.length <= 1) return data[0]
 
