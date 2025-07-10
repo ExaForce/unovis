@@ -14,7 +14,7 @@ import { DEFAULT_BULLET_SIZE } from './constants'
 import { BulletLegendItemInterface, BulletLegendOrientation } from './types'
 
 // Modules
-import { createBullets, updateBullets } from './modules/shape'
+import { createBullets, updateBullets, getBulletsTotalWidth } from './modules/shape'
 
 // Styles
 import * as s from './style'
@@ -70,12 +70,13 @@ export class BulletLegend {
       .call(createBullets)
 
     legendItemsMerged.select<SVGElement>(`.${s.bullet}`)
-      .style('width', (d: BulletLegendItemInterface) => {
+      .style('width', function (d: BulletLegendItemInterface) {
         const colors = Array.isArray(d.color) ? d.color : [d.color]
         const numColors = colors.length
-        const baseSize = config.bulletSize ? toPx(config.bulletSize) : DEFAULT_BULLET_SIZE
+        const defaultSize = toPx(getComputedStyle(this).getPropertyValue('--vis-legend-bullet-size')) || 9
+        const baseSize = config.bulletSize ? toPx(config.bulletSize) : defaultSize
         const spacing = config.bulletSpacing
-        return `${baseSize * numColors + spacing * (numColors - 1)}px`
+        return `${getBulletsTotalWidth(baseSize, numColors, spacing)}px`
       })
       .style('height', config.bulletSize)
       .style('box-sizing', 'content-box')

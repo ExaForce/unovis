@@ -1,5 +1,6 @@
 import { Selection, select } from 'd3-selection'
 import { symbol } from 'd3-shape'
+import toPx from 'to-px'
 
 // Types
 import { ColorAccessor } from 'types/accessor'
@@ -15,7 +16,6 @@ import { PATTERN_SIZE_PX } from 'styles/patterns'
 // Local types
 import { BulletLegendConfigInterface } from '../config'
 import { BulletShape, BulletLegendItemInterface } from '../types'
-import { DEFAULT_BULLET_SIZE } from '../constants'
 
 // Size with respect to the viewBox. We use this to compute path data which is independent of the
 // the configured size.
@@ -30,6 +30,11 @@ const shapeScale: Record<SymbolType, number> = {
   [BulletShape.Star]: 0.3,
   [BulletShape.Triangle]: Math.sqrt(3) / 4,
   [BulletShape.Wye]: 5 / 11,
+}
+
+export function getBulletsTotalWidth (bulletSize: number, numBullets: number, spacing: number): number {
+  if (numBullets < 1) return 0
+  return bulletSize * numBullets + spacing * (numBullets - 1)
 }
 
 export function createBullets (
@@ -53,8 +58,9 @@ export function updateBullets (
     const colors = ensureArray(d.color ?? getColor(d, colorAccessor, i))
     const numBullets = colors.length
     const bulletWidth = BULLET_SIZE
-    const spacing = config.bulletSpacing * (BULLET_SIZE / DEFAULT_BULLET_SIZE) // Scale spacing relative to bullet size
-    const width = bulletWidth * numBullets + spacing * (numBullets - 1)
+    const defaultBulletSize = toPx(getComputedStyle(els[i]).getPropertyValue('--vis-legend-bullet-size'))
+    const spacing = config.bulletSpacing * (BULLET_SIZE / defaultBulletSize) // Scale spacing relative to bullet size
+    const width = getBulletsTotalWidth(bulletWidth, numBullets, spacing)
     const height = shape === BulletShape.Line ? BULLET_SIZE / 2.5 : BULLET_SIZE
 
     const selection = select(els[i]).select('svg')

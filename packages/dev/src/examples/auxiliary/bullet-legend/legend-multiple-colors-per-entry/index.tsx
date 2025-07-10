@@ -21,7 +21,7 @@ export const component = (): React.ReactNode => {
 
   return (
     <div className={s.legendExample}>
-      <VisBulletLegend items={items} bulletSize='20px'/>
+      <VisBulletLegend items={items}/>
     </div>
   )
 }
