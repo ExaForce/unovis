@@ -115,8 +115,7 @@ export class XYContainer<Datum> extends ContainerCore {
 
   public setData (data: Datum[], preventRender?: boolean): void {
     const { components, config } = this
-    const hasDataUpdated = !isEqual(this.datamodel.data, data)
-    if (!hasDataUpdated || !data) return
+    if (!data) return
 
     this.datamodel.data = data
 
@@ -127,8 +126,16 @@ export class XYContainer<Datum> extends ContainerCore {
     config.crosshair?.setData(data)
     config.xAxis?.setData(data)
     config.yAxis?.setData(data)
-    config.tooltip?.hide()
-    config.crosshair?.hide()
+
+    // Hide tooltip and crosshair if the data has changed
+    // Important: We still want to do `setData` for the components above even if the data hasn't changed
+    // because calling `updateContainer` may add new components and we need to pass them the data
+    const hasDataUpdated = !isEqual(this.datamodel.data, data)
+    if (hasDataUpdated) {
+      config.tooltip?.hide()
+      config.crosshair?.hide()
+    }
+
     if (!preventRender) this.render()
   }
 
