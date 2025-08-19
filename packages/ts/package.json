@@ -30,10 +30,10 @@
   "type": "module",
   "sideEffects": [
     "styles/index.js",
-    "lib/styles/index.js"
+    "dist/styles/index.js"
   ],
   "scripts": {
-    "build": "sha=$(tar cf - ./src | shasum); if [[ $(echo $sha) == $(< .srcsha) ]] && [[ -d \"./lib\" ]]; then echo \"Lib Build Exists\"; else npm run forcebuild; echo $sha > .srcsha; fi",
+    "build": "sha=$(tar cf - ./src | shasum); if [[ $(echo $sha) == $(< .srcsha) ]] && [[ -d \"./dist\" ]]; then echo \"Lib Build Exists\"; else npm run forcebuild; echo $sha > .srcsha; fi",
     "forcebuild": "rimraf dist; vite build; cp LICENSE README.md package.json ./dist",
     "type:check": "tsc --noEmit",
     "publish:dist": "cd ./dist; npm publish"
