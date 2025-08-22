@@ -222,8 +222,9 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
         : this._shouldRenderMinMaxTicksOnly()
           ? axisScale.domain()
           : axisScale.ticks(this._getNumTicks())
-
     axisGen.tickValues(tickValues)
+
+    const tickCount = tickValues.length
 
     // Interrupting all active transitions first to prevent them from being stuck.
     // Somehow we see it happening in Angular apps.
