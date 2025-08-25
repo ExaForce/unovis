@@ -7,8 +7,6 @@ import { merge } from 'utils/data'
 // Config
 import { BulletLegendDefaultConfig, BulletLegendConfigInterface } from './config'
 
-// Constants
-import { DEFAULT_BULLET_SIZE } from './constants'
 
 // Local Types
 import { BulletLegendItemInterface, BulletLegendOrientation } from './types'
