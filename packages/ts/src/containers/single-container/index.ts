@@ -135,8 +135,8 @@ export class SingleContainer<Data> extends ContainerCore {
       const animated = currentWidth || currentHeight
 
       smartTransition(this.svg, animated ? duration : 0)
-        .attr('width', scaledWidth)
-        .attr('height', scaledHeight)
+        .attr('width', this.config.width || scaledWidth)
+        .attr('height', this.config.height || scaledHeight)
         .attr('viewBox', `${0} ${0} ${componentWidth} ${fitToWidth ? scaledHeight : componentHeight}`)
         .attr('preserveAspectRatio', 'xMinYMin')
     } else {
