@@ -1,5 +1,5 @@
 import { select, Selection, pointer } from 'd3-selection'
-import { zoom, D3ZoomEvent, ZoomBehavior } from 'd3-zoom'
+import { zoom, D3ZoomEvent, ZoomBehavior, zoomIdentity, ZoomTransform } from 'd3-zoom'
 import { sankey, SankeyGraph } from 'd3-sankey'
 import { extent, max, sum } from 'd3-array'
 import { scaleLinear } from 'd3-scale'
@@ -45,6 +45,8 @@ export class Sankey<
   public config: SankeyConfigInterface<N, L> = this._defaultConfig
   datamodel: GraphDataModel<N, L, SankeyNode<N, L>, SankeyLink<N, L>> = new GraphDataModel()
   public g: Selection<SVGGElement, unknown, null, undefined>
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  private _gNode: SVGGElement & { __zoom: ZoomTransform }
   private _extendedWidth: number | undefined = undefined
   private _extendedHeight: number | undefined = undefined
   private _extendedHeightIncreased: number | undefined = undefined
@@ -84,9 +86,15 @@ export class Sankey<
   constructor (config?: SankeyConfigInterface<N, L>) {
     super()
     if (config) this.setConfig(config)
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    this._gNode = this.g.node() as (SVGGElement & { __zoom: ZoomTransform })
     this._backgroundRect = this.g.append('rect').attr('class', s.background).style('pointer-events', 'all')
     this._linksGroup = this.g.append('g').attr('class', s.links)
     this._nodesGroup = this.g.append('g').attr('class', s.nodes)
+
+    // Initialize scale values from config
+    this._horizontalScale = this.config.zoomHorizontalScale ?? 1
+    this._verticalScale = this.config.zoomVerticalScale ?? 1
 
     // Set up d3-zoom to handle wheel/pinch/drag smoothly
     this._zoomBehavior = zoom<SVGGElement, unknown>()
@@ -200,7 +208,7 @@ export class Sankey<
     const nodeSelection = this._nodesGroup.selectAll<SVGGElement, SankeyNode<N, L>>(`.${s.nodeGroup}`)
       .data(nodes, (d, i) => config.id(d, i) ?? i)
     const nodeSelectionEnter = nodeSelection.enter().append('g').attr('class', s.nodeGroup)
-    const sankeyWidth = this.sizing === Sizing.Fit ? this._width : this._extendedWidth
+    const sankeyWidth = (this.sizing === Sizing.Fit ? this._width : this._extendedWidth) * this._horizontalScale
     nodeSelectionEnter.call(createNodes, this.config, sankeyWidth, bleed)
     nodeSelection.merge(nodeSelectionEnter).call(updateNodes, config, sankeyWidth, bleed, this._hasLinks(), duration, nodeSpacing)
     nodeSelection.exit<SankeyNode<N, L>>()
@@ -237,10 +245,15 @@ export class Sankey<
     if (isNumber(horizontalScale)) this._horizontalScale = Math.min(max, Math.max(min, horizontalScale))
     if (isNumber(verticalScale)) this._verticalScale = Math.min(max, Math.max(min, verticalScale))
 
-    // Sync d3-zoom baseline so next wheel delta is relative to our new state
-    this._lastZoomK = 1
-    this._lastZoomX = 0
-    this._lastZoomY = 0
+    // Sync D3's zoom transform to match our scale
+    // Use the geometric mean as a reasonable approximation for D3's single scale
+    const effectiveScale = Math.sqrt(
+      (this._horizontalScale ?? 1) * (this._verticalScale ?? 1)
+    )
+    const currentTransform = zoomIdentity.scale(effectiveScale)
+    this._gNode.__zoom = currentTransform
+    this._lastZoomK = effectiveScale
+
     this._render(this.config.duration)
   }
 
@@ -266,15 +279,13 @@ export class Sankey<
   }
 
   public fitView (duration = this.config.duration): void {
-    if (!this.config.enableZoom) return
-
     const initH = this.config.zoomHorizontalScale ?? 1
     const initV = this.config.zoomVerticalScale ?? 1
     const initPanX = this.config.zoomPanX ?? 0
     const initPanY = this.config.zoomPanY ?? 0
 
-    const curH = (isNumber(this._horizontalScale) ? this._horizontalScale : initH)
-    const curV = (isNumber(this._verticalScale) ? this._verticalScale : initV)
+    const curH = this._horizontalScale ?? 1
+    const curV = this._verticalScale ?? 1
     const changed = Math.abs(curH - initH) > 1e-6 || Math.abs(curV - initV) > 1e-6 || Math.abs(this._panX - initPanX) > 0.5 || Math.abs(this._panY - initPanY) > 0.5
     if (!changed) return
 
@@ -283,8 +294,11 @@ export class Sankey<
     this._panX = initPanX
     this._panY = initPanY
 
-    // Reset baseline for future deltas
-    this._lastZoomK = 1
+    // Sync D3 zoom transform with our scales
+    const effectiveScale = Math.sqrt(initH * initV)
+    const currentTransform = zoomIdentity.scale(effectiveScale)
+    this._gNode.__zoom = currentTransform
+    this._lastZoomK = effectiveScale
     this._lastZoomX = 0
     this._lastZoomY = 0
 
@@ -326,9 +340,9 @@ export class Sankey<
     const isHorizontalOnly = isHorizontalOnlyKey || mode === SankeyZoomMode.X
     const isVerticalOnly = isVerticalOnlyKey || mode === SankeyZoomMode.Y
 
-    // Controlled: treat config as the source of truth; overrides only if user called setters
-    const hCurrent = (isNumber(this._horizontalScale) ? this._horizontalScale : config.zoomHorizontalScale) ?? 1
-    const vCurrent = (isNumber(this._verticalScale) ? this._verticalScale : config.zoomVerticalScale) ?? 1
+    // Use our scale state as the source of truth (not config, not D3's k)
+    const hCurrent = this._horizontalScale ?? 1
+    const vCurrent = this._verticalScale ?? 1
     const hNext = isVerticalOnly ? hCurrent : Math.min(max, Math.max(min, hCurrent * deltaK))
     const vNext = isHorizontalOnly ? vCurrent : Math.min(max, Math.max(min, vCurrent * deltaK))
 
@@ -506,12 +520,12 @@ export class Sankey<
   }
 
   private _applyLayoutScaling (): void {
-    const { config, datamodel } = this
+    const { datamodel } = this
     const nodes = datamodel.nodes
     const links = datamodel.links
-    // Use controlled config values if provided; otherwise use internal runtime scales
-    const hScale = (config.zoomHorizontalScale ?? this._horizontalScale ?? 1)
-    const vScale = (config.zoomVerticalScale ?? this._verticalScale ?? 1)
+    // Use our scale state as the single source of truth
+    const hScale = this._horizontalScale ?? 1
+    const vScale = this._verticalScale ?? 1
 
     if ((hScale === 1 || !isFinite(hScale)) && (vScale === 1 || !isFinite(vScale))) return
 
