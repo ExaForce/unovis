@@ -39,7 +39,7 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
 
   return (
     <>
-      <VisSingleContainer data={data} sizing={Sizing.Extend}>
+      <VisSingleContainer data={data} sizing={Sizing.FitHeight}>
         <VisSankey<ApiEndpointNode, ApiEndpointLink>
           labelPosition={Position.Right}
           labelVerticalAlign={VerticalAlign.Middle}

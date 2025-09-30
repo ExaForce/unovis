@@ -120,7 +120,7 @@ export class SingleContainer<Data> extends ContainerCore {
   public render (duration = this.config.duration): void {
     const { config, component } = this
 
-    if (config.sizing === Sizing.Extend || config.sizing === Sizing.FitWidth) {
+    if (config.sizing === Sizing.Extend || config.sizing === Sizing.FitWidth || config.sizing === Sizing.FitHeight) {
       const fitToWidth = config.sizing === Sizing.FitWidth
       const extendedSizeComponent = component as ExtendedSizeComponent
 
@@ -135,8 +135,8 @@ export class SingleContainer<Data> extends ContainerCore {
       const animated = currentWidth || currentHeight
 
       smartTransition(this.svg, animated ? duration : 0)
-        .attr('width', scaledWidth)
-        .attr('height', scaledHeight)
+        .attr('width', this.config.width || scaledWidth)
+        .attr('height', this.config.height || scaledHeight)
         .attr('viewBox', `${0} ${0} ${componentWidth} ${fitToWidth ? scaledHeight : componentHeight}`)
         .attr('preserveAspectRatio', 'xMinYMin')
     } else {

@@ -224,8 +224,8 @@ export class Sankey<
 
   private _prepareLayout (): void {
     const { config, bleed, datamodel } = this
-    const isExtendedSize = this.sizing === Sizing.Extend
-    const sankeyHeight = this.sizing === Sizing.Fit ? this._height : this._extendedHeight
+    const isExtendedSize = this.sizing === Sizing.Extend || this.sizing === Sizing.FitHeight
+    const sankeyHeight = (this.sizing === Sizing.Fit || this.sizing === Sizing.FitHeight) ? this._height : this._extendedHeight
     const sankeyWidth = this.sizing === Sizing.Fit ? this._width : this._extendedWidth
     this._sankey
       .size([
@@ -285,7 +285,7 @@ export class Sankey<
   }
 
   getHeight (): number {
-    return this.sizing === Sizing.Fit ? this._height : Math.max(this._extendedHeightIncreased || 0, this._extendedHeight || 0)
+    return (this.sizing === Sizing.Fit || this.sizing === Sizing.FitHeight) ? this._height : Math.max(this._extendedHeightIncreased || 0, this._extendedHeight || 0)
   }
 
   getLayoutWidth (): number {
@@ -293,7 +293,7 @@ export class Sankey<
   }
 
   getLayoutHeight (): number {
-    return this.sizing === Sizing.Fit ? this._height : (this._extendedHeightIncreased || this._extendedHeight)
+    return (this.sizing === Sizing.Fit || this.sizing === Sizing.FitHeight) ? this._height : (this._extendedHeightIncreased || this._extendedHeight)
   }
 
   getColumnCenters (): number[] {
