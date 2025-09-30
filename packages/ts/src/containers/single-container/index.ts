@@ -120,7 +120,7 @@ export class SingleContainer<Data> extends ContainerCore {
   public render (duration = this.config.duration): void {
     const { config, component } = this
 
-    if (config.sizing === Sizing.Extend || config.sizing === Sizing.FitWidth) {
+    if (config.sizing === Sizing.Extend || config.sizing === Sizing.FitWidth || config.sizing === Sizing.FitHeight) {
       const fitToWidth = config.sizing === Sizing.FitWidth
       const extendedSizeComponent = component as ExtendedSizeComponent
 

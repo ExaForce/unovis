@@ -9,6 +9,7 @@ export enum Sizing {
   Fit = 'fit',
   Extend = 'extend',
   FitWidth = 'fit_width',
+  FitHeight = 'fit_height',
 }
 
 export interface ExtendedSizeComponent {
