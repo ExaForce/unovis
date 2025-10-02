@@ -40,6 +40,8 @@ export interface SankeyConfigInterface<N extends SankeyInputNode, L extends Sank
   zoomScaleExtent?: [number, number];
   /** Zoom interaction mode. Default: `SankeyZoomMode.XY` */
   zoomMode?: SankeyZoomMode | string;
+  /** Render only visible nodes. Improves performance but can lead to label flickering when panning. Default: `false` */
+  zoomRenderOnlyVisibleNodes?: boolean;
   /** Type of animation on removing nodes. Default: `ExitTransitionType.Default` */
   exitTransitionType?: SankeyExitTransitionType;
   /** Type of animation on creating nodes. Default: `EnterTransitionType.Default` */
@@ -162,6 +164,7 @@ export const SankeyDefaultConfig: SankeyConfigInterface<SankeyInputNode, SankeyI
   enableZoom: true,
   zoomScaleExtent: [1, 5] as [number, number],
   zoomMode: SankeyZoomMode.Y,
+  zoomRenderOnlyVisibleNodes: false,
   exitTransitionType: SankeyExitTransitionType.Default,
   enterTransitionType: SankeyEnterTransitionType.Default,
   id: (d: SankeyInputNode, i: number) => (d as { _id: string })._id ?? `${i}`,

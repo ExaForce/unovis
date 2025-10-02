@@ -26,7 +26,16 @@ import { SankeyDefaultConfig, SankeyConfigInterface } from './config'
 import * as s from './style'
 
 // Local Types
-import { SankeyInputLink, SankeyInputNode, SankeyLayout, SankeyLink, SankeyNode, SankeyZoomMode } from './types'
+import {
+  SankeyEnterTransitionType,
+  SankeyExitTransitionType,
+  SankeyInputLink,
+  SankeyInputNode,
+  SankeyLayout,
+  SankeyLink,
+  SankeyNode,
+  SankeyZoomMode,
+} from './types'
 
 // Modules
 import { createLinks, removeLinks, updateLinks } from './modules/link'
@@ -172,7 +181,7 @@ export class Sankey<
     }
   }
 
-  _render (customDuration?: number): void {
+  _render (customDuration?: number, enterTransitionType?: SankeyEnterTransitionType, exitTransitionType?: SankeyExitTransitionType): void {
     const { config, bleed, datamodel: { nodes, links } } = this
     const duration = isNumber(customDuration) ? customDuration : config.duration
 
@@ -189,37 +198,82 @@ export class Sankey<
     // Prepare Layout
     this._prepareLayout()
 
+    // Filter out off-screen nodes and links after zoom/pan
+    const visibleNodes = config.zoomRenderOnlyVisibleNodes ? this._filterVisibleNodes(nodes, bleed) : nodes
+    const visibleLinks = config.zoomRenderOnlyVisibleNodes ? this._filterVisibleLinks(links, visibleNodes) : links
+
     // Links
     this._applyPanToGroups(duration, bleed)
     const linkSelection = this._linksGroup.selectAll<SVGGElement, SankeyLink<N, L>>(`.${s.link}`)
-      .data(links, (d, i) => config.id(d, i) ?? i)
+      .data(visibleLinks, (d, i) => `${d.source.id}-${d.target.id}`)
     const linkSelectionEnter = linkSelection.enter().append('g').attr('class', s.link)
     linkSelectionEnter.call(createLinks)
     linkSelection.merge(linkSelectionEnter).call(updateLinks, config, duration)
     linkSelection.exit<SankeyLink<N, L>>().call(removeLinks)
 
     // Nodes
-    // smartTransition(this._nodesGroup, duration).attr('transform', `translate(${bleed.left},${bleed.top})`)
-
     // Sort nodes by x0 for optimize label rendering performance (see `getXDistanceToNextNode` in `modules/node.ts`)
-    nodes.sort((a, b) => a.x0 - b.x0)
+    visibleNodes.sort((a, b) => a.x0 - b.x0)
 
-    const nodeSpacing = this._getLayerSpacing(nodes)
+    // When zooming, we don't want to use the configured transition types
+    const nodeRenderConfig = (enterTransitionType || exitTransitionType) ? { ...config, enterTransitionType, exitTransitionType } : config
+
+    const nodeSpacing = this._getLayerSpacing(visibleNodes)
     const nodeSelection = this._nodesGroup.selectAll<SVGGElement, SankeyNode<N, L>>(`.${s.nodeGroup}`)
-      .data(nodes, (d, i) => config.id(d, i) ?? i)
+      .data(visibleNodes, (d, i) => nodeRenderConfig.id(d, i) ?? i)
     const nodeSelectionEnter = nodeSelection.enter().append('g').attr('class', s.nodeGroup)
     const sankeyWidth = (this.sizing === Sizing.Fit ? this._width : this._extendedWidth) * this._horizontalScale
-    nodeSelectionEnter.call(createNodes, this.config, sankeyWidth, bleed)
-    nodeSelection.merge(nodeSelectionEnter).call(updateNodes, config, sankeyWidth, bleed, this._hasLinks(), duration, nodeSpacing)
+    nodeSelectionEnter.call(createNodes, nodeRenderConfig, sankeyWidth, bleed)
+    nodeSelection.merge(nodeSelectionEnter).call(updateNodes, nodeRenderConfig, sankeyWidth, bleed, this._hasLinks(), duration, nodeSpacing)
     nodeSelection.exit<SankeyNode<N, L>>()
       .attr('class', s.nodeExit)
-      .call(removeNodes, config, duration)
+      .call(removeNodes, nodeRenderConfig, duration)
 
     // Background
     this._backgroundRect
       .attr('width', this.getWidth())
       .attr('height', this.getHeight())
       .attr('opacity', 0)
+  }
+
+  private _filterVisibleNodes (nodes: SankeyNode<N, L>[], bleed: Spacing): SankeyNode<N, L>[] {
+    // Calculate the visible viewport bounds in layout coordinates
+    const panX = (isFinite(this.config.zoomPanX) ? this.config.zoomPanX : this._panX) || 0
+    const panY = (isFinite(this.config.zoomPanY) ? this.config.zoomPanY : this._panY) || 0
+
+    // Viewport bounds in screen coordinates
+    const viewportLeft = 0
+    const viewportRight = this._width
+    const viewportTop = 0
+    const viewportBottom = this._height
+
+    // Transform to layout coordinates (inverse of the pan/bleed transform)
+    const layoutLeft = viewportLeft - bleed.left - panX
+    const layoutRight = viewportRight - bleed.left - panX
+    const layoutTop = viewportTop - bleed.top - panY
+    const layoutBottom = viewportBottom - bleed.top - panY
+
+    // Add a buffer to include nodes slightly outside the viewport for smooth transitions
+    const bufferX = 100
+    const bufferY = 100
+
+    return nodes.filter(node => {
+      // Check if node overlaps with visible area (with buffer)
+      return !(
+        node.x1 < layoutLeft - bufferX ||
+        node.x0 > layoutRight + bufferX ||
+        node.y1 < layoutTop - bufferY ||
+        node.y0 > layoutBottom + bufferY
+      )
+    })
+  }
+
+  private _filterVisibleLinks (links: SankeyLink<N, L>[], visibleNodes: SankeyNode<N, L>[]): SankeyLink<N, L>[] {
+    // Create a set of visible node ids for fast lookup
+    const visibleNodeIds = new Set(visibleNodes.map(n => n.id))
+
+    // A link is visible if its source or target node is visible
+    return links.filter(link => visibleNodeIds.has(link.source.id) || visibleNodeIds.has(link.target.id))
   }
 
   private _applyPanToGroups (duration: number, bleed: Spacing): void {
@@ -231,11 +285,11 @@ export class Sankey<
     smartTransition(this._nodesGroup, duration).attr('transform', `translate(${tx},${ty})`)
   }
 
-  private _scheduleRender (duration: number): void {
+  private _scheduleRender (duration: number, nodeEnterTransitionType?: SankeyEnterTransitionType, nodeExitTransitionType?: SankeyExitTransitionType): void {
     if (this._animationFrameId != null) return
 
     this._animationFrameId = requestAnimationFrame(() => {
-      this._render(duration)
+      this._render(duration, nodeEnterTransitionType, nodeExitTransitionType)
       this._animationFrameId = null
     })
   }
@@ -265,13 +319,13 @@ export class Sankey<
     this._panX = isFinite(x) ? x : 0
     this._panY = isFinite(y) ? y : 0
     this._lastZoomX = 0; this._lastZoomY = 0
-    this._scheduleRender(0)
+    this._scheduleRender(0, SankeyEnterTransitionType.Default, SankeyExitTransitionType.Default)
   }
 
   public panBy (dx: number, dy: number): void {
     this._panX += isFinite(dx) ? dx : 0
     this._panY += isFinite(dy) ? dy : 0
-    this._scheduleRender(0)
+    this._scheduleRender(0, SankeyEnterTransitionType.Default, SankeyExitTransitionType.Default)
   }
 
   public getPan (): [number, number] {
@@ -302,7 +356,7 @@ export class Sankey<
     this._lastZoomX = 0
     this._lastZoomY = 0
 
-    this._render(duration)
+    this._render(duration, SankeyEnterTransitionType.Default, SankeyExitTransitionType.Default)
   }
 
   private _onZoom (event: D3ZoomEvent<SVGGElement, unknown>): void {
@@ -325,7 +379,7 @@ export class Sankey<
       if (mode !== SankeyZoomMode.X) this._panY += dy
       this._lastZoomX = t.x
       this._lastZoomY = t.y
-      this._scheduleRender(0)
+      this._scheduleRender(0, SankeyEnterTransitionType.Default, SankeyExitTransitionType.Default)
       return
     }
 
@@ -387,7 +441,7 @@ export class Sankey<
     this._lastZoomX = t.x
     this._lastZoomY = t.y
 
-    this._scheduleRender(0)
+    this._scheduleRender(0, SankeyEnterTransitionType.Default, SankeyExitTransitionType.Default)
   }
 
   private _populateLinkAndNodeValues (): void {
