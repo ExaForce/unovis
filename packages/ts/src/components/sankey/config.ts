@@ -156,6 +156,10 @@ export interface SankeyConfigInterface<N extends SankeyInputNode, L extends Sank
    * Default: `0.4`, which means that 40% of `labelMaxWidth` will be given to sub-label, and 60% to the main label.
   */
   subLabelToLabelInlineWidthRatio?: number;
+
+  // Misc
+  /** Set selected nodes by unique id. Default: `undefined` */
+  selectedNodeIds?: string[];
 }
 
 export const SankeyDefaultConfig: SankeyConfigInterface<SankeyInputNode, SankeyInputLink> = ({
@@ -214,6 +218,7 @@ export const SankeyDefaultConfig: SankeyConfigInterface<SankeyInputNode, SankeyI
   linkValue: (d: SankeyInputNode) => (d as { value: number }).value,
   linkColor: (d: SankeyInputNode) => (d as { color: string }).color,
   linkCursor: undefined,
+  selectedNodeIds: undefined,
 
   // https://stackoverflow.com/a/21648197/2040291
   init: function () {
