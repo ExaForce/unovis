@@ -252,7 +252,7 @@ export class Sankey<
     })
   }
 
-  public setZoomLevel (horizontalScale?: number, verticalScale?: number, duration: number = this.config.duration): void {
+  public setZoomScale (horizontalScale?: number, verticalScale?: number, duration: number = this.config.duration): void {
     const [min, max] = this.config.zoomExtent
     if (isNumber(horizontalScale)) this._zoomScale[0] = Math.min(max, Math.max(min, horizontalScale))
     if (isNumber(verticalScale)) this._zoomScale[1] = Math.min(max, Math.max(min, verticalScale))
@@ -269,7 +269,7 @@ export class Sankey<
     this._render(duration)
   }
 
-  public getZoomLevel (): [number, number] {
+  public getZoomScale (): [number, number] {
     return [this._zoomScale[0] || 1, this._zoomScale[1] || 1]
   }
 
