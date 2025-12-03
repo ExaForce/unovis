@@ -14,6 +14,7 @@ import { FlowLegendItem, FlowLegendItemType } from './types'
 import * as s from './style'
 
 export class FlowLegend {
+  static selectors = s
   div: Selection<HTMLElement, unknown, null, undefined>
   element: HTMLElement
   line: Selection<HTMLDivElement, unknown, null, undefined>
