@@ -240,7 +240,7 @@ export class Sankey<
 
     // Prepare Layout
     this._prepareLayout()
-    config.onLayoutCalculated?.(nodes, links, this.getSankeyDepth(), this.getWidth(), this.getHeight())
+    config.onLayoutCalculated?.(nodes, links, this.getSankeyDepth(), this.getWidth(), this.getHeight(), bleed)
 
     // Links
     const linkSelection = this._linksGroup.selectAll<SVGGElement, SankeyLink<N, L>>(`.${s.link}`)
