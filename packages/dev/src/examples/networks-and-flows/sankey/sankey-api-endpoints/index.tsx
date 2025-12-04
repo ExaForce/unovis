@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react'
-import { VisSingleContainer, VisSankey } from '@unovis/react'
+import React, { useEffect, useRef, useState } from 'react'
+import { VisSingleContainer, VisSankey, VisFlowLegend, VisSankeyRef } from '@unovis/react'
 import {
   Position,
   Sankey,
@@ -24,9 +24,42 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
   const collapsedStateRef = useRef<{ [key: string]: boolean }>({})
   const rawData = apiRawData// .slice(25, 50)
   const [data, setData] = useState(getSankeyData(rawData))
+  const sankeyRef = useRef<VisSankeyRef<ApiEndpointNode, ApiEndpointLink>>(null)
+  const [legendWidth, setLegendWidth] = useState<number>()
+  const [hiddenDepths, setHiddenDepths] = useState<Set<number>>(new Set())
 
   const nodeWidth = 30
   const nodeHorizontalSpacing = 260
+  const [legendItems, setLegendItems] = useState<string[]>([])
+  const onLegendItemClick = (label?: string, i?: number): void => {
+    if (typeof i !== 'number') return
+    const depth = i + 1
+    setHiddenDepths(prev => {
+      const next = new Set(prev)
+      if (next.has(depth)) next.delete(depth)
+      else next.add(depth)
+      const base = getSankeyData(rawData, collapsedStateRef.current)
+      setData(filterByDepth(base, next))
+      return next
+    })
+  }
+
+  useEffect(() => {
+    const width = sankeyRef.current?.component?.getWidth() || 0
+    const depth = sankeyRef.current?.component?.getSankeyDepth() || 0
+
+    setLegendWidth(width - nodeHorizontalSpacing + 30)
+    // eslint-disable-next-line no-irregular-whitespace
+    setLegendItems(Array.from({ length: depth + 1 }, (_, i) => `Segment ${i + 1}`))
+  }, [data, nodeWidth, nodeHorizontalSpacing])
+
+  const filterByDepth = (base: { nodes: ApiEndpointNode[]; links: ApiEndpointLink[] }, hidden: Set<number>): { nodes: ApiEndpointNode[]; links: ApiEndpointLink[] } => {
+    if (!hidden || hidden.size === 0) return base
+    const nodes = base.nodes.filter(n => !hidden.has(n.depth))
+    const allowedIds = new Set(nodes.map(n => n.id))
+    const links = base.links.filter(l => allowedIds.has(l.source) && allowedIds.has(l.target))
+    return { nodes, links }
+  }
 
   const compareStrings = (a = '', b = ''): number => {
     const strA = a.toUpperCase()
@@ -39,8 +72,14 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
 
   return (
     <>
+      <VisFlowLegend
+        items={legendItems}
+        onLegendItemClick={onLegendItemClick}
+        customWidth={legendWidth}
+      />
       <VisSingleContainer data={data} sizing={Sizing.Extend}>
         <VisSankey<ApiEndpointNode, ApiEndpointLink>
+          ref={sankeyRef}
           labelPosition={Position.Right}
           labelVerticalAlign={VerticalAlign.Middle}
           labelBackground={false}
@@ -48,7 +87,7 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
           nodeWidth={nodeWidth}
           nodeAlign={SankeyNodeAlign.Left}
           nodeIconColor={'#e9edfe'}
-          nodePadding={50}
+          nodePadding={35}
           nodeMinHeight={6}
           labelColor={'#0D1C5B'}
           labelCursor={'pointer'}
@@ -90,7 +129,8 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
               click: (d: SankeyNode<ApiEndpointNode, ApiEndpointLink>) => {
                 if (!d.targetLinks?.[0] || (!collapsedStateRef.current[d.id] && !d.sourceLinks?.[0])) return
                 collapsedStateRef.current[d.id] = !collapsedStateRef.current[d.id]
-                setData(getSankeyData(rawData, collapsedStateRef.current))
+                const base = getSankeyData(rawData, collapsedStateRef.current)
+                setData(filterByDepth(base, hiddenDepths))
               },
             },
           }}
