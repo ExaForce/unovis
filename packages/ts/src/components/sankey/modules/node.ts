@@ -157,7 +157,7 @@ export function updateNodes<N extends SankeyInputNode, L extends SankeyInputLink
       const el = select(els[i])
       const nodeHeight = d.y1 - d.y0
       const color = getColor(d, config.nodeIconColor)
-      const visibility = nodeHeight < 2 ? null : 'hidden'
+      const visibility = nodeHeight > 2 ? null : 'hidden'
       const fontSize = nodeHeight < s.SANKEY_ICON_SIZE ? `${nodeHeight * 0.65}px` : null
 
       el
