@@ -169,18 +169,14 @@ export function getLabelMaxWidth<N extends SankeyInputNode, L extends SankeyInpu
 ): number {
   const labelHorizontalPadding = 2 * SANKEY_LABEL_SPACING + 2 * SANKEY_LABEL_BLOCK_PADDING
 
-  switch (d.layer) {
-    case 0: {
-      if (labelOrientation === Position.Left) return bleed.left - labelHorizontalPadding
-      break
-    }
-    case (sankeyMaxLayer): {
-      if (labelOrientation === Position.Right) return bleed.right - labelHorizontalPadding
-      break
-    }
-    default:
-      return clamp(layerSpacing - labelHorizontalPadding, 0, config.labelMaxWidth ?? Infinity)
+  if (d.layer === 0 && labelOrientation === Position.Left) {
+    return bleed.left - labelHorizontalPadding
   }
+  if (d.layer === sankeyMaxLayer && labelOrientation === Position.Right) {
+    return bleed.right - labelHorizontalPadding
+  }
+
+  return clamp(layerSpacing - labelHorizontalPadding, 0, config.labelMaxWidth ?? Infinity)
 }
 
 export function renderLabel<N extends SankeyInputNode, L extends SankeyInputLink> (
