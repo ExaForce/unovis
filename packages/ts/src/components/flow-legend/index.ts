@@ -96,18 +96,17 @@ export class FlowLegend {
     legendItemsEnter.append('span')
 
     const legendItemsMerged = legendItemsEnter.merge(legendItems)
-    legendItemsMerged
+    smartTransition(legendItemsMerged, 500)
+      .attr('opacity', 1)
+
+    legendItemsMerged.select('span')
       .attr('class',
         d => d.type === FlowLegendItemType.Symbol
           ? s.arrow(config.arrowColor, config.arrowSymbolYOffset)
           : s.label(config.labelFontSize, config.labelColor)
       )
       .classed(s.clickable, d => d.type === FlowLegendItemType.Label && !!config.onLegendItemClick)
-
-    smartTransition(legendItemsMerged, 500)
-      .attr('opacity', 1)
-
-    legendItemsMerged.select('span').html(d => d.text)
+      .html(d => d.text)
 
     legendItems.exit().remove()
   }
