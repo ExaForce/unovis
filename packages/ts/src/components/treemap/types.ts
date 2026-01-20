@@ -13,6 +13,9 @@ export type TreemapDatum<Datum> = {
   // The original data item
   // Defined for leaf nodes only.
   datum?: Datum;
+
+  // Reference to the top-level parent node (depth === 1)
+  topLevelParent?: TreemapNode<Datum>;
 }
 
 export interface TreemapNode<Datum> extends HierarchyRectangularNode<TreemapDatum<Datum>> {
