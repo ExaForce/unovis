@@ -13,16 +13,12 @@ export type TreemapDatum<Datum> = {
   // The original data item
   // Defined for leaf nodes only.
   datum?: Datum;
-
-  // Reference to the top-level parent node (depth === 1)
-  topLevelParent?: TreemapNode<Datum>;
 }
 
 export interface TreemapNode<Datum> extends HierarchyRectangularNode<TreemapDatum<Datum>> {
+  topLevelParent: TreemapNode<Datum>; // Reference to the top-level parent node (depth === 1). Convenient for external color routines.
+
   _id: string;
   _fill?: string;
   _fillOpacity?: number | null;
-
-  // Reference to the top-level parent node (depth === 1)
-  topLevelParent?: TreemapNode<Datum>;
 }
