@@ -22,4 +22,7 @@ export interface TreemapNode<Datum> extends HierarchyRectangularNode<TreemapDatu
   _id: string;
   _fill?: string;
   _fillOpacity?: number | null;
+
+  // Reference to the top-level parent node (depth === 1)
+  topLevelParent?: TreemapNode<Datum>;
 }

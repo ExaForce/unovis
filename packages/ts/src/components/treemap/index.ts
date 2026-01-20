@@ -103,7 +103,6 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
 
       const treemapDatum: TreemapDatum<Datum> = {
         key: n.data[0],
-        topLevelParent: this._getTopLevelParent(node),
       }
 
       // Populate the index and datum for leaf nodes
@@ -114,6 +113,7 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
       }
 
       node.data = treemapDatum
+      node.topLevelParent = this._getTopLevelParent(node)
     })
 
     const descendants = treemapData.descendants()
@@ -310,6 +310,7 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
       }
       return current?.depth === 1 ? current as TreemapNode<Datum> : undefined
     }
+
     return undefined
   }
 
