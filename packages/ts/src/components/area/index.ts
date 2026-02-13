@@ -137,14 +137,14 @@ export class Area<Datum> extends XYComponentCore<Datum, AreaConfigInterface<Datu
       .attr('class', s.area)
       .attr('d', d => this._areaGen(d) || this._emptyPath())
       .style('opacity', 0)
-      .style('fill', (d, i) => getColor(data, config.color, areaMaxIdx - i))
+      .style('fill', (d, i) => getColor(data, config.color, areaMaxIdx - i, undefined, config.colorKeys?.[areaMaxIdx - i]))
 
     const areasMerged = smartTransition(areasEnter.merge(areas), duration)
       .style('opacity', (d, i) => {
         const isDefined = d.some(p => (p.y0 - p.y1) !== 0)
         return isDefined ? getNumber(data, config.opacity, areaMaxIdx - i) : 0
       })
-      .style('fill', (d, i) => getColor(data, config.color, areaMaxIdx - i))
+      .style('fill', (d, i) => getColor(data, config.color, areaMaxIdx - i, undefined, config.colorKeys?.[areaMaxIdx - i]))
       .style('cursor', (d, i) => getString(data, config.cursor, areaMaxIdx - i))
 
     if (duration) {
@@ -179,12 +179,12 @@ export class Area<Datum> extends XYComponentCore<Datum, AreaConfigInterface<Datu
     const areas = this.g.selectAll(`.${s.area}`).nodes()
     const linesEnter = lines.enter().insert('path', (d, i) => areas[i + 1])
       .attr('class', s.areaLinePath)
-      .attr('stroke', (d, i) => getColor(data, colorAccessor, areaMaxIdx - i))
+      .attr('stroke', (d, i) => getColor(data, colorAccessor, areaMaxIdx - i, undefined, config.colorKeys?.[areaMaxIdx - i]))
       .attr('stroke-width', config.lineWidth)
       .attr('stroke-opacity', 0)
 
     const linesMerged = smartTransition(linesEnter.merge(lines), duration)
-      .attr('stroke', (d, i) => getColor(data, colorAccessor, areaMaxIdx - i))
+      .attr('stroke', (d, i) => getColor(data, colorAccessor, areaMaxIdx - i, undefined, config.colorKeys?.[areaMaxIdx - i]))
       .attr('stroke-width', config.lineWidth)
       .attr('stroke-opacity', 1)
       .attr('cursor', (d, i) => getString(data, config.cursor, areaMaxIdx - i))

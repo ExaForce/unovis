@@ -144,13 +144,13 @@ export class StackedBar<Datum> extends XYComponentCore<Datum, StackedBarConfigIn
     const barsEnter = bars.enter().append('path')
       .attr('class', s.bar)
       .attr('d', d => this._getBarPath(d, true))
-      .style('fill', d => getColor(d.datum, config.color, d.stackIndex))
+      .style('fill', d => getColor(d.datum, config.color, d.stackIndex, undefined, config.colorKeys?.[d.stackIndex]))
 
     const barsMerged = barsEnter.merge(bars)
 
     smartTransition(barsMerged, duration)
       .attr('d', d => this._getBarPath(d))
-      .style('fill', d => getColor(d.datum, config.color, d.stackIndex))
+      .style('fill', d => getColor(d.datum, config.color, d.stackIndex, undefined, config.colorKeys?.[d.stackIndex]))
       .style('cursor', d => getString(d.datum, config.cursor, d.stackIndex))
 
     smartTransition(bars.exit(), duration)

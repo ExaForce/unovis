@@ -6,6 +6,7 @@ import { Sizing } from 'types/component'
 // Utils
 import { isEqual, clamp, merge } from 'utils/data'
 import { ResizeObserver } from 'utils/resize-observer'
+import { UnovisColorScale } from 'utils/color'
 
 // Config
 import { ContainerDefaultConfig, ContainerConfigInterface } from './config'
@@ -55,6 +56,11 @@ export class ContainerCore {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     this.prevConfig = this.config
     this.config = merge(this._defaultConfig, config)
+
+    // Set `colorPalette` if provided in the config
+    // if (config?.colorPalette) {
+    //   UnovisColorScale.range(config.colorPalette)
+    // }
 
     // Add `svgDefs` if provided in the config
     if (config?.svgDefs !== this.prevConfig?.svgDefs) {

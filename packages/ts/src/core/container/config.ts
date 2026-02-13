@@ -31,6 +31,8 @@ export interface ContainerConfigInterface {
    * `aria-label` attribute to the div element containing your chart. Default: `undefined`.
   */
   ariaLabel?: string | null | undefined;
+  colorScale?: (key: string) => string;
+  colorMap?: Record<string, string>;
 }
 
 export const ContainerDefaultConfig: ContainerConfigInterface = {
@@ -55,4 +57,7 @@ export const ContainerDefaultConfig: ContainerConfigInterface = {
 
   svgDefs: undefined,
   ariaLabel: undefined,
+
+  colorScale: undefined,
+  colorMap: undefined,
 }
