@@ -1,6 +1,6 @@
 import React, { useRef } from 'react'
 import { scaleOrdinal } from 'd3-scale'
-import { VisXYContainer, VisArea, VisAxis, VisTooltip, VisCrosshair, VisStackedBar } from '@unovis/react'
+import { VisXYContainer, VisArea, VisAxis, VisTooltip, VisCrosshair, VisStackedBar, VisBulletLegend } from '@unovis/react'
 
 import { ExampleViewerDurationProps } from '@src/components/ExampleViewer/index'
 import { TextAlign, UnovisColorScale } from '@unovis/ts'
@@ -9,7 +9,7 @@ import { CurveType } from '@unovis/ts/types/curve'
 export const title = 'Color Synchronization'
 export const subTitle = 'Multiple Charts'
 
-const colorScale = scaleOrdinal<string, string>()
+const colorScale = scaleOrdinal<string | number, string>()
   .range(['#ff8CFD', '#126B7E', '#FF5450', '#23cc00', '#0000FF', '#FFFF00'])
 
 export const component = (props: ExampleViewerDurationProps): React.ReactNode => {
@@ -38,7 +38,10 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
 
   return (
     <>
-      <VisXYContainer<Datum> data={data} margin={{ top: 5, left: 5 }} colorScale={colorScale}>
+      <VisBulletLegend
+        items={[{ name: 'Azure', colorKey: 'azure' }, { name: 'AWS', colorKey: 'aws' }, { name: 'GitHub', colorKey: 'github' }]}
+      />
+      <VisXYContainer<Datum> data={data} margin={{ top: 5, left: 5 }} color={colorScale}>
         <VisArea
           x={d => d.x}
           y={accessorsAreaChart}
@@ -47,6 +50,10 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
           color={(d: Datum[], i: number, key?: string) => {
             if (key && colorMap[key]) {
               return colorMap[key]
+            }
+
+            if (key && colorScale) {
+              return colorScale(key)
             }
 
             return null
@@ -66,6 +73,9 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
         />
         <VisAxis type='y' tickFormat={(y: number | Date, i: number, ticks: number[] | Date[]) => `${y}bps`} duration={props.duration}/>
       </VisXYContainer>
+      <VisBulletLegend
+        items={[{ name: 'AWS', colorKey: 'aws' }, { name: 'Google', colorKey: 'google' }, { name: 'GitHub', colorKey: 'github' }, { name: 'Apple', colorKey: 'apple' }]}
+      />
       <VisXYContainer<Datum> data={data} margin={{ top: 5, left: 5 }}>
         <VisStackedBar x={d => d.x} y={accessorsStackedBarChart} duration={props.duration} colorKeys={stackedBarChartKeys} barPadding={0.05}/>
         <VisAxis type='x' numTicks={3} tickFormat={(tick: number | Date, i: number, ticks: number[] | Date[]) => `${tick}ms`} duration={props.duration}/>

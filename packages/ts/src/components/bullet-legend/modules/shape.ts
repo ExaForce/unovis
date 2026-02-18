@@ -56,7 +56,7 @@ export function updateBullets (
 ): void {
   container.each((d, i, els) => {
     const shape = getString(d, config.bulletShape, i) as BulletShape
-    const colors = ensureArray(d.color ?? getColor(d, colorAccessor, i))
+    const colors = ensureArray(d.color ?? getColor(d, colorAccessor, i, false, d.colorKey))
     const numBullets = colors.length
     const bulletWidth = BULLET_SIZE
     const defaultBulletSize = toPx(config.bulletSize) || getCSSVariableValueInPixels('var(--vis-legend-bullet-size)', els[i])

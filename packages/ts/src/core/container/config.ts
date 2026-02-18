@@ -1,6 +1,7 @@
 // Core
 
 // Types
+import { ColorFunction } from 'types/accessor'
 import { Sizing } from 'types/component'
 import { Spacing } from 'types/spacing'
 
@@ -31,8 +32,11 @@ export interface ContainerConfigInterface {
    * `aria-label` attribute to the div element containing your chart. Default: `undefined`.
   */
   ariaLabel?: string | null | undefined;
-  colorScale?: (key: string) => string;
-  colorMap?: Record<string, string>;
+  /** A custom color function to be used for all the components within the container.
+   * Maps indices or data color keys (when `colorKeys` are provided to components) to colors.
+   * Default: `undefined`
+  */
+  color?: ColorFunction;
 }
 
 export const ContainerDefaultConfig: ContainerConfigInterface = {

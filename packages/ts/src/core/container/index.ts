@@ -6,7 +6,6 @@ import { Sizing } from 'types/component'
 // Utils
 import { isEqual, clamp, merge } from 'utils/data'
 import { ResizeObserver } from 'utils/resize-observer'
-import { UnovisColorScale } from 'utils/color'
 
 // Config
 import { ContainerDefaultConfig, ContainerConfigInterface } from './config'

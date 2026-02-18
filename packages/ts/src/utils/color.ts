@@ -5,57 +5,49 @@ import { scaleOrdinal } from 'd3-scale'
 import { colors, getCSSColorVariable } from 'styles/colors'
 
 // Utils
-import { ColorAccessor, StringAccessor } from 'types/accessor'
-import { getString, isFunction, isNumber } from 'utils/data'
+import { ColorAccessor, ColorFunction } from 'types/accessor'
+import { isFunction, isNumber } from 'utils/data'
 import { isStringCSSVariable, getCSSVariableValue } from 'utils/misc'
 
 type RGBColor = { r: number; g: number; b: number }
 
-export const UnovisColorScale = scaleOrdinal<string, string>()
+// Default color scale that uses CSS variables for the colors
+// The scale is available to the users to override the default colors and domain.
+export const UnovisColorScale = scaleOrdinal<string | number, string>()
   .range(Array.from({ length: colors.length }, (_, i) => `var(${getCSSColorVariable(i)})`))
+  .domain(Array.from({ length: colors.length }, (_, i) => i))
 
-// export const UnovisColor = {
-//   scale: UnovisColorScale,
-//   colorMap: {} as Record<string, string>,
-//   set colorPalette (palette: string[]) {
-//     UnovisColorScale.range(palette)
-//   },
-//   get colorPalette (): string[] {
-//     return UnovisColorScale.range() as string[]
-//   },
-// }
 /** Retrieves color from the data if provided; fallbacks to CSS variables if the index was passed */
 export function getColor<T> (
   d: T,
-  accessor: ColorAccessor<T>,
+  accessorOrValue: ColorAccessor<T>,
   index?: number,
-  dontFallbackToCssVar?: boolean,
   key?: string,
-  customColorScale?: (key: string) => string
+  options?: {
+    dontFallbackToCssVar?: boolean;
+    customColorScale?: ColorFunction;
+  }
 ): string | null {
   // If accessor is an array and index is provided, return the value at the index
-  if (Array.isArray(accessor) && isFinite(index)) return accessor[index % accessor.length]
+  if (Array.isArray(accessorOrValue) && isFinite(index)) return accessorOrValue[index % accessorOrValue.length]
 
   // If accessor is a function, call it and return the result
   let value: string | null | undefined
-  if (isFunction(accessor)) {
-    value = accessor(d, index, key) as (string | null | undefined)
+  if (isFunction(accessorOrValue)) {
+    value = accessorOrValue(d, index, key) as (string | null | undefined)
   } else {
-    value = accessor as string | null | undefined // getString(d, accessor as StringAccessor<T>, index)
+    value = accessorOrValue as string | null | undefined
   }
   if (value) return value
 
-
   // If key is provided, return the color for the key
-  const colorScale = customColorScale ?? UnovisColorScale
+  const colorScale = options?.customColorScale ?? UnovisColorScale
   if (key) {
-    // const colorFromMap = UnovisColor.colorMap?.[key]
-    // return colorFromMap ?? UnovisColorScale(key)
-    return colorScale(key)
+    return colorScale(key as string)
   }
 
-  // If index is a number and dontFallbackToCssVar is false, return the color for the index
-  if (isNumber(index) && !dontFallbackToCssVar) return colorScale(index.toString())
+  // If index is a number and `dontFallbackToCssVar` is `false`, return the color for the index
+  if (isNumber(index) && !options?.dontFallbackToCssVar) return colorScale(index % colors.length)
 
   // If all else fails, return null
   return null
