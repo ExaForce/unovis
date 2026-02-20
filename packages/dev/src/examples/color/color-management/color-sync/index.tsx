@@ -1,16 +1,22 @@
-import React, { useRef } from 'react'
+import React from 'react'
 import { scaleOrdinal } from 'd3-scale'
-import { VisXYContainer, VisArea, VisAxis, VisTooltip, VisCrosshair, VisStackedBar, VisBulletLegend } from '@unovis/react'
+import {
+  VisXYContainer,
+  VisArea,
+  VisAxis,
+  VisStackedBar,
+  VisBulletLegend,
+  VisCrosshair,
+  VisLine,
+  VisGroupedBar,
+  VisScatter,
+  VisTimeline,
+} from '@unovis/react'
 
 import { ExampleViewerDurationProps } from '@src/components/ExampleViewer/index'
-import { TextAlign, UnovisColorScale } from '@unovis/ts'
-import { CurveType } from '@unovis/ts/types/curve'
 
 export const title = 'Color Synchronization'
 export const subTitle = 'Multiple Charts'
-
-const colorScale = scaleOrdinal<string | number, string>()
-  .range(['#ff8CFD', '#126B7E', '#FF5450', '#23cc00', '#0000FF', '#FFFF00'])
 
 export const component = (props: ExampleViewerDurationProps): React.ReactNode => {
   type Datum = { x: number; azure: number; aws: number; google: number; github: number; apple: number };
@@ -26,61 +32,81 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
     }
   })
 
-  const areaChartKeys = ['azure', 'aws', 'github']
-  const accessorsAreaChart = areaChartKeys.map(key => (d: Datum) => d[key as keyof Datum])
+  // Left Block
+  const leftBlockChartKeys = ['azure', 'aws', 'github']
+  const accessorsLeftBlockCharts = leftBlockChartKeys.map(key => (d: Datum) => d[key as keyof Datum])
+  const leftBlockColorScale = scaleOrdinal<string | number, string>()
+    .range(['#ff8CFD', '#126B7E', '#FF5450', '#23cc00', '#0000FF', '#FFFF00'])
 
-  const stackedBarChartKeys = ['aws', 'google', 'github', 'apple']
-  const accessorsStackedBarChart = stackedBarChartKeys.map(key => (d: Datum) => d[key as keyof Datum])
+  // Right Block
+  const rightBlockChartKeys = ['aws', 'google', 'github', 'apple']
+  const accessorsRightBlockCharts = rightBlockChartKeys.map(key => (d: Datum) => d[key as keyof Datum])
 
   const colorMap = {
-    azure: '#123456',
+    aws: '#f0a8b4',
+    google: '#7eb8d4',
+    github: '#b89ef0',
   } as Record<string, string>
 
+  const unknownColor = '#ccc'
+
+  const rightBlockColorFunction = (key: string | number): string => {
+    const valueFromMap = colorMap[key]
+    return valueFromMap ?? unknownColor
+  }
+
+  // Styles
+  const blockStyle = { display: 'flex', flexDirection: 'column', gap: 24, flex: 1, minWidth: 0 } as const
+  const wrapperStyle = { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start' } as const
+
   return (
-    <>
-      <VisBulletLegend
-        items={[{ name: 'Azure', colorKey: 'azure' }, { name: 'AWS', colorKey: 'aws' }, { name: 'GitHub', colorKey: 'github' }]}
-      />
-      <VisXYContainer<Datum> data={data} margin={{ top: 5, left: 5 }} color={colorScale}>
-        <VisArea
-          x={d => d.x}
-          y={accessorsAreaChart}
-          duration={props.duration}
-          colorKeys={areaChartKeys}
-          color={(d: Datum[], i: number, key?: string) => {
-            if (key && colorMap[key]) {
-              return colorMap[key]
-            }
-
-            if (key && colorScale) {
-              return colorScale(key)
-            }
-
-            return null
-          }}
+    <div style={wrapperStyle}>
+      <div style={blockStyle}>
+        <p>This block of charts uses a color function defined with <code>scaleOrdinal</code> from D3</p>
+        <VisBulletLegend
+          color={leftBlockColorScale}
+          items={leftBlockChartKeys.map(key => ({ name: key, colorKey: key }))}
         />
-        <VisAxis
-          type='x'
-          numTicks={10}
-          tickTextHideOverlapping={true}
-          tickTextAlign={(tick: number | Date, i: number, ticks: number[] | Date[], pos: [number, number], width: number) => {
-            if (i === 0) return TextAlign.Left
-            if (i === ticks.length - 1 && pos[0] > (width - 10)) return TextAlign.Right
-            return TextAlign.Center
-          }}
-          tickFormat={(tick: number | Date, i: number, ticks: number[] | Date[]) => `${tick}ms`}
-          duration={props.duration}
+        <VisXYContainer<Datum> data={data} color={leftBlockColorScale}>
+          <VisLine x={d => d.x} y={accessorsLeftBlockCharts} colorKeys={leftBlockChartKeys}/>
+          <VisGroupedBar x={d => d.x} y={accessorsLeftBlockCharts} colorKeys={leftBlockChartKeys} barPadding={0.3}/>
+          <VisAxis type='x'/>
+          <VisCrosshair template={(d: Datum) => `x: ${d.x}`} />
+        </VisXYContainer>
+        <VisXYContainer<Datum> data={data.slice(0, 10)} color={leftBlockColorScale}>
+          <VisGroupedBar x={d => d.x} y={accessorsLeftBlockCharts} colorKeys={leftBlockChartKeys} barPadding={0.1}/>
+          <VisAxis type='x'/>
+          <VisCrosshair template={(d: Datum) => `x: ${d.x}`} />
+        </VisXYContainer>
+        <VisXYContainer<Datum> data={data} color={leftBlockColorScale}>
+          <VisArea x={d => d.x} y={accessorsLeftBlockCharts} colorKeys={leftBlockChartKeys}/>
+          <VisAxis type='x'/>
+          <VisCrosshair template={(d: Datum) => `x: ${d.x}`} />
+        </VisXYContainer>
+      </div>
+      <div style={blockStyle}>
+        <p>This block defines a custom color function that assigns the colors using a color map</p>
+        <VisBulletLegend
+          color={rightBlockColorFunction}
+          items={rightBlockChartKeys.map(key => ({ name: key, colorKey: key }))}
         />
-        <VisAxis type='y' tickFormat={(y: number | Date, i: number, ticks: number[] | Date[]) => `${y}bps`} duration={props.duration}/>
-      </VisXYContainer>
-      <VisBulletLegend
-        items={[{ name: 'AWS', colorKey: 'aws' }, { name: 'Google', colorKey: 'google' }, { name: 'GitHub', colorKey: 'github' }, { name: 'Apple', colorKey: 'apple' }]}
-      />
-      <VisXYContainer<Datum> data={data} margin={{ top: 5, left: 5 }}>
-        <VisStackedBar x={d => d.x} y={accessorsStackedBarChart} duration={props.duration} colorKeys={stackedBarChartKeys} barPadding={0.05}/>
-        <VisAxis type='x' numTicks={3} tickFormat={(tick: number | Date, i: number, ticks: number[] | Date[]) => `${tick}ms`} duration={props.duration}/>
-        <VisAxis type='y' tickFormat={(tick: number | Date, i: number, ticks: number[] | Date[]) => `${tick}bps`} duration={props.duration}/>
-      </VisXYContainer>
-    </>
+        <VisXYContainer<Datum> data={data} color={rightBlockColorFunction}>
+          <VisStackedBar x={d => d.x} y={accessorsRightBlockCharts} colorKeys={rightBlockChartKeys} barPadding={0.05}/>
+          <VisAxis type='x' />
+          <VisCrosshair template={(d: Datum) => `x: ${d.x}`} />
+        </VisXYContainer>
+        <VisXYContainer<Datum> data={data.slice(0, 15)} color={rightBlockColorFunction}>
+          <VisScatter x={d => d.x} y={accessorsRightBlockCharts} colorKeys={rightBlockChartKeys}/>
+          <VisAxis type='x' />
+          <VisCrosshair template={(d: Datum) => `x: ${d.x}`} />
+        </VisXYContainer>
+        {/* <VisXYContainer<Datum> data={data.slice(0, 15)}>
+          <VisTimeline x={d => d.x} lineRow={(d, i): string => `Row ${i}`}
+            lineDuration={10} colorKeys={stackedBarChartKeys}/>
+          <VisAxis type='x' />
+          <VisCrosshair template={(d: Datum) => `x: ${d.x}`} colorKeys={stackedBarChartKeys}/>
+        </VisXYContainer> */}
+      </div>
+    </div>
   )
 }

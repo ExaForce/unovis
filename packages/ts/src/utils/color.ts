@@ -25,7 +25,7 @@ export function getColor<T> (
   key?: string,
   options?: {
     dontFallbackToCssVar?: boolean;
-    customColorScale?: ColorFunction;
+    colorFn?: ColorFunction;
   }
 ): string | null {
   // If accessor is an array and index is provided, return the value at the index
@@ -41,7 +41,7 @@ export function getColor<T> (
   if (value) return value
 
   // If key is provided, return the color for the key
-  const colorScale = options?.customColorScale ?? UnovisColorScale
+  const colorScale = options?.colorFn ?? UnovisColorScale
   if (key) {
     return colorScale(key as string)
   }

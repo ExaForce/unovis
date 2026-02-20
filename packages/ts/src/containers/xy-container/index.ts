@@ -270,9 +270,11 @@ export class XYContainer<Datum> extends ContainerCore {
     // Crosshair
     const crosshair = config.crosshair
     if (crosshair) {
+      const nonStackedComponents = this.components.filter(c => !c.stacked)
+      const stackedComponents = this.components.filter(c => c.stacked)
       // Pass accessors
-      const yAccessors = this.components.filter(c => !c.stacked).map(c => c.config.y)
-      const yStackedAccessors = this.components.filter(c => c.stacked).map(c => c.config.y)
+      const yAccessors = nonStackedComponents.map(c => c.config.y)
+      const yStackedAccessors = stackedComponents.map(c => c.config.y)
       const baselineComponentConfig = this.components.find(c => (c.config as AreaConfigInterface<Datum>).baseline)?.config as AreaConfigInterface<Datum>
       const baselineAccessor = baselineComponentConfig?.baseline
 
@@ -284,6 +286,13 @@ export class XYContainer<Datum> extends ContainerCore {
         baseline: baselineAccessor,
       }
 
+      const colorKeys = [
+        nonStackedComponents.map(c => c.config.colorKeys),
+        stackedComponents.map(c => c.config.colorKeys),
+      ].flat(2)
+
+      crosshair.colorKeys = colorKeys
+      console.log('colorKeys', colorKeys)
       crosshair.g.attr('transform', `translate(${margin.left},${margin.top})`)
         .style('clip-path', `url(#${this._clipPathId})`)
         .style('-webkit-clip-path', `url(#${this._clipPathId})`)
