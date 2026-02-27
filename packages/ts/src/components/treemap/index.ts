@@ -24,7 +24,7 @@ import { FitMode } from 'types/text'
 import { TreemapConfigInterface, TreemapDefaultConfig } from './config'
 
 // Local Types
-import { HierarchyNodeWithValue, TreemapDatum, TreemapNode } from './types'
+import { TreemapDatum, TreemapNode } from './types'
 
 // Styles
 import * as s from './style'
@@ -81,8 +81,11 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
     })
 
     // Process the hierarchy into the type we need
-    const hierarchyWithPopulatedData = rootNode as unknown as HierarchyNodeWithValue<Datum>
-    hierarchyWithPopulatedData.each(d => {
+    // The original type of `rootNode` is HierarchyNode<InternMap<string, number[]>>, but we're replacing its data manually with `TreemapDatum`.
+    // Strictly speaking, the real data type at this stage is `HierarchyNode<Datum> & { readonly value: number }`,
+    // but we're assigning the `TreemapNode` type (which extends HierarchyRectangularNode<TreemapDatum<Datum>>) in advance to avoid unnecessary complexity
+    const hierarchyWithPopulatedData = rootNode as unknown as TreemapNode<Datum>
+    hierarchyWithPopulatedData.each((d, i) => {
       const node = d as unknown as TreemapNode<Datum>
       const n = d as unknown as HierarchyNode<[string, number[]]>
 
@@ -98,10 +101,14 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
       }
 
       node.data = treemapDatum
-      node._id = `node-${node.data.key}-${node.depth}`
+      node._id = `node-${i}` // This id is used for the clipPath assignment and need to be unique and HTML id compliant
       node.topLevelParent = this._getTopLevelParent(node)
     })
 
+    // Sort the hierarchy
+    // The `tileSort` function in the config accepts two `TreemapNode` arguments, but the corresponding data fields
+    // will be populated at the next step (`treemap<TreemapDatum<Datum>>()`). This shouldn't cause any issues,
+    // for our end users, but if it does, we can manage types more strictly.
     if (config.tileSort || config.tileSort === null) hierarchyWithPopulatedData.sort(config.tileSort)
 
     const treemapLayout = treemap<TreemapDatum<Datum>>()
@@ -116,7 +123,7 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
     }
 
     // Compute the treemap layout
-    const treemapData = treemapLayout(hierarchyWithPopulatedData as unknown as HierarchyNode<TreemapDatum<Datum>>) as unknown as TreemapNode<Datum>
+    const treemapData = treemapLayout(hierarchyWithPopulatedData) as TreemapNode<Datum>
     const descendants = treemapData.descendants()
 
     // Set up the brightness increase scale based on depth

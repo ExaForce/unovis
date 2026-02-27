@@ -3,7 +3,7 @@ import { ColorAccessor, NumericAccessor, StringAccessor } from 'types/accessor'
 import { FitMode, TrimMode } from 'types/text'
 
 // Local Types
-import { HierarchyNodeWithValue, TreemapDatum, TreemapNode, TreemapTileFunction } from './types'
+import { TreemapDatum, TreemapNode, TreemapTileFunction } from './types'
 
 export interface TreemapConfigInterface<Datum> extends ComponentConfigInterface {
   id?: ((d: Datum, i: number) => string | number);
@@ -30,7 +30,7 @@ export interface TreemapConfigInterface<Datum> extends ComponentConfigInterface 
   tileFunction?: TreemapTileFunction<TreemapDatum<Datum>>;
 
   /** Comparator for sorting hierarchy nodes before layout. Receives two `HierarchyNode`s. Default: `undefined`. */
-  tileSort?: ((a: HierarchyNodeWithValue<Datum>, b: HierarchyNodeWithValue<Datum>) => number) | null;
+  tileSort?: ((a: TreemapNode<Datum>, b: TreemapNode<Datum>) => number) | null;
 
   /** Padding passed to D3 treemap layout. Default: `2` */
   tilePadding?: number;

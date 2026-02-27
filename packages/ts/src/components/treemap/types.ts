@@ -1,4 +1,4 @@
-import { HierarchyNode, HierarchyRectangularNode } from 'd3-hierarchy'
+import { HierarchyRectangularNode } from 'd3-hierarchy'
 
 export type TreemapDatum<Datum> = {
   // The key for this layer of the hierarchy,
@@ -19,6 +19,8 @@ export type TreemapDatum<Datum> = {
 }
 
 export interface TreemapNode<Datum> extends HierarchyRectangularNode<TreemapDatum<Datum>> {
+  readonly value: number;
+
   topLevelParent: TreemapNode<Datum>; // Reference to the top-level parent node (depth === 1). Convenient for external color routines.
 
   _id: string;
@@ -26,5 +28,4 @@ export interface TreemapNode<Datum> extends HierarchyRectangularNode<TreemapDatu
   _fillOpacity?: number | null;
 }
 
-export type HierarchyNodeWithValue<Datum> = HierarchyNode<Datum> & { readonly value: number }
 export type TreemapTileFunction<Datum> = (node: HierarchyRectangularNode<Datum>, x0: number, y0: number, x1: number, y1: number) => void
