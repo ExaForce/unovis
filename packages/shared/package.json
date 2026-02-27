@@ -37,7 +37,7 @@
   },
   "devDependencies": {
     "@angular/core": "^12.0.3",
-    "@angular/common": "^12.0.3",
+    "@angular/common": "^19.2.16",
     "@angular/platform-browser": "^12.0.3",
     "@types/d3-scale": "^4.0.8",
     "@types/d3-selection": "^3.0.10",
