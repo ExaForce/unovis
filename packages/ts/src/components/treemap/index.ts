@@ -102,7 +102,7 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
       node.topLevelParent = this._getTopLevelParent(node)
     })
 
-    if (config.timeSort && config.timeSort === null) hierarchyWithPopulatedData.sort(config.timeSort)
+    if (config.tileSort && config.tileSort === null) hierarchyWithPopulatedData.sort(config.tileSort)
 
     const treemapLayout = treemap<TreemapDatum<Datum>>()
       .size([_width, _height])

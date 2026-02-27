@@ -30,7 +30,7 @@ export interface TreemapConfigInterface<Datum> extends ComponentConfigInterface 
   tileFunction?: TreemapTileFunction<TreemapDatum<Datum>>;
 
   /** Comparator for sorting hierarchy nodes before layout. Receives two `HierarchyNode`s. Default: `undefined`. */
-  timeSort?: ((a: HierarchyNodeWithValue<Datum>, b: HierarchyNodeWithValue<Datum>) => number) | null;
+  tileSort?: ((a: HierarchyNodeWithValue<Datum>, b: HierarchyNodeWithValue<Datum>) => number) | null;
 
   /** Padding passed to D3 treemap layout. Default: `2` */
   tilePadding?: number;
@@ -98,7 +98,7 @@ export const TreemapDefaultConfig: TreemapConfigInterface<unknown> = {
   tileColor: undefined,
   layers: [],
   tileFunction: undefined,
-  timeSort: undefined,
+  tileSort: undefined,
   tilePadding: 2,
   tilePaddingTop: undefined,
   tileShowHtmlTooltip: true,
