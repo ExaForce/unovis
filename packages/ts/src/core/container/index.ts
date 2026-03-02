@@ -56,6 +56,11 @@ export class ContainerCore {
     this.prevConfig = this.config
     this.config = merge(this._defaultConfig, config)
 
+    // Set `colorPalette` if provided in the config
+    // if (config?.colorPalette) {
+    //   UnovisColorScale.range(config.colorPalette)
+    // }
+
     // Add `svgDefs` if provided in the config
     if (config?.svgDefs !== this.prevConfig?.svgDefs) {
       this._svgDefsExternal.selectAll('*').remove()

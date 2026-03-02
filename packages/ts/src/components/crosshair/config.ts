@@ -62,6 +62,8 @@ export interface CrosshairConfigInterface<Datum> extends WithOptional<XYComponen
    *  This is useful for testing, especially when you only triggers mousemove event but does not have real mouse event.
    */
   skipRangeCheck?: boolean;
+  /** Radius of the crosshair circles. Default: `4` */
+  circleRadius?: number;
 }
 
 export const CrosshairDefaultConfig: CrosshairConfigInterface<unknown> = {
@@ -81,5 +83,6 @@ export const CrosshairDefaultConfig: CrosshairConfigInterface<unknown> = {
   onCrosshairMove: undefined,
   forceShowAt: undefined,
   skipRangeCheck: false,
+  circleRadius: 4,
 }
 
