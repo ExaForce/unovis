@@ -81,7 +81,7 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
     })
 
     // Process the hierarchy into the type we need
-    const hierarchyWithPopulatedData = rootNode as HierarchyNodeWithValue<Datum>
+    const hierarchyWithPopulatedData = rootNode as unknown as HierarchyNodeWithValue<Datum>
     hierarchyWithPopulatedData.each(d => {
       const node = d as unknown as TreemapNode<Datum>
       const n = d as unknown as HierarchyNode<[string, number[]]>
@@ -116,7 +116,7 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
     }
 
     // Compute the treemap layout
-    const treemapData = treemapLayout(hierarchyWithPopulatedData as HierarchyNode<TreemapDatum<Datum>>) as TreemapNode<Datum>
+    const treemapData = treemapLayout(hierarchyWithPopulatedData as unknown as HierarchyNode<TreemapDatum<Datum>>) as unknown as TreemapNode<Datum>
     const descendants = treemapData.descendants()
 
     // Set up the brightness increase scale based on depth
