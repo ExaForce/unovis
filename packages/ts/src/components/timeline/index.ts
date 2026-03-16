@@ -45,6 +45,9 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
     [Timeline.selectors.label]: {
       wheel: this._onMouseWheel.bind(this),
     },
+    [Timeline.selectors.labelBackground]: {
+      wheel: this._onMouseWheel.bind(this),
+    },
     [Timeline.selectors.rows]: {
       wheel: this._onMouseWheel.bind(this),
     },
