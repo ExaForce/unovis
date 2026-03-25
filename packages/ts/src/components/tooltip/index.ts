@@ -33,6 +33,7 @@ export class Tooltip {
   private _overriddenHorizontalPlacement: Position.Left | Position.Right | string | undefined
   private _hideDelayTimeoutId: ReturnType<typeof setTimeout> | undefined
   private _showDelayTimeoutId: ReturnType<typeof setTimeout> | undefined
+  private _placementRafId: number | undefined
 
   constructor (config: TooltipConfigInterface = {}) {
     this.element = document.createElement('div')
@@ -111,6 +112,7 @@ export class Tooltip {
   }
 
   private _hide (): void {
+    cancelAnimationFrame(this._placementRafId)
     this.div
       .classed(s.show, false) // The `show` class triggers the opacity transition
       .on('transitionend', () => {
@@ -198,7 +200,7 @@ export class Tooltip {
   public placeByElement (hoveredElement: SVGElement | HTMLElement): void {
     const { config } = this
 
-    // Store the hovered element and the event for future reference,
+    // Store the hovered element for future reference,
     // i.e. to re-position the tooltip if the content has been changed
     // by something else and it was captured by the MutationObserver
     this._hoveredElement = hoveredElement
@@ -378,7 +380,10 @@ export class Tooltip {
                   // an empty string. This way we can allow it to work with things like `createPortal` in React
                   this.render(content)
                   if (currentConfig.followCursor) this.place({ x, y })
-                  else this.placeByElement(el)
+                  else {
+                    cancelAnimationFrame(this._placementRafId)
+                    this._placementRafId = requestAnimationFrame(() => this.placeByElement(el))
+                  }
                 }
 
                 // Stop propagation to prevent other interfering events from being triggered, e.g. Crosshair
