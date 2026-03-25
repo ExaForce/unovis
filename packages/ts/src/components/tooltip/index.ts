@@ -152,7 +152,8 @@ export class Tooltip {
       window.clearTimeout(this._showDelayTimeoutId)
       this._showDelayTimeoutId = setTimeout(() => {
         this._display()
-        this.place({ x: this._position[0], y: this._position[1] })
+        if (!this.config.followCursor && this._hoveredElement) this.placeByElement(this._hoveredElement)
+        else if (this._position) this.place({ x: this._position[0], y: this._position[1] })
       }, this.config.showDelay)
     } else {
       this._display()
@@ -285,8 +286,8 @@ export class Tooltip {
     if (html instanceof HTMLElement) {
       const node = this.div.select(':first-child').node()
       if (node !== html) this.div.html('').append(() => html)
-    } else if (html !== null) {
-      this.div.html(html || '')
+    } else if (html) {
+      this.div.html(html as string)
     }
 
     this.div
@@ -381,8 +382,11 @@ export class Tooltip {
                   this.render(content)
                   if (currentConfig.followCursor) this.place({ x, y })
                   else {
+                    this._hoveredElement = el
                     cancelAnimationFrame(this._placementRafId)
-                    this._placementRafId = requestAnimationFrame(() => this.placeByElement(el))
+                    this._placementRafId = requestAnimationFrame(() => {
+                      if (this._isShown) this.placeByElement(el)
+                    })
                   }
                 }
 

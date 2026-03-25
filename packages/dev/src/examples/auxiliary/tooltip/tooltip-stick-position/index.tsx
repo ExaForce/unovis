@@ -26,6 +26,7 @@ export const TooltipComponent = (props: VisTooltipDurationProps): React.ReactNod
         followCursor={false}
         horizontalShift={10}
         verticalShift={10}
+        showDelay={600}
         horizontalPlacement={Position.Auto}
         verticalPlacement={Position.Auto}
         triggers={{
