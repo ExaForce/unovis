@@ -382,7 +382,7 @@ export class Tooltip {
                 }
 
                 // Stop propagation to prevent other interfering events from being triggered, e.g. Crosshair
-                e.stopPropagation()
+                if (currentConfig.stopEventPropagation) e.stopPropagation()
 
                 // Stop looking for other matches
                 return
@@ -396,7 +396,7 @@ export class Tooltip {
           if (this._isShown) this.hide()
         })
         .on('mouseleave.tooltip', (e: MouseEvent) => {
-          e.stopPropagation() // Stop propagation to prevent other interfering events from being triggered, e.g. Crosshair
+          if (this.config.stopEventPropagation) e.stopPropagation() // Stop propagation to prevent other interfering events from being triggered, e.g. Crosshair
           this.hide()
         })
     })

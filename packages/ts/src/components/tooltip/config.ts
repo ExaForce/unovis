@@ -66,6 +66,8 @@ export interface TooltipConfigInterface {
   hideDelay?: number;
   /** Show delay in milliseconds. Default: `undefined` */
   showDelay?: number;
+  /** Stop mouse event propagation when the tooltip is triggered. Default: `true` */
+  stopEventPropagation?: boolean;
 }
 
 export const TooltipDefaultConfig: TooltipConfigInterface = {
@@ -82,5 +84,6 @@ export const TooltipDefaultConfig: TooltipConfigInterface = {
   className: undefined,
   showDelay: undefined,
   hideDelay: undefined,
+  stopEventPropagation: true,
 }
 
