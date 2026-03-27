@@ -45,6 +45,31 @@ Alternatively, you can define any defs you want to use in an SVG element on the 
 
 :::
 
+### Multi-Series Gradient Areas
+
+To apply individual gradients to each series in a multi-area chart, define one `<linearGradient>` per series and reference them by index:
+
+export const seriesColors = ['#3b82f6', '#ef4444', '#f59e0b']
+export const multiSeriesDefs = seriesColors.map((color, i) => `
+  <linearGradient id="area-grad-${i}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="${color}" stop-opacity="0.4" />
+    <stop offset="100%" stop-color="${color}" stop-opacity="0.02" />
+  </linearGradient>`).join('')
+
+<XYWrapper
+  name="Area"
+  data={generateDataRecords(20)}
+  x={d => d.x}
+  y={[d => d.y, d => d.y1, d => d.y2]}
+  color={seriesColors.map((_, i) => `url(#area-grad-${i})`)}
+  line={true}
+  lineWidth={1}
+  lineColor={seriesColors}
+  showAxes
+  height={200}
+  containerProps={{ svgDefs: multiSeriesDefs }}
+/>
+
 ## Displaying Ordinal Values
 We don't natively support the ordinal scale for XY components, but it can still be achieved with some
 small tweaks.
