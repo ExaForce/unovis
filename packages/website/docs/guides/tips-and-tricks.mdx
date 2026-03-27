@@ -12,45 +12,10 @@ import './styles.css'
 # Tips and Tricks
 
 ## Custom Fills with SVG `defs`
-If you want to custom SVG definitions available for your components, you can use the `svgDefs` property on the container, like this:
-
-export const defs = `
-    <linearGradient id="gradient" gradientTransform="rotate(90)">
-      <stop offset="20%" stop-color="#051937" />
-      <stop offset="40%" stop-color="#004d7a" />
-      <stop offset="60%" stop-color="#008793" />
-      <stop offset="80%" stop-color="#00bf72" />
-    </linearGradient>`
-
-<XYWrapper name="Area"
-  data={generateDataRecords(10)}
-  x={d=>d.x} y={d=>d.y}
-  showContext="full"
-  color="url(#gradient)"
-  declarations={{ svgDefs: `\`${defs}\n  \`` }}
-  containerProps={{
-    svgDefs: defs
-  }}/>
-
-export const svg = `\n<svg>\n  <defs>   ${defs}\n  </defs>\n</svg>`
-
-:::note
-
-Alternatively, you can define any defs you want to use in an SVG element on the same page.
-
-<FrameworkTabs
-  angular={{html: `<vis-area ... color="url(#gradient)"></vis-area>\n${svg}`}}
-  react={`<VisArea ... color="url(#gradient)"/>\n${svg}`}
-  typescript={`const chart = new Area({... color: "url(#gradient)"})\n\ndocument.getElementById('container').insertAdjacentHTML(\`${svg}\`\n)`}/>
-
-:::
-
-### Multi-Series Gradient Areas
-
-To apply individual gradients to each series in a multi-area chart, define one `<linearGradient>` per series and reference them by index:
+Use the `svgDefs` property on the container to inject custom SVG definitions — gradients, patterns, clip paths — that any component can reference by `id`. The following example defines a vertical `<linearGradient>` per series and passes the `url(#id)` references as the area `color`:
 
 export const seriesColors = ['#3b82f6', '#ef4444', '#f59e0b']
-export const multiSeriesDefs = seriesColors.map((color, i) => `
+export const gradientDefs = seriesColors.map((color, i) => `
   <linearGradient id="area-grad-${i}" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0%" stop-color="${color}" stop-opacity="0.4" />
     <stop offset="100%" stop-color="${color}" stop-opacity="0.02" />
@@ -67,7 +32,7 @@ export const multiSeriesDefs = seriesColors.map((color, i) => `
   lineColor={seriesColors}
   showAxes
   height={200}
-  containerProps={{ svgDefs: multiSeriesDefs }}
+  containerProps={{ svgDefs: gradientDefs }}
 />
 
 ## Displaying Ordinal Values
