@@ -13,6 +13,7 @@ import { getColor } from 'utils/color'
 // Types
 import { Position } from 'types/position'
 import { FindNearestDirection } from 'types/data'
+import { Spacing } from 'types/spacing'
 
 // Local Types
 import { CrosshairAccessors, CrosshairCircle } from './types'
@@ -47,6 +48,10 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
     yStacked: undefined,
     baseline: undefined,
   }
+
+  private _colorKeys: string[] = []
+  public set colorKeys (colorKeys: string[]) { this._colorKeys = colorKeys }
+  public get colorKeys (): string[] { return this.config.colorKeys ?? this._colorKeys }
 
   public set accessors (accessors: CrosshairAccessors<Datum>) { this._accessors = accessors }
   public get accessors (): CrosshairAccessors<Datum> {
@@ -86,6 +91,15 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
     this.g.style('opacity', 0)
     this.line = this.g.append('line')
       .attr('class', s.line)
+  }
+
+  get bleed (): Spacing {
+    const { config: { circleRadius } } = this
+
+    // We leave the bottom bleed empty because usually the crosshair is used along with the X axis,
+    // so we don't need extra space at the bottom. For inverted charts, the users will need to specify
+    // the container margins themselves to avoid the crosshair circles from being cut off.
+    return { top: circleRadius, left: circleRadius, right: circleRadius }
   }
 
   setContainer (containerSvg: Selection<SVGSVGElement, unknown, SVGSVGElement, unknown>): void {
@@ -207,7 +221,7 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
     smartTransition(circlesEnter.merge(circles), duration, easeLinear)
       .attr('cx', xClamped)
       .attr('cy', d => d.y)
-      .attr('r', 4)
+      .attr('r', config.circleRadius)
       .style('opacity', d => d.opacity)
       .style('fill', d => d.color)
       .style('stroke', d => d.strokeColor)
@@ -290,6 +304,8 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
 
   private getCircleData (datum: Datum, datumIndex: number): CrosshairCircle[] {
     const { config } = this
+    const colorOptions = { colorFn: this._colorFunction }
+    const colorKeys = this.colorKeys
 
     if (config.snapToData && datum) {
       const yAccessors = this.accessors.y ?? []
@@ -299,8 +315,8 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
         .map((value, index) => ({
           y: this.yScale(value + baselineValue),
           opacity: isNumber(getNumber(datum, yStackedAccessors[index], index)) ? 1 : 0,
-          color: getColor(datum, config.color, index),
-          strokeColor: config.strokeColor ? getColor(datum, config.strokeColor, index) : undefined,
+          color: getColor(datum, config.color, index, colorKeys?.[index], colorOptions),
+          strokeColor: config.strokeColor ? getColor(datum, config.strokeColor, index, colorKeys?.[index], colorOptions) : undefined,
           strokeWidth: config.strokeWidth ? getNumber(datum, config.strokeWidth, index) : undefined,
         }))
 
@@ -310,8 +326,8 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
           return {
             y: this.yScale(value),
             opacity: isNumber(value) ? 1 : 0,
-            color: getColor(datum, config.color, stackedValues.length + index),
-            strokeColor: config.strokeColor ? getColor(datum, config.strokeColor, index) : undefined,
+            color: getColor(datum, config.color, stackedValues.length + index, colorKeys?.[stackedValues.length + index], colorOptions),
+            strokeColor: config.strokeColor ? getColor(datum, config.strokeColor, index, colorKeys?.[index], colorOptions) : undefined,
             strokeWidth: config.strokeWidth ? getNumber(datum, config.strokeWidth, index) : undefined,
           }
         })
