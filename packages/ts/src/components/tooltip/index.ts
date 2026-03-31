@@ -384,8 +384,12 @@ export class Tooltip {
                   else {
                     this._hoveredElement = el
                     cancelAnimationFrame(this._placementRafId)
+                    // Place in the next frame to ensure the tooltip has been rendered and has its dimensions when we calculate the position
                     this._placementRafId = requestAnimationFrame(() => {
-                      if (this._isShown) this.placeByElement(el)
+                      // Place the tooltip only if it was shown after calling `this.render()`, which may not be the case if `showDelay` is configured
+                      if (this._isShown) {
+                        this.placeByElement(el)
+                      }
                     })
                   }
                 }
