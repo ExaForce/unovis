@@ -286,8 +286,8 @@ export class Tooltip {
     if (html instanceof HTMLElement) {
       const node = this.div.select(':first-child').node()
       if (node !== html) this.div.html('').append(() => html)
-    } else if (html) {
-      this.div.html(html as string)
+    } else if (typeof html === 'string') {
+      this.div.html(html)
     }
 
     this.div
