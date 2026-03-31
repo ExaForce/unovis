@@ -19,12 +19,12 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
 
   return (
     <div>
-      <p>This example tests tooltip behavior with different empty content scenarios:</p>
+      <p>This example tests tooltip behavior with different trigger return values:</p>
       <ul>
-        <li>Points in category 0 (red): Show normal tooltip with data</li>
-        <li>Points in category 1 (blue): Return empty string - show empty tooltip</li>
-        <li>Points in category 2 (green): Return null - should not show tooltip</li>
-        <li>Points in category 3 (orange): Return undefined - show empty tooltip</li>
+        <li>Points in category 0 (red): Return a string - show tooltip with content</li>
+        <li>Points in category 1 (blue): Return <code>{'\'\''}</code> (empty string) - show empty tooltip</li>
+        <li>Points in category 2 (green): Return <code>null</code> - hide the tooltip</li>
+        <li>Points in category 3 (orange): Return <code>undefined</code> - leave content unchanged (for use with React portals or external content managers)</li>
       </ul>
 
       <VisXYContainer<XYDataRecord> data={data} height={400}>

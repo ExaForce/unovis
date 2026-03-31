@@ -39,6 +39,14 @@ export interface TooltipConfigInterface {
    *   [Area.selectors.area]: (d: AreaDatum[]) => `<div>${d.value.toString()}</div>
    * }
    * ```
+   *
+   * The trigger function return value controls tooltip behavior:
+   * - `string` — set as the tooltip's HTML content
+   * - `HTMLElement` — appended directly as the tooltip's content
+   * - `''` (empty string) — clear the content and show an empty tooltip
+   * - `null` — hide the tooltip
+   * - `undefined` / no return — leave the content unchanged; use this when managing
+   *   content externally (e.g. via React `createPortal`)
    */
   triggers?: {
     [selector: string]: ((data: any, i: number, elements: (HTMLElement | SVGElement)[]) => string | HTMLElement | undefined | null | void) | undefined | null;
