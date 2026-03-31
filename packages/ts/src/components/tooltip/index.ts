@@ -33,6 +33,7 @@ export class Tooltip {
   private _overriddenHorizontalPlacement: Position.Left | Position.Right | string | undefined
   private _hideDelayTimeoutId: ReturnType<typeof setTimeout> | undefined
   private _showDelayTimeoutId: ReturnType<typeof setTimeout> | undefined
+  private _placementRafId: number | undefined
 
   constructor (config: TooltipConfigInterface = {}) {
     this.element = document.createElement('div')
@@ -111,6 +112,7 @@ export class Tooltip {
   }
 
   private _hide (): void {
+    cancelAnimationFrame(this._placementRafId)
     this.div
       .classed(s.show, false) // The `show` class triggers the opacity transition
       .on('transitionend', () => {
@@ -150,7 +152,8 @@ export class Tooltip {
       window.clearTimeout(this._showDelayTimeoutId)
       this._showDelayTimeoutId = setTimeout(() => {
         this._display()
-        this.place({ x: this._position[0], y: this._position[1] })
+        if (!this.config.followCursor && this._hoveredElement) this.placeByElement(this._hoveredElement)
+        else if (this._position) this.place({ x: this._position[0], y: this._position[1] })
       }, this.config.showDelay)
     } else {
       this._display()
@@ -198,7 +201,7 @@ export class Tooltip {
   public placeByElement (hoveredElement: SVGElement | HTMLElement): void {
     const { config } = this
 
-    // Store the hovered element and the event for future reference,
+    // Store the hovered element for future reference,
     // i.e. to re-position the tooltip if the content has been changed
     // by something else and it was captured by the MutationObserver
     this._hoveredElement = hoveredElement
@@ -378,7 +381,17 @@ export class Tooltip {
                   // an empty string. This way we can allow it to work with things like `createPortal` in React
                   this.render(content)
                   if (currentConfig.followCursor) this.place({ x, y })
-                  else this.placeByElement(el)
+                  else {
+                    this._hoveredElement = el
+                    cancelAnimationFrame(this._placementRafId)
+                    // Place in the next frame to ensure the tooltip has been rendered and has its dimensions when we calculate the position
+                    this._placementRafId = requestAnimationFrame(() => {
+                      // Place the tooltip only if it was shown after calling `this.render()`, which may not be the case if `showDelay` is configured
+                      if (this._isShown) {
+                        this.placeByElement(el)
+                      }
+                    })
+                  }
                 }
 
                 // Stop propagation to prevent other interfering events from being triggered, e.g. Crosshair
