@@ -98,13 +98,21 @@ The arguments of the callback can be used to customize the string content or cus
 - `i`: the datum's array index
 - `els`: an array of all elements with the selector
 
+The return value controls what the tooltip does:
+
+| Return value | Behavior |
+|---|---|
+| `string` | Set as the tooltip's HTML content |
+| `HTMLElement` | Appended directly as the tooltip's content |
+| `''` (empty string) | Clear the content and show an empty tooltip |
+| `null` | Hide the tooltip |
+| `undefined` / no return | Leave the content unchanged |
+
 :::tip
 
-Returning `null` will hide the tooltip, while returning nothing or `undefined` will
-show the tooltip but won't render anything.
-
-You can use this behavior to make _Tooltip_ work with Portals (e.g. `createPortal` in React),
-when you want to render your custom tooltip component into Unovis's _Tooltip_.
+Returning `undefined` (or nothing) leaves the tooltip content untouched. Use this when managing
+content externally — for example, with React's `createPortal` to render a component directly
+into the tooltip element.
 
 :::
 
