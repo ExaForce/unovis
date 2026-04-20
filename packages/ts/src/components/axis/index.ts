@@ -255,6 +255,7 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
 
     // Resolving tick label overlap after the animation is over
     transition.on('end', () => {
+      if (this.config.tickTextAlign) this._alignTickLabels(selection)
       this._resolveTickLabelOverlap(selection)
     })
 
@@ -270,6 +271,7 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
       .filter(tickValue => tickValues.some((t: number | Date) => isEqual(tickValue, t))) // We use isEqual to compare Dates
       .classed(s.tickLabel, true)
       .classed(s.tickLabelHideable, Boolean(config.tickTextHideOverlapping))
+      .classed(s.tickTextExiting, false)
       .style('fill', config.tickTextColor) as Selection<SVGTextElement, number, SVGGElement, unknown> | Selection<SVGTextElement, Date, SVGGElement, unknown>
 
     // Marking exiting elements
@@ -566,12 +568,12 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
 
   private _alignTickLabels (axisGroup = this.axisGroup): void {
     const { config: { type, tickTextAlign, tickTextAngle, position } } = this
-    const tickGroups = axisGroup.selectAll<SVGGElement, number | Date>('g.tick')
-    const ticksData = tickGroups.data() as number[] | Date[]
+    const activeTickTexts = axisGroup.selectAll<SVGTextElement, number | Date>(`g.tick > text:not(.${s.tickTextExiting})`)
+    const ticksData = activeTickTexts.data() as number[] | Date[]
 
-    tickGroups.each((_, i, elements) => {
-      const tickGroupElement = elements[i] as SVGGElement
-      const tickTextElement = tickGroupElement.querySelector('text') as SVGTextElement
+    activeTickTexts.each((_, i, elements) => {
+      const tickTextElement = elements[i] as SVGTextElement
+      const tickGroupElement = tickTextElement.parentNode as SVGGElement
       const transformValues = getTransformValues(tickGroupElement)
       const tickPosition = [transformValues.translate.x, transformValues.translate.y] as [number, number]
       const textAlign = (isFunction(tickTextAlign) ? tickTextAlign(ticksData[i], i, ticksData, tickPosition, this._width, this._height) : tickTextAlign) as TextAlign
