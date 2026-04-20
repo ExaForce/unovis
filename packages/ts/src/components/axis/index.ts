@@ -18,7 +18,6 @@ import { renderTextToSvgTextElement, textAlignToAnchor, trimSVGText, wrapSVGText
 import { isEqual, isFunction } from 'utils/data'
 import { rectIntersect } from 'utils/misc'
 import { getFontWidthToHeightRatio } from 'styles/index'
-import { getTransformValues } from 'utils/svg'
 
 // Local Types
 import { AxisType } from './types'
@@ -255,7 +254,6 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
 
     // Resolving tick label overlap after the animation is over
     transition.on('end', () => {
-      if (this.config.tickTextAlign) this._alignTickLabels(selection)
       this._resolveTickLabelOverlap(selection)
     })
 
@@ -573,10 +571,13 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
 
     activeTickTexts.each((_, i, elements) => {
       const tickTextElement = elements[i] as SVGTextElement
-      const tickGroupElement = tickTextElement.parentNode as SVGGElement
-      const transformValues = getTransformValues(tickGroupElement)
-      const tickPosition = [transformValues.translate.x, transformValues.translate.y] as [number, number]
-      const textAlign = (isFunction(tickTextAlign) ? tickTextAlign(ticksData[i], i, ticksData, tickPosition, this._width, this._height) : tickTextAlign) as TextAlign
+      const tickDatum = ticksData[i]
+      // Compute the tick's target position from the scale rather than reading the DOM transform,
+      // which would return an interpolated value during a transition.
+      const tickPosition: [number, number] = type === AxisType.X
+        ? [this.xScale(tickDatum as never), 0]
+        : [0, this.yScale(tickDatum as never)]
+      const textAlign = (isFunction(tickTextAlign) ? tickTextAlign(tickDatum, i, ticksData, tickPosition, this._width, this._height) : tickTextAlign) as TextAlign
       const textAnchor = textAlignToAnchor(textAlign)
       const translateX = type === AxisType.X ? 0 : this._getYTickTextTranslate(textAlign, position as Position)
 
