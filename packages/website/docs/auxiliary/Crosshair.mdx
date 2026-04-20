@@ -44,6 +44,22 @@ You can disable this feature using the `hideWhenFarFromPointer` attribute.
 Use the `hideWhenFarFromPointerDistance` attribute with a length (in pixels) that represents the minimum horizontal distance the cursor must be from a datapoint before hiding.
 <XYWrapperWithInput {...crosshairProps("StackedBar", { barWidth: 10})} data={generateDataRecords(10).filter(d => d.x % 2 == 0)} property="hideWhenFarFromPointerDistance" defaultValue={50} inputType="range"/>
 
+#### `minContainerVisibleRatio`
+The _Crosshair_'s tooltip is only shown when the chart container is sufficiently visible in the viewport.
+This prevents the tooltip from appearing detached over unrelated page content when the chart has been scrolled mostly off-screen.
+
+The `minContainerVisibleRatio` attribute accepts a value between `0` and `1` and represents the minimum fraction of the container's area that must intersect the viewport before the tooltip is allowed to show. It defaults to `0.35` (i.e. at least 35% of the container must be visible).
+
+Container visibility is tracked with an [`IntersectionObserver`](https://developer.mozilla.org/docs/Web/API/IntersectionObserver), so the check is performed asynchronously by the browser and does not trigger layout reads on `mousemove`.
+
+Set it to `0` to always allow the tooltip (regardless of visibility), or to `1` to require the container to be fully on-screen.
+
+```ts
+const crosshairConfig = {
+  minContainerVisibleRatio: 0.5, // Require at least 50% of the chart to be visible
+}
+```
+
 ## Custom Color
 Provide a `string` or color accessor function to the `color` attribute to customize the crosshair's point color:
 <XYWrapper {...crosshairProps()} color={(d, i) => ['red', 'green', 'blue'][i]} showContext="minimal"/>
