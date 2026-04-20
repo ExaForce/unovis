@@ -36,6 +36,9 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
   private _yPx: number | undefined = undefined
   private _mouseEvent: MouseEvent | undefined = undefined
   private _animFrameId: number = null
+  private _isContainerVisible = false
+  private _intersectionObserver: IntersectionObserver | null = null
+  private _observedContainerNode: SVGSVGElement | null = null
 
   /** Tooltip component to be used by Crosshair if not provided by the config.
    * This property is supposed to be set externally by a container component like XYContainer. */
@@ -64,20 +67,38 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
   }
 
   private _isContainerInViewport (): boolean {
-    if (!this.container?.node()) return false
+    return this._isContainerVisible
+  }
 
-    const containerRect = this.container.node().getBoundingClientRect()
-    const viewportWidth = window.innerWidth || document.documentElement.clientWidth
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight
+  private _setupIntersectionObserver (node: SVGSVGElement): void {
+    this._teardownIntersectionObserver()
 
-    // Calculate the visible area of the container
-    const visibleWidth = Math.max(0, Math.min(containerRect.right, viewportWidth) - Math.max(containerRect.left, 0))
-    const visibleHeight = Math.max(0, Math.min(containerRect.bottom, viewportHeight) - Math.max(containerRect.top, 0))
-    const containerArea = containerRect.width * containerRect.height
-    const visibleArea = visibleWidth * visibleHeight
+    if (typeof IntersectionObserver === 'undefined') {
+      // Fallback for environments without `IntersectionObserver` (e.g. older SSR setups):
+      // assume visible so we don't suppress the tooltip entirely.
+      this._isContainerVisible = true
+      return
+    }
 
-    // Container must be at least 35% visible
-    return containerArea > 0 && (visibleArea / containerArea) >= 0.35
+    const threshold = this.config.minContainerVisibleRatio ?? CrosshairDefaultConfig.minContainerVisibleRatio
+    const clampedThreshold = Math.max(0, Math.min(1, threshold))
+
+    this._intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[entries.length - 1]
+        if (!entry) return
+        this._isContainerVisible = entry.intersectionRatio >= clampedThreshold
+      },
+      { threshold: [0, clampedThreshold, 1] }
+    )
+    this._intersectionObserver.observe(node)
+    this._observedContainerNode = node
+  }
+
+  private _teardownIntersectionObserver (): void {
+    this._intersectionObserver?.disconnect()
+    this._intersectionObserver = null
+    this._observedContainerNode = null
   }
 
   constructor (config?: CrosshairConfigInterface<Datum>) {
@@ -105,6 +126,25 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
     this.container.on('mousemove.crosshair', this._onMouseMove.bind(this))
     this.container.on('mouseout.crosshair', this._onMouseOut.bind(this))
     this.container.on('wheel.crosshair', this._onWheel.bind(this))
+
+    const node = this.container.node()
+    if (node) this._setupIntersectionObserver(node)
+  }
+
+  setConfig (config: CrosshairConfigInterface<Datum>): void {
+    const prevThreshold = this.config?.minContainerVisibleRatio
+    super.setConfig(config)
+
+    // Re-create the observer if the visibility threshold changed so the new value takes effect.
+    if (this._observedContainerNode && this.config.minContainerVisibleRatio !== prevThreshold) {
+      this._setupIntersectionObserver(this._observedContainerNode)
+    }
+  }
+
+  public destroy (): void {
+    this._teardownIntersectionObserver()
+    window.cancelAnimationFrame(this._animFrameId)
+    super.destroy()
   }
 
   _render (customDuration?: number): void {
