@@ -9,6 +9,7 @@ import { isNumber, getExtent, getNumber, getString, isArray, flatten, getValue }
 import { getColor } from 'utils/color'
 import { smartTransition } from 'utils/d3'
 import { getCSSVariableValueInPixels } from 'utils/misc'
+import { getFontStringFromElement } from 'utils/font'
 
 // Types
 import { Spacing } from 'types/spacing'
@@ -74,6 +75,13 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
 
     const fontSizePx = getCSSVariableValueInPixels('var(--vis-scatter-point-label-text-font-size)', this.element)
 
+    // Scatter point labels are styled via `.point > text` selector — probe a temporary
+    // structure inside the chart so the canvas measurement uses the same resolved font.
+    const probeGroup = select(this.element).append('g').attr('class', s.point).style('visibility', 'hidden')
+    const probeText = probeGroup.append('text')
+    const fontString = getFontStringFromElement(probeText.node(), { fontSize: fontSizePx })
+    probeGroup.remove()
+
     const extent = pointDataFlat.reduce((ext, d) => {
       const x = this.xScale(d._point.xValue)
       const y = this.yScale(d._point.yValue)
@@ -85,7 +93,7 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
       ext.maxY = Math.max(ext.maxY, y + r)
 
       if (d._point.label) {
-        const labelBBox = getEstimatedLabelBBox(d, d._point.labelPosition, this.xScale, this.yScale, fontSizePx)
+        const labelBBox = getEstimatedLabelBBox(d, d._point.labelPosition, this.xScale, this.yScale, fontSizePx, fontString)
         ext.minX = Math.min(ext.minX, labelBBox.x)
         ext.maxX = Math.max(ext.maxX, labelBBox.x + labelBBox.width)
         ext.minY = Math.min(ext.minY, labelBBox.y)

@@ -14,18 +14,25 @@ import { measureTextWidth, resolveFontString } from 'utils/font'
 // Styles
 import { getFontWidthToHeightRatio, UNOVIS_TEXT_DEFAULT, UNOVIS_TEXT_SEPARATOR_DEFAULT, UNOVIS_TEXT_HYPHEN_CHARACTER_DEFAULT } from 'styles/index'
 
-// Warn once per (function, reason) when a measurement falls back to the legacy
-// ratio-based path. "ratio" = uniform-character estimate using fontWidthToHeightRatio.
-// "dom" = SVG getComputedTextLength (older path used by wrapSVGText when no fontString).
-// Reason "no-fontString": caller didn't supply fontString → component not migrated yet.
-// Reason "font-loading":  fontString was provided but fonts haven't loaded into canvas yet (transient; expected on first paint, container re-renders once fonts ready).
+// Warn once per (function, reason, mode) when a measurement falls back to the
+// legacy ratio-based or DOM path. Off by default; opt in by setting
+// `globalThis.UNOVIS_DEBUG_FONT_FALLBACK = true` (handy for catching regressions
+// when wiring a new component).
+//
+//   "ratio":         uniform-character estimate via fontWidthToHeightRatio
+//   "dom":           SVG getComputedTextLength (only `wrapSVGText` without fontString)
+//   "no-fontString": caller didn't supply fontString → component not migrated
+//   "font-loading":  fontString supplied but fonts not yet loaded into canvas
+//                    (transient; container re-renders once fonts ready)
 const _ratioFallbackWarned = new Set<string>()
 const warnRatioFallback = (fn: string, reason: 'no-fontString' | 'font-loading', mode: 'ratio' | 'dom'): void => {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  if (!(globalThis as { UNOVIS_DEBUG_FONT_FALLBACK?: boolean }).UNOVIS_DEBUG_FONT_FALLBACK) return
   const key = `${fn}|${reason}|${mode}`
   if (_ratioFallbackWarned.has(key)) return
   _ratioFallbackWarned.add(key)
   // eslint-disable-next-line no-console
-  console.warn(`[unovis] ${fn} fell back to ${mode}-based measurement (${reason}). This warning fires once per (function, reason) per session.`)
+  console.warn(`[unovis] ${fn} fell back to ${mode}-based measurement (${reason}). Once per (function, reason, mode) per session. Disable: globalThis.UNOVIS_DEBUG_FONT_FALLBACK = false`)
 }
 
 export const textAlignToAnchor = (textAlign: TextAlign): string | null => {

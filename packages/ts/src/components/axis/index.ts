@@ -18,7 +18,6 @@ import { renderTextToSvgTextElement, textAlignToAnchor, trimSVGText, wrapSVGText
 import { getFontStringFromElement } from 'utils/font'
 import { isEqual, isFunction } from 'utils/data'
 import { rectIntersect } from 'utils/misc'
-import { getFontWidthToHeightRatio } from 'styles/index'
 
 // Local Types
 import { AxisType } from './types'
@@ -44,7 +43,6 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
   private _tickTextStyleCached: {
     fontSize: number;
     fontFamily: string;
-    fontWidthToHeightRatio: number;
     fontString: string;
   }
 
@@ -295,7 +293,6 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
         this._tickTextStyleCached = {
           fontSize: Number.parseFloat(styleDeclaration.fontSize),
           fontFamily: styleDeclaration.fontFamily,
-          fontWidthToHeightRatio: getFontWidthToHeightRatio(),
           fontString: getFontStringFromElement(textElement),
         }
       }
@@ -316,7 +313,7 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
 
       if (config.tickTextFitMode === FitMode.Trim) {
         const textElementSelection = select<SVGTextElement, string>(textElement).text(text)
-        trimSVGText(textElementSelection, textMaxWidth, config.tickTextTrimType as TrimMode, true, this._tickTextStyleCached.fontSize, 0.58, this._tickTextStyleCached.fontString)
+        trimSVGText(textElementSelection, textMaxWidth, config.tickTextTrimType as TrimMode, true, this._tickTextStyleCached.fontSize, undefined, this._tickTextStyleCached.fontString)
         text = select<SVGTextElement, string>(textElement).text()
       }
 

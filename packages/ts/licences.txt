@@ -1,5 +1,6 @@
 name                               license period  license type  installed version  author
 ----                               --------------  ------------  -----------------  ------
+@chenglou/pretext                  perpetual       MIT           0.0.6              n/a
 @emotion/css                       perpetual       MIT           11.10.5            Kye Hohenberger
 @juggle/resize-observer            perpetual       Apache-2.0    3.3.1              Juggle
 @types/d3                          perpetual       MIT           7.4.0              n/a

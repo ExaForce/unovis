@@ -7,6 +7,7 @@ import { throttle, getValue, getNumber, getBoolean, ensureArray } from 'utils/da
 import { smartTransition } from 'utils/d3'
 import { getCSSVariableValueInPixels } from 'utils/misc'
 import { estimateStringPixelLength } from 'utils/text'
+import { probeFontStringForClass } from 'utils/font'
 import { toPx } from 'utils/to-px'
 
 // Types
@@ -228,7 +229,8 @@ export function updateLinks<N extends GraphInputNode, L extends GraphInputLink> 
       const shouldBeRenderedAsCircle = text.length <= 2 || shouldRenderUseElement
       const paddingVertical = 4
       const paddingHorizontal = shouldBeRenderedAsCircle ? paddingVertical : 8
-      const estimatedWidthPx = estimateStringPixelLength(text, fontSizePx)
+      const fontString = probeFontStringForClass(linkGroup.node(), linkSelectors.linkLabelContent, { fontSize: fontSizePx })
+      const estimatedWidthPx = estimateStringPixelLength(text, fontSizePx, undefined, fontString)
 
       return {
         ...linkLabelDatum,

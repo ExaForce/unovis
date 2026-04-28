@@ -133,6 +133,29 @@ export function getFontStringFromElement (
   return `${s.fontStyle || 'normal'} ${s.fontWeight || 400} ${fontSize} ${s.fontFamily}`
 }
 
+/**
+ * Probes the font string that would apply to an SVG `<text>` element with the
+ * given class within the given parent. Creates a temporary, hidden element
+ * to read the resolved computed style, then removes it. Useful for pre-render
+ * call sites (bleed/extent calculations) that need the same fontString their
+ * production labels will get, but don't have a real element yet.
+ */
+export function probeFontStringForClass (
+  parent: Element,
+  className: string,
+  overrides?: { fontSize?: number | string }
+): string {
+  const svgNS = 'http://www.w3.org/2000/svg'
+  const probe = parent.ownerDocument!.createElementNS(svgNS, 'text')
+  probe.setAttribute('class', className)
+  probe.setAttribute('visibility', 'hidden')
+  probe.setAttribute('aria-hidden', 'true')
+  parent.appendChild(probe)
+  const fontString = getFontStringFromElement(probe, overrides)
+  parent.removeChild(probe)
+  return fontString
+}
+
 function resolveCSSVariables (value: string, context: Element): string {
   if (!value.includes('var(')) return value
   const cs = getComputedStyle(context)

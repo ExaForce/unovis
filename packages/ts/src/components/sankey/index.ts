@@ -17,6 +17,7 @@ import { VerticalAlign } from 'types/text'
 // Utils
 import { smartTransition } from 'utils/d3'
 import { clamp, getNumber, getString, groupBy, isNumber } from 'utils/data'
+import { probeFontStringForClass } from 'utils/font'
 
 // Config
 import { SankeyDefaultConfig, SankeyConfigInterface } from './config'
@@ -116,6 +117,8 @@ export class Sankey<
     if (nodes.length) {
       const labelFontSize = getLabelFontSize(config, this.element as SVGElement)
       const subLabelFontSize = getSubLabelFontSize(config, this.element as SVGElement)
+      const labelFontString = probeFontStringForClass(this.element as SVGElement, s.label, { fontSize: labelFontSize })
+      const subLabelFontString = probeFontStringForClass(this.element as SVGElement, s.sublabel, { fontSize: subLabelFontSize })
 
       // We pre-calculate sankey layout to get information about node labels placement and calculate bleed properly
       // Potentially it can be a performance bottleneck for large layouts, but generally rendering of such layouts is much more computationally heavy
@@ -137,14 +140,14 @@ export class Sankey<
       const hasLabelsOnTheLeft = zeroLayerNodes.some(d => getLabelOrientation(d, sankeyProbeSize, config.labelPosition) === Position.Left)
 
       if (hasLabelsOnTheLeft) {
-        const maxLeftLabelWidth = max(zeroLayerNodes, d => estimateRequiredLabelWidth(d, config, labelFontSize, subLabelFontSize))
+        const maxLeftLabelWidth = max(zeroLayerNodes, d => estimateRequiredLabelWidth(d, config, labelFontSize, subLabelFontSize, labelFontString, subLabelFontString))
         left = min([labelMaxWidth, maxLeftLabelWidth]) + labelHorizontalPadding
       }
 
       let right = 0
       const hasLabelsOnTheRight = maxLayerNodes.some(d => getLabelOrientation(d, sankeyProbeSize, config.labelPosition) === Position.Right)
       if (hasLabelsOnTheRight) {
-        const maxRightLabelWidth = max(maxLayerNodes, d => estimateRequiredLabelWidth(d, config, labelFontSize, subLabelFontSize))
+        const maxRightLabelWidth = max(maxLayerNodes, d => estimateRequiredLabelWidth(d, config, labelFontSize, subLabelFontSize, labelFontString, subLabelFontString))
         right = min([labelMaxWidth, maxRightLabelWidth]) + labelHorizontalPadding
       }
 
