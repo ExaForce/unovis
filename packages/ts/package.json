@@ -83,6 +83,7 @@
     "rollup-plugin-visualizer": "^4.2.2"
   },
   "dependencies": {
+    "@chenglou/pretext": "^0.0.6",
     "@emotion/css": "^11.7.1",
     "@juggle/resize-observer": "^3.3.1",
     "@types/d3": "^7.4.0",

@@ -40,6 +40,8 @@ export type UnovisText = {
   marginBottom?: number;
   // The font width-to-height ratio (optional).
   fontWidthToHeightRatio?: number;
+  // CSS font shorthand string for precise text measurement via pretext (e.g. "normal 400 12px Inter").
+  fontString?: string;
 }
 
 export type UnovisWrappedText = UnovisText & {
