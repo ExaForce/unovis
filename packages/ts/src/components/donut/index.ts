@@ -9,6 +9,7 @@ import { SeriesDataModel } from 'data-models/series'
 import { smartTransition } from 'utils/d3'
 import { isNumber, clamp, getNumber } from 'utils/data'
 import { wrapSVGText } from 'utils/text'
+import { getFontStringFromElement } from 'utils/font'
 
 // Types
 import { Spacing } from 'types/spacing'
@@ -162,7 +163,10 @@ export class Donut<Datum> extends ComponentCore<Datum[], DonutConfigInterface<Da
       .style('text-anchor', labelTextAnchor)
       .text(config.centralSubLabel ?? null)
 
-    if (config.centralSubLabelWrap) wrapSVGText(this.centralSubLabel, innerRadius * 1.9)
+    if (config.centralSubLabelWrap) {
+      const fontString = getFontStringFromElement(this.centralSubLabel.node())
+      wrapSVGText(this.centralSubLabel, innerRadius * 1.9, undefined, fontString)
+    }
 
     // Label placement
     const labelTranslateX = (config.centralLabelOffsetX || 0) + translateX

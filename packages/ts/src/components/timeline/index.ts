@@ -12,6 +12,7 @@ import { isNumber, arrayOfIndices, getMin, getMax, getString, getNumber, getValu
 import { smartTransition } from 'utils/d3'
 import { getColor } from 'utils/color'
 import { textAlignToAnchor, trimSVGText } from 'utils/text'
+import { getFontStringFromElement } from 'utils/font'
 import { arrowPolylinePath } from 'utils/path'
 import { guid } from 'utils/misc'
 
@@ -137,10 +138,14 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
       if (config.rowLabelWidth ?? config.labelWidth) {
         this._labelWidth = (config.rowLabelWidth ?? config.labelWidth) + marginLeft + marginRight
       } else {
-        const labels = rowLabels.map(l => this._labelsGroup.append('text')
-          .attr('class', s.label)
-          .text(l.formattedLabel || '')
-          .call(trimSVGText, config.rowMaxLabelWidth ?? config.maxLabelWidth, config.rowLabelTrimMode as TrimMode))
+        const labels = rowLabels.map(l => {
+          const sel = this._labelsGroup.append('text')
+            .attr('class', s.label)
+            .text(l.formattedLabel || '')
+          const fontString = getFontStringFromElement(sel.node())
+          trimSVGText(sel, config.rowMaxLabelWidth ?? config.maxLabelWidth, config.rowLabelTrimMode as TrimMode, true, undefined, undefined, fontString)
+          return sel
+        })
 
         const labelWidth = max(labels.map(l => l.node().getBBox().width)) || 0
         labels.forEach(l => l.remove())
@@ -296,7 +301,8 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
       .each((label, i, els) => {
         const labelSelection = select(els[i])
         const maxLabelWidth = (config.rowLabelWidth ?? config.labelWidth) || (config.rowMaxLabelWidth ?? config.maxLabelWidth)
-        trimSVGText(labelSelection, maxLabelWidth, config.rowLabelTrimMode as TrimMode)
+        const fontString = getFontStringFromElement(els[i])
+        trimSVGText(labelSelection, maxLabelWidth, config.rowLabelTrimMode as TrimMode, true, undefined, undefined, fontString)
 
         // Apply custom label style if it has been provided
         const customStyle = getValue(label, config.rowLabelStyle)

@@ -9,10 +9,24 @@ import { TextAlign, TrimMode, UnovisText, UnovisTextFrameOptions, UnovisTextOpti
 import { flatten, isArray, merge } from 'utils/data'
 import { getTextAnchorFromTextAlign } from 'types/svg'
 import { toPx } from 'utils/to-px'
-import { measureTextWidth } from 'utils/font'
+import { measureTextWidth, resolveFontString } from 'utils/font'
 
 // Styles
 import { getFontWidthToHeightRatio, UNOVIS_TEXT_DEFAULT, UNOVIS_TEXT_SEPARATOR_DEFAULT, UNOVIS_TEXT_HYPHEN_CHARACTER_DEFAULT } from 'styles/index'
+
+// Warn once per (function, reason) when a measurement falls back to the legacy
+// ratio-based path. "ratio" = uniform-character estimate using fontWidthToHeightRatio.
+// "dom" = SVG getComputedTextLength (older path used by wrapSVGText when no fontString).
+// Reason "no-fontString": caller didn't supply fontString → component not migrated yet.
+// Reason "font-loading":  fontString was provided but fonts haven't loaded into canvas yet (transient; expected on first paint, container re-renders once fonts ready).
+const _ratioFallbackWarned = new Set<string>()
+const warnRatioFallback = (fn: string, reason: 'no-fontString' | 'font-loading', mode: 'ratio' | 'dom'): void => {
+  const key = `${fn}|${reason}|${mode}`
+  if (_ratioFallbackWarned.has(key)) return
+  _ratioFallbackWarned.add(key)
+  // eslint-disable-next-line no-console
+  console.warn(`[unovis] ${fn} fell back to ${mode}-based measurement (${reason}). This warning fires once per (function, reason) per session.`)
+}
 
 export const textAlignToAnchor = (textAlign: TextAlign): string | null => {
   switch (textAlign) {
@@ -161,6 +175,7 @@ export function wrapSVGText (
     const tspanText = `${tspanContent}${word}`
     tspan.text(tspanText)
     const measured = fontString ? measureTextWidth(tspanText, fontString) : null
+    if (measured === null) warnRatioFallback('wrapSVGText', fontString ? 'font-loading' : 'no-fontString', 'dom')
     const tspanWidth = measured ?? tspan.node().getComputedTextLength()
     if (tspanWidth > width) {
       tspan.text(tspanContent.trim())
@@ -209,6 +224,7 @@ export function trimSVGText (
   // and we land here with stable measurements.
   if (fontString) {
     const fullWidth = measureTextWidth(text, fontString)
+    if (fullWidth === null) warnRatioFallback('trimSVGText', 'font-loading', 'ratio')
     if (fullWidth !== null) {
       if (fullWidth <= maxWidth) return false
       let lo = 0
@@ -259,6 +275,9 @@ export function estimateStringPixelLength (
   if (fontString) {
     const measured = measureTextWidth(str, fontString)
     if (measured !== null) return measured
+    warnRatioFallback('estimateStringPixelLength', 'font-loading', 'ratio')
+  } else {
+    warnRatioFallback('estimateStringPixelLength', 'no-fontString', 'ratio')
   }
   return str.length * fontSize * fontWidthToHeightRatio || 0
 }
@@ -316,6 +335,9 @@ export function estimateTextSize (
     if (fontString) {
       const measured = measureTextWidth(str, fontString)
       if (measured !== null) return measured
+      warnRatioFallback('estimateTextSize', 'font-loading', fastMode ? 'ratio' : 'dom')
+    } else {
+      warnRatioFallback('estimateTextSize', 'no-fontString', fastMode ? 'ratio' : 'dom')
     }
     return fastMode ? fontSize * str.length * ratio : domFallback()
   }
@@ -363,6 +385,9 @@ function breakTextIntoLines (
     if (fontString) {
       const measured = measureTextWidth(str, fontString)
       if (measured !== null) return measured
+      warnRatioFallback('breakTextIntoLines', 'font-loading', fastMode ? 'ratio' : 'dom')
+    } else {
+      warnRatioFallback('breakTextIntoLines', 'no-fontString', fastMode ? 'ratio' : 'dom')
     }
     return fastMode
       ? estimateStringPixelLength(str, fontSize, fontWidthToHeightRatio)
@@ -467,6 +492,9 @@ export function getWrappedText (
 
       const lineWithEllipsis = `${line} …`
       const measuredEllipsis = text.fontString ? measureTextWidth(lineWithEllipsis, text.fontString) : null
+      if (measuredEllipsis === null) {
+        warnRatioFallback('getWrappedText.ellipsis', text.fontString ? 'font-loading' : 'no-fontString', fastMode ? 'ratio' : 'dom')
+      }
       const textLengthPx = measuredEllipsis ?? (fastMode
         ? estimateStringPixelLength(lineWithEllipsis, text.fontSize, text.fontWidthToHeightRatio)
         : getPreciseStringLengthPx(lineWithEllipsis, text.fontFamily, text.fontSize))
@@ -555,6 +583,18 @@ export function estimateWrappedTextHeight (blocks: UnovisWrappedText[]): number 
 export const allowedSvgTextTags = ['text', 'tspan', 'textPath', 'altGlyph', 'altGlyphDef', 'altGlyphItem', 'glyphRef', 'textRef', 'textArea']
 
 /**
+ * Ensures every text block has `fontString` populated, resolving from the
+ * given context element when missing. Existing fontStrings are preserved.
+ */
+function withResolvedFontStrings (
+  text: UnovisText | UnovisText[],
+  context: Element
+): UnovisText | UnovisText[] {
+  const resolveOne = (b: UnovisText): UnovisText => (b.fontString ? b : { ...b, fontString: resolveFontString(b, context) })
+  return Array.isArray(text) ? text.map(resolveOne) : resolveOne(text)
+}
+
+/**
  * Renders a text or array of texts to an SVG text element.
  * Calling this function will replace the contents of the specified SVG text element.
  *
@@ -572,7 +612,8 @@ export function renderTextToSvgTextElement (
   // shifting it vertically, irrespective of the dominant baseline.
   dominantBaseline?: string
 ): void {
-  const wrappedText = getWrappedText(text, options.width, undefined, options.fastMode, options.separator, options.wordBreak)
+  const textWithFont = withResolvedFontStrings(text, textElement)
+  const wrappedText = getWrappedText(textWithFont, options.width, undefined, options.fastMode, options.separator, options.wordBreak)
   const textElementX = options.x ?? +textElement.getAttribute('x')
   const textElementY = options.y ?? +textElement.getAttribute('y')
   const x = textElementX ?? 0
@@ -619,7 +660,8 @@ export function renderTextIntoFrame (
   text: UnovisText | UnovisText[],
   frameOptions: UnovisTextFrameOptions
 ): void {
-  const wrappedText = getWrappedText(text, frameOptions.width, frameOptions.height, frameOptions.fastMode, frameOptions.separator, frameOptions.wordBreak)
+  const textWithFont = withResolvedFontStrings(text, group)
+  const wrappedText = getWrappedText(textWithFont, frameOptions.width, frameOptions.height, frameOptions.fastMode, frameOptions.separator, frameOptions.wordBreak)
 
   const x = frameOptions.textAlign === TextAlign.Center ? frameOptions.width / 2
     : frameOptions.textAlign === TextAlign.Right ? frameOptions.width : 0
