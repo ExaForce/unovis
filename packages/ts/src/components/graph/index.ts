@@ -481,6 +481,7 @@ export class Graph<
   }
 
   private _fit (duration = 0, nodeIds?: (string | number)[], alignment = this.config.fitViewAlign): void {
+    if (this.isDestroyed()) return
     const { datamodel, config: { nodeSize } } = this
     const nodes = nodeIds?.length ? datamodel.nodes.filter(n => nodeIds.includes(n.id)) : datamodel.nodes
 
