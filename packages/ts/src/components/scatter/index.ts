@@ -237,6 +237,19 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
     })
   }
 
+  // The D3 datum bound to each point is a `ScatterPoint<Datum>` wrapper, and the
+  // DOM-derived index no longer matches the original row index: off-screen
+  // points and points with missing values are filtered out, and points from
+  // all y-accessor groups share the same selection. We restore the original
+  // row index from `_point.pointIndex` while leaving the datum wrapper intact.
+  // Todo: This can be revisited in Unovis 2.0, but the migration guide should contain a note about it.
+  protected _mapEventDatum (d: ScatterPoint<Datum>): { datum: ScatterPoint<Datum>; index: number } {
+    return {
+      datum: d,
+      index: d._point.pointIndex,
+    }
+  }
+
   private _onPointMouseOver (d: ScatterPoint<Datum>, event: MouseEvent): void {
     const point = select(event.target as SVGGElement)
     const pointNode = point.node() as ScatterPointGroupNode | null
