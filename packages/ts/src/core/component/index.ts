@@ -142,7 +142,7 @@ export class ComponentCore<
 
   // Sometimes we don't want to pass the original data and/or index to the event handler.
   // This method can be overridden by components to implement a custom mapping.
-  // See Stacked Bar for an example.
+  // See Stacked Bar and Scatter for examples.
   protected _mapEventDatum (datum: unknown, index: number): { datum: unknown; index: number } {
     return { datum, index }
   }
