@@ -135,9 +135,7 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
     if (config.showRowLabels ?? config.showLabels) {
       const [marginLeft, marginRight] = this._getRowLabelMargin()
       if (config.rowLabelWidth ?? config.labelWidth) {
-        // We add a little of extra space to take into account the fact that `trimSVGText` is not always precise
-        const tolerance = 1.1
-        this._labelWidth = tolerance * (config.rowLabelWidth ?? config.labelWidth) + marginLeft + marginRight
+        this._labelWidth = (config.rowLabelWidth ?? config.labelWidth) + marginLeft + marginRight
       } else {
         const labels = rowLabels.map(l => this._labelsGroup.append('text')
           .attr('class', s.label)

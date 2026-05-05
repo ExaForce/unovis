@@ -152,7 +152,7 @@ export const TimelineDefaultConfig: TimelineConfigInterface<unknown> = {
   rowMaxLabelWidth: undefined,
   rowLabelTextAlign: TextAlign.Right,
   rowLabelTrimMode: TrimMode.Middle,
-  rowLabelMargin: [0, 5],
+  rowLabelMargin: [0, 6],
   rowFillEmptySpace: true,
 
   // Arrows
