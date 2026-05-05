@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { VisXYContainer, VisTimeline, VisAxis } from '@unovis/react'
-import { Timeline, TimelineRowLabel } from '@unovis/ts'
+import { Timeline } from '@unovis/ts'
 
 import { TimeDataRecord, generateTimeSeries } from '@src/utils/data'
 import { ExampleViewerDurationProps } from '@src/components/ExampleViewer/index'
@@ -13,10 +13,10 @@ const rows = ['Long Row', 'Empty Row 1', 'Empty Row 2']
 export const component = (props: ExampleViewerDurationProps): React.ReactNode => {
   const [hoveredLabel, setHoveredLabel] = useState<string | null>(null)
 
-  const data = generateTimeSeries(15, 3, 10).map((d, i) => ({
+  const data = useMemo(() => generateTimeSeries(15, 3, 10).map((d, i) => ({
     ...d,
     type: rows[i % rows.length],
-  }))
+  })), [])
 
   const events = {
     [Timeline.selectors.labelBackground]: {
@@ -35,8 +35,8 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
         '--vis-timeline-label-pointer-events': 'none',
       }}>
       <VisTimeline
-        lineRow={(d: TimeDataRecord) => d.type as string}
-        x={(d: TimeDataRecord) => d.timestamp}
+        lineRow={useCallback((d: TimeDataRecord) => d.type as string, [])}
+        x={useCallback((d: TimeDataRecord) => d.timestamp, [])}
         rowHeight={50}
         showRowLabels
         duration={props.duration}
