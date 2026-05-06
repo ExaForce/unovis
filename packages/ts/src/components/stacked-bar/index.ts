@@ -115,6 +115,9 @@ export class StackedBar<Datum> extends XYComponentCore<Datum, StackedBarConfigIn
     smartTransition(barGroupExit, duration)
       .style('opacity', 0)
       .remove()
+      // `transition.remove()` only fires on `end`; if the transition is interrupted by a re-render,
+      // the node would linger in the DOM with opacity < 1 and could be picked up by the next data join.
+      .on('interrupt', function () { this.remove() })
 
     // Animate bars from exiting groups going down
     smartTransition(barGroupExit.selectAll(`.${s.bar}`), duration)
@@ -171,6 +174,9 @@ export class StackedBar<Datum> extends XYComponentCore<Datum, StackedBarConfigIn
     smartTransition(bars.exit(), duration)
       .style('opacity', 0)
       .remove()
+      // `transition.remove()` only fires on `end`; if the transition is interrupted by a re-render,
+      // the node would linger in the DOM with opacity < 1 and could be picked up by the next data join.
+      .on('interrupt', function () { this.remove() })
   }
 
   _getBarWidth (): number {
