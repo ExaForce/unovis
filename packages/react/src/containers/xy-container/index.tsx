@@ -32,7 +32,8 @@ export function VisXYContainerFC<Datum> (props: PropsWithChildren<VisXYContainer
   const getConfig = (): XYContainerConfigInterface<Datum> => ({
     components: Array
       .from(container.current?.querySelectorAll<VisComponentElement<XYComponentCore<Datum>>>('vis-component') ?? [])
-      .map(c => c.__component__),
+      .map(c => c.__component__)
+      .filter(Boolean) as XYComponentCore<Datum>[],
     tooltip: container.current?.querySelector<VisComponentElement<Tooltip>>('vis-tooltip')?.__component__,
     crosshair: container.current?.querySelector<VisComponentElement<Crosshair<Datum>>>('vis-crosshair')?.__component__,
     annotations: container.current?.querySelector<VisComponentElement<Annotations>>('vis-annotations')?.__component__,
