@@ -162,9 +162,7 @@ export class Area<Datum> extends XYComponentCore<Datum, AreaConfigInterface<Datu
       .style('opacity', 0)
       .remove()
 
-    if (config.line) {
-      this._renderLines(duration, stackedData)
-    }
+    this._renderLines(duration, config.line ? stackedData : [])
   }
 
   _renderLines (duration: number, stackedData: AreaDatum[][]): void {
