@@ -1,0 +1,22 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "baseUrl": "../src",
+    "skipLibCheck": true,
+    "noEmit": true,
+    "strictFunctionTypes": false,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "paths": {
+      "utils/*": ["./utils/*"],
+      "types/*": ["./types/*"],
+      "styles/*": ["./styles/*"],
+      "core/*": ["./core/*"],
+      "components/*": ["./components/*"],
+      "containers/*": ["./containers/*"],
+      "data-models/*": ["./data-models/*"]
+    }
+  },
+  "include": ["bench.ts", "types.d.ts"]
+}

@@ -108,6 +108,9 @@ export function onFontsReady (callback: () => void): () => void {
  * deterministic canvas widths.
  */
 export function measureTextWidth (str: string, fontString: string): number | null {
+  // Benchmarking / A-B testing escape hatch — force the ratio fallback path.
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  if ((globalThis as { UNOVIS_FORCE_RATIO_MEASUREMENT?: boolean }).UNOVIS_FORCE_RATIO_MEASUREMENT) return null
   if (!loadedFonts.has(fontString)) {
     ensureFontLoaded(fontString)
     return null
