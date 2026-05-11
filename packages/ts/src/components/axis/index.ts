@@ -15,9 +15,9 @@ import { FitMode, TextAlign, TrimMode, UnovisText, UnovisTextOptions, VerticalAl
 // Utils
 import { smartTransition } from 'utils/d3'
 import { renderTextToSvgTextElement, textAlignToAnchor, trimSVGText, wrapSVGText } from 'utils/text'
+import { getFontStringFromElement } from 'utils/font'
 import { isEqual, isFunction } from 'utils/data'
 import { rectIntersect } from 'utils/misc'
-import { getFontWidthToHeightRatio } from 'styles/index'
 
 // Local Types
 import { AxisType } from './types'
@@ -43,7 +43,7 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
   private _tickTextStyleCached: {
     fontSize: number;
     fontFamily: string;
-    fontWidthToHeightRatio: number;
+    fontString: string;
   }
 
   protected events = {}
@@ -293,7 +293,7 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
         this._tickTextStyleCached = {
           fontSize: Number.parseFloat(styleDeclaration.fontSize),
           fontFamily: styleDeclaration.fontFamily,
-          fontWidthToHeightRatio: getFontWidthToHeightRatio(),
+          fontString: getFontStringFromElement(textElement),
         }
       }
 
@@ -313,7 +313,7 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
 
       if (config.tickTextFitMode === FitMode.Trim) {
         const textElementSelection = select<SVGTextElement, string>(textElement).text(text)
-        trimSVGText(textElementSelection, textMaxWidth, config.tickTextTrimType as TrimMode, true, this._tickTextStyleCached.fontSize, 0.58)
+        trimSVGText(textElementSelection, textMaxWidth, config.tickTextTrimType as TrimMode, true, this._tickTextStyleCached.fontSize, undefined, this._tickTextStyleCached.fontString)
         text = select<SVGTextElement, string>(textElement).text()
       }
 
@@ -467,6 +467,8 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
     // Set the text content
     textElement.text(label)
 
+    const labelFontString = getFontStringFromElement(textElement.node())
+
     let isWrapped = false
     if (labelTextFitMode === FitMode.Wrap) {
       // For Y-axis, use the chart height as the maximum width before rotation
@@ -474,7 +476,7 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
       const currentTextWidth = textElement.node().getComputedTextLength()
 
       if (currentTextWidth > maxWidth) {
-        wrapSVGText(textElement, maxWidth, labelTextSeparator)
+        wrapSVGText(textElement, maxWidth, labelTextSeparator, labelFontString)
         isWrapped = true
       }
     }
@@ -490,13 +492,14 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
       const trimWidth = type === AxisType.X ? labelWidth : labelHeight
       const styleDeclaration = getComputedStyle(textElement.node())
       const fontSize = Number.parseFloat(styleDeclaration.fontSize)
-      // Use the default fontWidthToHeightRatio
       trimSVGText(
         textElement,
         trimWidth,
         this.config.labelTextTrimType as TrimMode,
         true,
-        fontSize
+        fontSize,
+        undefined,
+        labelFontString
       )
       const trimmedBBox = textElement.node().getBBox()
       labelWidth = trimmedBBox.width

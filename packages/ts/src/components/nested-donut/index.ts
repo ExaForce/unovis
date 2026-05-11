@@ -18,6 +18,7 @@ import { getNumber, getString, getValue, isNumber, isNumberWithinRange, merge } 
 import { getPixelValue } from 'utils/misc'
 import { cssvar } from 'utils/style'
 import { wrapSVGText } from 'utils/text'
+import { getFontStringFromElement } from 'utils/font'
 
 // Local Types
 import { NestedDonutDirection, NestedDonutSegment, NestedDonutLayer, NestedDonutSegmentLabelAlignment } from './types'
@@ -168,7 +169,10 @@ NestedDonutConfigInterface<Datum>
       .attr('dy', config.centralLabel ? '0.55em' : null)
       .text(config.centralSubLabel ?? null)
 
-    if (config.centralSubLabelWrap) wrapSVGText(this.centralSubLabel, layers[0]._innerRadius * 1.9, VerticalAlign.Top)
+    if (config.centralSubLabelWrap) {
+      const fontString = getFontStringFromElement(this.centralSubLabel.node())
+      wrapSVGText(this.centralSubLabel, layers[0]._innerRadius * 1.9, VerticalAlign.Top, fontString)
+    }
   }
 
   private _getHierarchyData (layers: NestedDonutLayer[]): NestedDonutSegment<Datum>[] {

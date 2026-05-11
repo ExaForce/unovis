@@ -9,9 +9,31 @@ import { TextAlign, TrimMode, UnovisText, UnovisTextFrameOptions, UnovisTextOpti
 import { flatten, isArray, merge } from 'utils/data'
 import { getTextAnchorFromTextAlign } from 'types/svg'
 import { toPx } from 'utils/to-px'
+import { measureTextWidth, resolveFontString } from 'utils/font'
 
 // Styles
 import { getFontWidthToHeightRatio, UNOVIS_TEXT_DEFAULT, UNOVIS_TEXT_SEPARATOR_DEFAULT, UNOVIS_TEXT_HYPHEN_CHARACTER_DEFAULT } from 'styles/index'
+
+// Warn once per (function, reason, mode) when a measurement falls back to the
+// legacy ratio-based or DOM path. Off by default; opt in by setting
+// `globalThis.UNOVIS_DEBUG_FONT_FALLBACK = true` (handy for catching regressions
+// when wiring a new component).
+//
+//   "ratio":         uniform-character estimate via fontWidthToHeightRatio
+//   "dom":           SVG getComputedTextLength (only `wrapSVGText` without fontString)
+//   "no-fontString": caller didn't supply fontString → component not migrated
+//   "font-loading":  fontString supplied but fonts not yet loaded into canvas
+//                    (transient; container re-renders once fonts ready)
+const _ratioFallbackWarned = new Set<string>()
+const warnRatioFallback = (fn: string, reason: 'no-fontString' | 'font-loading', mode: 'ratio' | 'dom'): void => {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  if (!(globalThis as { UNOVIS_DEBUG_FONT_FALLBACK?: boolean }).UNOVIS_DEBUG_FONT_FALLBACK) return
+  const key = `${fn}|${reason}|${mode}`
+  if (_ratioFallbackWarned.has(key)) return
+  _ratioFallbackWarned.add(key)
+  // eslint-disable-next-line no-console
+  console.warn(`[unovis] ${fn} fell back to ${mode}-based measurement (${reason}). Once per (function, reason, mode) per session. Disable: globalThis.UNOVIS_DEBUG_FONT_FALLBACK = false`)
+}
 
 export const textAlignToAnchor = (textAlign: TextAlign): string | null => {
   switch (textAlign) {
@@ -138,7 +160,8 @@ export function splitString (text: string, separators = [' ']): string[] {
 export function wrapSVGText (
   textElement: Selection<SVGTextElement, any, SVGElement, any>,
   width: number,
-  separator: string | string[] = [' ', '-', '.', ',']
+  separator: string | string[] = [' ', '-', '.', ','],
+  fontString?: string
 ): void {
   const text = textElement.text()
   if (!text) return
@@ -158,7 +181,9 @@ export function wrapSVGText (
 
     const tspanText = `${tspanContent}${word}`
     tspan.text(tspanText)
-    const tspanWidth = tspan.node().getComputedTextLength()
+    const measured = fontString ? measureTextWidth(tspanText, fontString) : null
+    if (measured === null) warnRatioFallback('wrapSVGText', fontString ? 'font-loading' : 'no-fontString', 'dom')
+    const tspanWidth = measured ?? tspan.node().getComputedTextLength()
     if (tspanWidth > width) {
       tspan.text(tspanContent.trim())
 
@@ -191,14 +216,48 @@ export function trimSVGText (
   trimType = TrimMode.Middle,
   fastMode = true,
   fontSize = toPx(window.getComputedStyle(svgTextSelection.node())?.fontSize || UNOVIS_TEXT_DEFAULT.fontSize),
-  fontWidthToHeightRatio = getFontWidthToHeightRatio()
+  fontWidthToHeightRatio = getFontWidthToHeightRatio(),
+  fontString?: string
 ): boolean {
   const text = svgTextSelection.text() || ''
   const textLength = text.length
+  if (textLength === 0) return false
 
+  // When pretext is available AND the font is loaded into the canvas, binary-
+  // search for the largest budget whose trimmed result actually fits.
+  // measureTextWidth returns null until the font is registered with canvas
+  // (document.fonts.load), which kicks off load on first call. We fall through
+  // to the ratio path until then; once load resolves, the container re-renders
+  // and we land here with stable measurements.
+  if (fontString) {
+    const fullWidth = measureTextWidth(text, fontString)
+    if (fullWidth === null) warnRatioFallback('trimSVGText', 'font-loading', 'ratio')
+    if (fullWidth !== null) {
+      if (fullWidth <= maxWidth) return false
+      let lo = 0
+      let hi = textLength
+      let best = ''
+      while (lo <= hi) {
+        const mid = (lo + hi) >> 1
+        const candidate = trimString(text, mid, trimType)
+        const candidateWidth = measureTextWidth(candidate, fontString) ?? Number.POSITIVE_INFINITY
+        if (candidateWidth <= maxWidth) {
+          best = candidate
+          lo = mid + 1
+        } else {
+          hi = mid - 1
+        }
+      }
+      svgTextSelection.text(best || trimString(text, 0, trimType))
+      return true
+    }
+    // measureTextWidth === null → font not yet loaded, fall through to ratio
+  }
+
+  // Fallback: when only ratio-based estimation is available, the proportional
+  // formula is the analytic solution under the uniform-char-width assumption.
   const textWidth = fastMode ? fontSize * textLength * fontWidthToHeightRatio : svgTextSelection.node().getComputedTextLength()
-  const tolerance = 1.1
-  const maxCharacters = Math.ceil(textLength * maxWidth / (tolerance * textWidth))
+  const maxCharacters = Math.ceil(textLength * maxWidth / textWidth)
   if (maxCharacters < textLength) {
     svgTextSelection.text(trimString(text, maxCharacters, trimType))
     return true
@@ -217,8 +276,16 @@ export function trimSVGText (
 export function estimateStringPixelLength (
   str: string,
   fontSize: number,
-  fontWidthToHeightRatio = getFontWidthToHeightRatio()
+  fontWidthToHeightRatio = getFontWidthToHeightRatio(),
+  fontString?: string
 ): number {
+  if (fontString) {
+    const measured = measureTextWidth(str, fontString)
+    if (measured !== null) return measured
+    warnRatioFallback('estimateStringPixelLength', 'font-loading', 'ratio')
+  } else {
+    warnRatioFallback('estimateStringPixelLength', 'no-fontString', 'ratio')
+  }
   return str.length * fontSize * fontWidthToHeightRatio || 0
 }
 
@@ -262,22 +329,33 @@ export function estimateTextSize (
   fontSize: number,
   dy = 0.32,
   fastMode = true,
-  fontWidthToHeightRatio?: number
+  fontWidthToHeightRatio?: number,
+  fontString?: string
 ): { width: number; height: number } {
-  fontWidthToHeightRatio = fontWidthToHeightRatio || getFontWidthToHeightRatio()
+  const ratio = fontWidthToHeightRatio || getFontWidthToHeightRatio()
   const tspanSelection = svgTextSelection.selectAll('tspan')
 
   const lines = tspanSelection.size() || 1
   const height = svgTextSelection.text() ? 0.85 * fontSize * lines * (1 + dy) - dy : 0
 
+  const measureOne = (str: string, domFallback: () => number): number => {
+    if (fontString) {
+      const measured = measureTextWidth(str, fontString)
+      if (measured !== null) return measured
+      warnRatioFallback('estimateTextSize', 'font-loading', fastMode ? 'ratio' : 'dom')
+    } else {
+      warnRatioFallback('estimateTextSize', 'no-fontString', fastMode ? 'ratio' : 'dom')
+    }
+    return fastMode ? fontSize * str.length * ratio : domFallback()
+  }
+
   let width = 0
   if (tspanSelection.empty()) {
-    const textLength = svgTextSelection.text().length
-    width = fastMode ? fontSize * textLength * fontWidthToHeightRatio : svgTextSelection.node().getComputedTextLength()
+    width = measureOne(svgTextSelection.text(), () => svgTextSelection.node().getComputedTextLength())
   } else {
     for (const tspan of tspanSelection.nodes()) {
-      const tspanTextLength = (tspan as SVGTSpanElement).textContent.length
-      const w = fastMode ? fontSize * tspanTextLength * fontWidthToHeightRatio : (tspan as SVGTSpanElement).getComputedTextLength()
+      const tspanText = (tspan as SVGTSpanElement).textContent
+      const w = measureOne(tspanText, () => (tspan as SVGTSpanElement).getComputedTextLength())
       if (w > width) width = w
     }
   }
@@ -307,7 +385,21 @@ function breakTextIntoLines (
   const fontSize = textBlock.fontSize ?? UNOVIS_TEXT_DEFAULT.fontSize
   const fontFamily = textBlock.fontFamily ?? UNOVIS_TEXT_DEFAULT.fontFamily
   const fontWidthToHeightRatio: number | undefined = textBlock.fontWidthToHeightRatio ?? UNOVIS_TEXT_DEFAULT.fontWidthToHeightRatio
+  const fontString = textBlock.fontString
   const separators = Array.isArray(separator) ? separator : [separator]
+
+  const measure = (str: string): number => {
+    if (fontString) {
+      const measured = measureTextWidth(str, fontString)
+      if (measured !== null) return measured
+      warnRatioFallback('breakTextIntoLines', 'font-loading', fastMode ? 'ratio' : 'dom')
+    } else {
+      warnRatioFallback('breakTextIntoLines', 'no-fontString', fastMode ? 'ratio' : 'dom')
+    }
+    return fastMode
+      ? estimateStringPixelLength(str, fontSize, fontWidthToHeightRatio)
+      : getPreciseStringLengthPx(str, fontFamily, fontSize)
+  }
 
   const splitByNewLine = text.split('\n')
   return splitByNewLine.map((str) => {
@@ -317,9 +409,7 @@ function breakTextIntoLines (
     const words = splitString(str, separators)
     let line = ''
     for (let i = 0; i < words.length; i += 1) {
-      const textLengthPx = fastMode
-        ? estimateStringPixelLength(line + words[i], fontSize, fontWidthToHeightRatio)
-        : getPreciseStringLengthPx(line + words[i], fontFamily, fontSize)
+      const textLengthPx = measure(line + words[i])
 
       if (textLengthPx < width || i === 0) {
         line += words[i]
@@ -332,17 +422,13 @@ function breakTextIntoLines (
       const minCharactersOnLine = 2
       if (wordBreak) {
         while (line.trim().length > minCharactersOnLine) {
-          const subLineLengthPx = fastMode
-            ? estimateStringPixelLength(line, fontSize, fontWidthToHeightRatio)
-            : getPreciseStringLengthPx(line, fontFamily, fontSize)
+          const subLineLengthPx = measure(line)
 
           if (subLineLengthPx > width) {
             let breakIndex = (line.trim()).length - minCharactersOnLine // Place at least `minCharactersOnLine` characters onto the next line
             while (breakIndex > 0) {
               const subLine = `${line.substring(0, breakIndex)}${UNOVIS_TEXT_HYPHEN_CHARACTER_DEFAULT}` // Use hyphen when force breaking words
-              const subLinePx = fastMode
-                ? estimateStringPixelLength(subLine, fontSize, fontWidthToHeightRatio)
-                : getPreciseStringLengthPx(subLine, fontFamily, fontSize)
+              const subLinePx = measure(subLine)
 
               // If the subline is less than the width, or just one character left, break the line
               if (subLinePx <= width || breakIndex === 1) {
@@ -412,9 +498,13 @@ export function getWrappedText (
       h += dh
 
       const lineWithEllipsis = `${line} …`
-      const textLengthPx = fastMode
+      const measuredEllipsis = text.fontString ? measureTextWidth(lineWithEllipsis, text.fontString) : null
+      if (measuredEllipsis === null) {
+        warnRatioFallback('getWrappedText.ellipsis', text.fontString ? 'font-loading' : 'no-fontString', fastMode ? 'ratio' : 'dom')
+      }
+      const textLengthPx = measuredEllipsis ?? (fastMode
         ? estimateStringPixelLength(lineWithEllipsis, text.fontSize, text.fontWidthToHeightRatio)
-        : getPreciseStringLengthPx(lineWithEllipsis, text.fontFamily, text.fontSize)
+        : getPreciseStringLengthPx(lineWithEllipsis, text.fontFamily, text.fontSize))
 
       maxWidth = Math.max(textLengthPx, maxWidth)
       if (height && (h + dh) > height && (k !== lines.length - 1)) {
@@ -500,6 +590,18 @@ export function estimateWrappedTextHeight (blocks: UnovisWrappedText[]): number 
 export const allowedSvgTextTags = ['text', 'tspan', 'textPath', 'altGlyph', 'altGlyphDef', 'altGlyphItem', 'glyphRef', 'textRef', 'textArea']
 
 /**
+ * Ensures every text block has `fontString` populated, resolving from the
+ * given context element when missing. Existing fontStrings are preserved.
+ */
+function withResolvedFontStrings (
+  text: UnovisText | UnovisText[],
+  context: Element
+): UnovisText | UnovisText[] {
+  const resolveOne = (b: UnovisText): UnovisText => (b.fontString ? b : { ...b, fontString: resolveFontString(b, context) })
+  return Array.isArray(text) ? text.map(resolveOne) : resolveOne(text)
+}
+
+/**
  * Renders a text or array of texts to an SVG text element.
  * Calling this function will replace the contents of the specified SVG text element.
  *
@@ -517,7 +619,8 @@ export function renderTextToSvgTextElement (
   // shifting it vertically, irrespective of the dominant baseline.
   dominantBaseline?: string
 ): void {
-  const wrappedText = getWrappedText(text, options.width, undefined, options.fastMode, options.separator, options.wordBreak)
+  const textWithFont = withResolvedFontStrings(text, textElement)
+  const wrappedText = getWrappedText(textWithFont, options.width, undefined, options.fastMode, options.separator, options.wordBreak)
   const textElementX = options.x ?? +textElement.getAttribute('x')
   const textElementY = options.y ?? +textElement.getAttribute('y')
   const x = textElementX ?? 0
@@ -564,7 +667,8 @@ export function renderTextIntoFrame (
   text: UnovisText | UnovisText[],
   frameOptions: UnovisTextFrameOptions
 ): void {
-  const wrappedText = getWrappedText(text, frameOptions.width, frameOptions.height, frameOptions.fastMode, frameOptions.separator, frameOptions.wordBreak)
+  const textWithFont = withResolvedFontStrings(text, group)
+  const wrappedText = getWrappedText(textWithFont, frameOptions.width, frameOptions.height, frameOptions.fastMode, frameOptions.separator, frameOptions.wordBreak)
 
   const x = frameOptions.textAlign === TextAlign.Center ? frameOptions.width / 2
     : frameOptions.textAlign === TextAlign.Right ? frameOptions.width : 0

@@ -38,8 +38,19 @@ export type UnovisText = {
   marginTop?: number;
   // The bottom margin of the text block in pixels (optional). Default: `0`.
   marginBottom?: number;
-  // The font width-to-height ratio (optional).
+  /**
+   * @internal
+   * Legacy ratio used by the ratio-based fallback path. The library uses
+   * canvas-based measurement (pretext) when fonts are loaded; this knob only
+   * affects the brief pre-fonts-loaded window and SSR/jsdom environments.
+   */
   fontWidthToHeightRatio?: number;
+  /**
+   * @internal
+   * CSS font shorthand string used for canvas-based measurement. Populated
+   * automatically by the library; advanced callers may set it explicitly.
+   */
+  fontString?: string;
 }
 
 export type UnovisWrappedText = UnovisText & {

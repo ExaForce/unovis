@@ -4,6 +4,7 @@ import { color } from 'd3-color'
 
 // Utils
 import { trimSVGText } from 'utils/text'
+import { getFontStringFromElement } from 'utils/font'
 import { smartTransition } from 'utils/d3'
 import { getNumber, getString, getValue } from 'utils/data'
 import { getColor, hexToBrightness } from 'utils/color'
@@ -114,8 +115,9 @@ export function updateLabel<N extends ChordInputNode, L extends ChordInputLink> 
       const arcLength = radius * radianArcLength
       const maxWidth = (nodeLabelAlignment === ChordLabelAlignment.Along ? arcLength : width - LABEL_PADDING * 2)
 
+      const fontString = getFontStringFromElement(elements[i])
       const textElement = select(elements[i])
-        .call(trimSVGText, maxWidth)
+        .call(trimSVGText, maxWidth, undefined, true, undefined, undefined, fontString)
         .attr('dx', nodeLabelAlignment === ChordLabelAlignment.Along ? LABEL_PADDING : null)
         .attr('dy', nodeLabelAlignment === ChordLabelAlignment.Along ? getNumber(d.data, nodeWidth) / 2 : null)
 

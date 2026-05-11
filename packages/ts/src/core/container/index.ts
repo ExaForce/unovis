@@ -6,6 +6,7 @@ import { Sizing } from 'types/component'
 // Utils
 import { isEqual, clamp, merge } from 'utils/data'
 import { ResizeObserver } from 'utils/resize-observer'
+import { onFontsReady } from 'utils/font'
 
 // Config
 import { ContainerDefaultConfig, ContainerConfigInterface } from './config'
@@ -20,6 +21,7 @@ export class ContainerCore {
   protected _container: HTMLElement
   protected _renderAnimationFrameId: number
   protected _isFirstRender = true
+  protected _fontsReadyUnregister: (() => void) | undefined
   protected _resizeObserver: ResizeObserver | undefined
   protected _resizeObserverAnimationFrameId: number
   protected _svgDefs: Selection<SVGDefsElement, unknown, null, undefined>
@@ -102,6 +104,24 @@ export class ContainerCore {
       this._preRender()
       this._render(duration)
     })
+
+    // The first time this container renders, register a listener so that as
+    // soon as any web font this chart needs becomes available in the canvas
+    // font cache, we re-render once with accurate canvas measurements.
+    // First render uses ratio fallback (deterministic, never wrong); the
+    // re-render upgrades to pretext-based measurement.
+    if (!this._fontsReadyUnregister) {
+      this._fontsReadyUnregister = onFontsReady(() => {
+        // Guard against firing on a destroyed container — Storybook navigation
+        // and HMR can tear down a chart before fonts finish loading.
+        if (!this._container || !this.element || !this._container.isConnected) {
+          this._fontsReadyUnregister?.()
+          this._fontsReadyUnregister = undefined
+          return
+        }
+        this.render(0)
+      })
+    }
   }
 
   get containerWidth (): number {
@@ -165,6 +185,8 @@ export class ContainerCore {
     cancelAnimationFrame(this._renderAnimationFrameId)
     cancelAnimationFrame(this._resizeObserverAnimationFrameId)
     this._resizeObserver?.disconnect()
+    this._fontsReadyUnregister?.()
+    this._fontsReadyUnregister = undefined
     this.svg.remove()
   }
 }

@@ -24,6 +24,9 @@
   },
   "exclude": [
     "index.ts",
-    "maps.ts"
+    "maps.ts",
+    "bench",
+    "playwright.config.ts",
+    "vitest.config.ts"
   ]
 }

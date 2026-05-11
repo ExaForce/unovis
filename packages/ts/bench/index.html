@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>unovis text-measurement bench</title>
+    <style>
+      body { margin: 0; font-family: monospace; padding: 12px; }
+      #chart { width: 1200px; height: 700px; border: 1px solid #ddd; }
+      #status { white-space: pre; padding: 8px 0; }
+      #results { white-space: pre; background: #f6f6f6; padding: 12px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <div id="status">loading…</div>
+    <div id="chart"></div>
+    <pre id="results"></pre>
+    <script type="module" src="/bench.ts"></script>
+  </body>
+</html>

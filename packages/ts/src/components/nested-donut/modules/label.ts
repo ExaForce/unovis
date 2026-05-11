@@ -9,6 +9,7 @@ import { getString } from 'utils/data'
 import { getCSSVariableValueInPixels } from 'utils/misc'
 import { cssvar } from 'utils/style'
 import { wrapSVGText } from 'utils/text'
+import { getFontStringFromElement } from 'utils/font'
 
 // Config
 import { NestedDonutConfigInterface } from '../config'
@@ -92,7 +93,8 @@ export function updateLabel<Datum> (
     .style('fill', (d, i, els) => getColor(d, config.segmentLabelColor) ?? getLabelFillColor(d, els[i]))
     .each((d, i, els) => {
       const bounds = getLabelBounds(d)
-      const label = select(els[i]).call(wrapSVGText, bounds.width)
+      const fontString = getFontStringFromElement(els[i])
+      const label = select(els[i]).call(wrapSVGText, bounds.width, undefined, fontString)
 
       const { width, height } = label.node().getBBox()
 

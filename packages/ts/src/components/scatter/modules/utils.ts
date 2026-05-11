@@ -4,6 +4,7 @@ import { Position } from 'types/position'
 // Utils
 import { rectIntersect } from 'utils/misc'
 import { estimateStringPixelLength } from 'utils/text'
+import { getFontStringFromElement } from 'utils/font'
 import { getValue } from 'utils/data'
 
 // Types
@@ -49,7 +50,8 @@ export function getEstimatedLabelBBox<Datum> (
   labelPosition: Position | `${Position}`,
   xScale: ContinuousScale,
   yScale: ContinuousScale,
-  fontSizePx: number
+  fontSizePx: number,
+  fontString?: string
 ): Rect {
   const x = xScale(d._point.xValue)
   const y = yScale(d._point.yValue)
@@ -59,7 +61,10 @@ export function getEstimatedLabelBBox<Datum> (
   const textLength = pointLabelText.length
   const centralLabelFontSize = getCentralLabelFontSize(pointDiameter, textLength)
 
-  const width = estimateStringPixelLength(pointLabelText, isLabelPositionCenter(labelPosition) ? centralLabelFontSize : fontSizePx, 0.6)
+  // When `fontString` is provided AND the font is loaded, `estimateStringPixelLength`
+  // uses canvas measurement (pretext). Otherwise it falls back to the global ratio.
+  const effectiveFontSize = isLabelPositionCenter(labelPosition) ? centralLabelFontSize : fontSizePx
+  const width = estimateStringPixelLength(pointLabelText, effectiveFontSize, undefined, fontString)
   const height = fontSizePx
 
   const labelShift = getLabelShift(labelPosition, pointDiameter)
@@ -98,9 +103,10 @@ export function collideLabels<Datum> (
 
     const label1 = select<SVGGElement, ScatterPoint<Datum>>(group1Node).select<SVGTextElement>('text')
     const label1FontSize = Number.parseFloat(window.getComputedStyle(label1.node())?.fontSize)
+    const label1FontString = getFontStringFromElement(label1.node())
 
     // Calculate bounding rect of point's label
-    const label1BoundingRect = getEstimatedLabelBBox(datum1, label1Position as Position, xScale, yScale, label1FontSize)
+    const label1BoundingRect = getEstimatedLabelBBox(datum1, label1Position as Position, xScale, yScale, label1FontSize, label1FontString)
 
     for (let j = 0; j < elements.length; j += 1) {
       if (i === j) continue
@@ -125,8 +131,9 @@ export function collideLabels<Datum> (
       const label2Visible = group2Node._labelVisible
       if (!intersect && label2Visible) {
         const label2FontSize = Number.parseFloat(window.getComputedStyle(label2.node())?.fontSize)
+        const label2FontString = getFontStringFromElement(label2.node())
         const label2Position = getValue(datum2, config.labelPosition, datum2._point.pointIndex)
-        const label2BoundingRect = getEstimatedLabelBBox(datum2, label2Position as Position, xScale, yScale, label2FontSize)
+        const label2BoundingRect = getEstimatedLabelBBox(datum2, label2Position as Position, xScale, yScale, label2FontSize, label2FontString)
 
         intersect = rectIntersect(label1BoundingRect, label2BoundingRect, 0.25)
       }

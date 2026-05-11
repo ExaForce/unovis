@@ -11,6 +11,7 @@ import { GraphData, GraphDataModel } from 'data-models/graph'
 // Utils
 import { getNumber, isNumber, getString, getValue } from 'utils/data'
 import { estimateStringPixelLength } from 'utils/text'
+import { probeFontStringForClass } from 'utils/font'
 import { getCSSVariableValueInPixels } from 'utils/misc'
 
 // Types
@@ -93,7 +94,8 @@ export class ChordDiagram<
       if (n.height === 0 && nodeLabelAlignment === ChordLabelAlignment.Perpendicular) {
         const label = getString(n.data as N, config.nodeLabel) ?? ''
         const fontSize = getCSSVariableValueInPixels('var(--vis-chord-diagram-label-text-font-size)', this.element)
-        const labelWidth = estimateStringPixelLength(label, fontSize)
+        const fontString = probeFontStringForClass(this.element as SVGElement, s.labelText, { fontSize })
+        const labelWidth = estimateStringPixelLength(label, fontSize, undefined, fontString)
 
         const [x, y] = this.arcGen.centroid(n)
 
