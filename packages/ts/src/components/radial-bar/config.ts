@@ -26,9 +26,9 @@ export interface RadialBarConfigInterface<Datum> extends ComponentConfigInterfac
   color?: ColorAccessor<Datum>;
   /** Explicitly set the outer radius of the outermost ring. Default: `undefined` */
   radius?: number;
-  /** Width of each ring (track) in pixels. Default: `8` */
+  /** Width of each ring (track) in pixels. Default: `16` */
   trackWidth?: number;
-  /** Gap between rings in pixels. Default: `2` */
+  /** Gap between rings in pixels. Default: `4` */
   trackPadding?: number;
   /** When `true`, `data[0]` is the innermost ring instead of the outermost. Default: `false` */
   reverseOrder?: boolean;
@@ -62,8 +62,8 @@ export const RadialBarDefaultConfig: RadialBarConfigInterface<unknown> = {
   cornerRadius: 0,
   color: undefined,
   radius: undefined,
-  trackWidth: 8,
-  trackPadding: 2,
+  trackWidth: 16,
+  trackPadding: 4,
   reverseOrder: false,
   centralLabel: undefined,
   centralSubLabel: undefined,
