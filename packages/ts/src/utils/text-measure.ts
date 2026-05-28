@@ -25,7 +25,7 @@ export function clearTextMeasurementCache (): void {
 // Web fonts often finish loading after the first measurement, which changes
 // glyph widths. Clear the cache once the font set settles so stale fallback-font
 // widths don't persist.
-globalThis?.document?.fonts?.ready?.then(clearTextMeasurementCache)
+(globalThis as { document?: { fonts?: { ready?: Promise<unknown> } } })?.document?.fonts?.ready?.then(clearTextMeasurementCache)
 
 export function estimateStringPixelLength (str: string, fontSize: number, fontWidthToHeightRatio = getFontWidthToHeightRatio()): number {
   return str.length * fontSize * fontWidthToHeightRatio || 0
