@@ -131,9 +131,12 @@ export class Boxplot<Datum> extends XYComponentCore<Datum, BoxplotConfigInterfac
 
     // Each part renders from its own accessor. The median is just a line at a value, so it's fully
     // independent. The whiskers extend from the box edges (q1/q3), so they additionally need quartiles.
-    const hasQuartiles = Array.isArray(d.quartiles) && isFinite(d.quartiles[0]) && isFinite(d.quartiles[1])
-    const hasMedian = isFinite(d.median)
-    const hasWhiskers = hasQuartiles && Array.isArray(d.whiskers) && isFinite(d.whiskers[0]) && isFinite(d.whiskers[1])
+    // Use `Number.isFinite` (not the global `isFinite`): the global coerces first, so `isFinite(null)`
+    // is `true` (because `Number(null) === 0`) — which would draw a phantom part for a `null` accessor
+    // return. `Number.isFinite` is `true` only for an actual finite number.
+    const hasQuartiles = Array.isArray(d.quartiles) && Number.isFinite(d.quartiles[0]) && Number.isFinite(d.quartiles[1])
+    const hasMedian = Number.isFinite(d.median)
+    const hasWhiskers = hasQuartiles && Array.isArray(d.whiskers) && Number.isFinite(d.whiskers[0]) && Number.isFinite(d.whiskers[1])
 
     // We toggle each part's visibility with a transitioned `opacity` rather than `display`, so a part
     // whose data disappears on update fades out (and is no longer shown), instead of leaving stale
