@@ -1,5 +1,6 @@
 import { injectGlobal } from '@emotion/css'
 import { getCSSVariableValue } from 'utils/misc'
+import { UNOVIS_PATTERN_INDEX_ATTR } from 'utils/pattern'
 import { UnovisText } from 'types/text'
 import { colors, colorsDark, getCSSColorVariable, getLighterColor, getDarkerColor } from './colors'
 import { fills, lines, getPatternVariable } from './patterns'
@@ -44,12 +45,11 @@ export const variables = injectGlobal`
     }
 
     body.theme-patterns {
-      ${fills.map((_, i) => `path[style*="fill: var(${getCSSColorVariable(i)})"]  {
+      ${fills.map((_, i) => `path[${UNOVIS_PATTERN_INDEX_ATTR}="${i}"][style*="fill"]:not([style*="mask"]) {
         mask: var(--vis-pattern-fill${i});
       }`)}
       ${lines.map((_, i) => `
-      path[stroke="var(${getCSSColorVariable(i)})"]:not([style*="fill"]),
-      path[style*="stroke: var(${getCSSColorVariable(i)})"]:not([style*="fill"]) {
+      path[${UNOVIS_PATTERN_INDEX_ATTR}="${i}"]:not([style*="fill"]):not([style*="marker"]) {
         marker: var(--vis-pattern-marker${i});
         stroke-dasharray: var(--vis-pattern-dasharray${i});
       }
