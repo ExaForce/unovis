@@ -6,7 +6,7 @@ react-dom                             perpetual       MIT           19.2.4      
 react-router-dom                      perpetual       MIT           6.30.3             Remix Software <hello@remix.run>
 seedrandom                            perpetual       MIT           3.0.5              David Bau
 serve                                 perpetual       MIT           14.2.6             n/a
-@percy/cli                            perpetual       MIT           1.31.10            n/a
+@percy/cli                            perpetual       MIT           1.31.9             n/a
 @percy/cypress                        perpetual       MIT           3.1.7              Perceptual Inc.
 @pmmmwh/react-refresh-webpack-plugin  perpetual       MIT           0.5.17             Michael Mok
 @types/react                          perpetual       MIT           19.2.14            n/a
@@ -20,6 +20,6 @@ react-refresh-typescript              perpetual       MIT           2.0.9       
 ts-loader                             perpetual       MIT           9.5.4              John Reilly <johnny_reilly@hotmail.com> (https://johnnyreilly.com)
 typescript                            perpetual       Apache-2.0    4.9.5              Microsoft Corp.
 typescript-plugin-css-modules         perpetual       MIT           4.2.3              Brody McKee <mrmckeb@hotmail.com>
-webpack                               perpetual       MIT           5.105.4            Tobias Koppers @sokra
+webpack                               perpetual       MIT           5.76.0             Tobias Koppers @sokra
 webpack-cli                           perpetual       MIT           5.1.4              n/a
-webpack-dev-server                    perpetual       MIT           4.15.2             Tobias Koppers @sokra
+webpack-dev-server                    perpetual       n/a           n/a                n/a
