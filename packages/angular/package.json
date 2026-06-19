@@ -62,7 +62,7 @@
     "@angular/common": "^12.0.3",
     "@angular/compiler": "^12.0.3",
     "@angular/compiler-cli": "^12.0.3",
-    "@angular/core": "^12.0.3",
+    "@angular/core": "^20.3.25",
     "@angular/platform-browser": "^12.0.3",
     "@angular/platform-browser-dynamic": "^12.0.3",
     "@types/d3-brush": "~3.0.6",
