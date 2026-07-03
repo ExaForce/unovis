@@ -1,9 +1,9 @@
 // Config
-import { XYComponentConfigInterface, XYComponentDefaultConfig } from 'core/xy-component/config'
+import { XYComponentConfigInterface, XYComponentDefaultConfig } from '@/core/xy-component/config'
 
 // Types
-import { AxisType } from 'components/axis/types'
-import { UnovisText } from 'types/text'
+import { AxisType } from '@/components/axis/types'
+import { UnovisText } from '@/types/text'
 import { PlotlineLabelPosition, PlotlineLabelOrientation, PlotlineLineStylePresets } from './types'
 
 export interface PlotlineConfigInterface<Datum> extends Partial<XYComponentConfigInterface<Datum>> {

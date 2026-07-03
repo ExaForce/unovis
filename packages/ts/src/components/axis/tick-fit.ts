@@ -1,11 +1,11 @@
 // Types
-import { Rect } from 'types/misc'
-import { ContinuousScale } from 'types/scale'
+import { Rect } from '@/types/misc'
+import { ContinuousScale } from '@/types/scale'
 
 // Utils
-import { isEqual } from 'utils/data'
-import { rectIntersect } from 'utils/misc'
-import { resolveRectsOverlap } from 'utils/text-overlap'
+import { isEqual } from '@/utils/data'
+import { rectIntersect } from '@/utils/misc'
+import { resolveRectsOverlap } from '@/utils/text-overlap'
 
 // Local Types
 import { FittedTickValues, TickValues } from './types'

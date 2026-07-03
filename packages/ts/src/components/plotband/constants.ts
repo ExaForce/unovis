@@ -1,4 +1,4 @@
-import { TextAlign, VerticalAlign } from 'types/text'
+import { TextAlign, VerticalAlign } from '@/types/text'
 import { PlotbandLayoutMap, PlotbandLabelPosition } from './types'
 
 export const HORIZONTAL_X: PlotbandLayoutMap = {

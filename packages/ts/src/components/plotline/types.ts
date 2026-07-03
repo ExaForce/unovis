@@ -1,4 +1,4 @@
-import { TextAlign, VerticalAlign } from 'types/text'
+import { TextAlign, VerticalAlign } from '@/types/text'
 
 export enum PlotlineLineStylePresets {
   Solid = 'solid',

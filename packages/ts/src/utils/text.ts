@@ -2,18 +2,18 @@ import { Selection } from 'd3-selection'
 import { sum } from 'd3-array'
 
 // Types
-import { TextAlign, TrimMode, UnovisText, UnovisTextFrameOptions, UnovisTextOptions, UnovisWrappedText, VerticalAlign } from 'types/text'
-import { Rect } from 'types/misc'
+import { TextAlign, TrimMode, UnovisText, UnovisTextFrameOptions, UnovisTextOptions, UnovisWrappedText, VerticalAlign } from '@/types/text'
+import { Rect } from '@/types/misc'
 
 // Utils
-import { flatten, isArray, merge } from 'utils/data'
-import { getTextAnchorFromTextAlign } from 'types/svg'
-import { getRotatedRectAabb } from 'utils/misc'
-import { estimateStringPixelLength, getCachedComputedTextLength, getPreciseStringLengthPx } from 'utils/text-measure'
-import { toPx } from 'utils/to-px'
+import { flatten, isArray, merge } from '@/utils/data'
+import { getTextAnchorFromTextAlign } from '@/types/svg'
+import { getRotatedRectAabb } from '@/utils/misc'
+import { estimateStringPixelLength, getCachedComputedTextLength, getPreciseStringLengthPx } from '@/utils/text-measure'
+import { toPx } from '@/utils/to-px'
 
 // Styles
-import { getFontWidthToHeightRatio, UNOVIS_TEXT_DEFAULT, UNOVIS_TEXT_SEPARATOR_DEFAULT, UNOVIS_TEXT_HYPHEN_CHARACTER_DEFAULT } from 'styles/index'
+import { getFontWidthToHeightRatio, UNOVIS_TEXT_DEFAULT, UNOVIS_TEXT_SEPARATOR_DEFAULT, UNOVIS_TEXT_HYPHEN_CHARACTER_DEFAULT } from '@/styles/index'
 
 export const textAlignToAnchor = (textAlign: TextAlign): string | null => {
   switch (textAlign) {

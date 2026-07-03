@@ -4,23 +4,23 @@ import { Axis as D3Axis, axisBottom, axisLeft, axisRight, axisTop } from 'd3-axi
 import { NumberValue } from 'd3-scale'
 
 // Core
-import { XYComponentCore } from 'core/xy-component'
+import { XYComponentCore } from '@/core/xy-component'
 
 // Types
-import { Rect } from 'types/misc'
-import { Position } from 'types/position'
-import { ContinuousScale } from 'types/scale'
-import { Spacing } from 'types/spacing'
-import { FitMode, TextAlign, TrimMode, UnovisText, UnovisTextOptions, VerticalAlign } from 'types/text'
+import { Rect } from '@/types/misc'
+import { Position } from '@/types/position'
+import { ContinuousScale } from '@/types/scale'
+import { Spacing } from '@/types/spacing'
+import { FitMode, TextAlign, TrimMode, UnovisText, UnovisTextOptions, VerticalAlign } from '@/types/text'
 
 // Utils
-import { smartTransition } from 'utils/d3'
-import { estimateWrappedTextHeight, getWrappedText, renderTextToSvgTextElement, textAlignToAnchor, trimSVGText, wrapSVGText } from 'utils/text'
-import { getCachedComputedTextLength, getPreciseStringLengthPx } from 'utils/text-measure'
-import { isEqual, isFunction } from 'utils/data'
-import { getRotatedRectAabb } from 'utils/misc'
-import { hideOverlappingLabels } from 'utils/text-overlap'
-import { UNOVIS_TEXT_DEFAULT } from 'styles/index'
+import { smartTransition } from '@/utils/d3'
+import { estimateWrappedTextHeight, getWrappedText, renderTextToSvgTextElement, textAlignToAnchor, trimSVGText, wrapSVGText } from '@/utils/text'
+import { getCachedComputedTextLength, getPreciseStringLengthPx } from '@/utils/text-measure'
+import { isEqual, isFunction } from '@/utils/data'
+import { getRotatedRectAabb } from '@/utils/misc'
+import { hideOverlappingLabels } from '@/utils/text-overlap'
+import { UNOVIS_TEXT_DEFAULT } from '@/styles/index'
 
 // Local Types
 import { AxisType, TickSets, TickValues } from './types'

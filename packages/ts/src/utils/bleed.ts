@@ -1,9 +1,9 @@
 // Types
-import { Rect } from 'types/misc'
-import { Spacing } from 'types/spacing'
+import { Rect } from '@/types/misc'
+import { Spacing } from '@/types/spacing'
 
 // Utils
-import { clamp } from 'utils/data'
+import { clamp } from '@/utils/data'
 
 /** Converts a label's bounding box into the bleed required to fit it, i.e. the space needed outside
  * of a scale range. Used by the components that draw labels near the edges of the chart (e.g. Plotline, Plotband).

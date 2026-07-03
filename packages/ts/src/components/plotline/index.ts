@@ -1,24 +1,24 @@
 import { Selection } from 'd3-selection'
 
 // Utils
-import { smartTransition } from 'utils/d3'
-import { isArray, isNumber, isNumberWithinRange, isString } from 'utils/data'
-import { getCSSVariableValueInPixels, getRectFitTranslation } from 'utils/misc'
-import { labelBboxToBleed } from 'utils/bleed'
-import { getWrappedText, getWrappedTextAabb, renderTextToSvgTextElement } from 'utils/text'
-import { getCachedFontFamily } from 'utils/text-measure'
+import { smartTransition } from '@/utils/d3'
+import { isArray, isNumber, isNumberWithinRange, isString } from '@/utils/data'
+import { getCSSVariableValueInPixels, getRectFitTranslation } from '@/utils/misc'
+import { labelBboxToBleed } from '@/utils/bleed'
+import { getWrappedText, getWrappedTextAabb, renderTextToSvgTextElement } from '@/utils/text'
+import { getCachedFontFamily } from '@/utils/text-measure'
 
 // Core
-import { XYComponentCore } from 'core/xy-component'
-import { AxisType } from 'components/axis/types'
+import { XYComponentCore } from '@/core/xy-component'
+import { AxisType } from '@/components/axis/types'
 
 // Types
-import { Rect } from 'types/misc'
-import { Spacing } from 'types/spacing'
-import { UnovisText } from 'types/text'
+import { Rect } from '@/types/misc'
+import { Spacing } from '@/types/spacing'
+import { UnovisText } from '@/types/text'
 
 // Styles
-import { UNOVIS_TEXT_DEFAULT_FONT_SIZE } from 'styles'
+import { UNOVIS_TEXT_DEFAULT_FONT_SIZE } from '@/styles'
 
 // Config
 import { LINE_STYLE, VERTICAL_X, HORIZONTAL_X, VERTICAL_Y, HORIZONTAL_Y } from './constants'

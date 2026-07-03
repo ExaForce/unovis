@@ -1,4 +1,4 @@
-import { TextAlign, VerticalAlign } from 'types/text'
+import { TextAlign, VerticalAlign } from '@/types/text'
 import { PlotlineLineStylePresets, PlotlineLabelPosition, PlotlineLayoutMap, LineStyleValue } from './types'
 
 export const LINE_STYLE: Record<PlotlineLineStylePresets, LineStyleValue | 'none'> = {
