@@ -27,6 +27,9 @@ import * as s from './style'
 // Local Types
 import { SankeyInputLink, SankeyInputNode, SankeyLayout, SankeyLink, SankeyNode, SankeyZoomMode, SankeyZoomOrigin } from './types'
 
+// Constants
+import { SANKEY_MIN_NODE_BODY_RATIO } from './constants'
+
 // Modules
 import { createLinks, removeLinks, updateLinks } from './modules/link'
 import { createNodes, NODE_SELECTION_RECT_DELTA, onNodeMouseOut, onNodeMouseOver, removeNodes, updateNodes } from './modules/node'
@@ -137,14 +140,14 @@ export class Sankey<
       const hasLabelsOnTheLeft = zeroLayerNodes.some(d => getLabelOrientation(d, sankeyProbeSize, config.labelPosition) === Position.Left)
 
       if (hasLabelsOnTheLeft) {
-        const maxLeftLabelWidth = max(zeroLayerNodes, d => estimateRequiredLabelWidth(d, config, labelFontSize, subLabelFontSize))
+        const maxLeftLabelWidth = max(zeroLayerNodes, d => estimateRequiredLabelWidth(d, config, labelFontSize, subLabelFontSize, this.element as SVGElement))
         left = min([labelMaxWidth, maxLeftLabelWidth]) + labelHorizontalPadding
       }
 
       let right = 0
       const hasLabelsOnTheRight = maxLayerNodes.some(d => getLabelOrientation(d, sankeyProbeSize, config.labelPosition) === Position.Right)
       if (hasLabelsOnTheRight) {
-        const maxRightLabelWidth = max(maxLayerNodes, d => estimateRequiredLabelWidth(d, config, labelFontSize, subLabelFontSize))
+        const maxRightLabelWidth = max(maxLayerNodes, d => estimateRequiredLabelWidth(d, config, labelFontSize, subLabelFontSize, this.element as SVGElement))
         right = min([labelMaxWidth, maxRightLabelWidth]) + labelHorizontalPadding
       }
 
@@ -551,7 +554,21 @@ export class Sankey<
 
     // Calculate sankey
     this._populateLinkAndNodeValues()
+    this._sankey.nodePadding(config.nodePadding)
     this._sankey({ nodes, links })
+
+    if (config.nodeAdaptivePadding && this.sizing === Sizing.Fit) {
+      const columns = Object.values(groupBy(nodes, d => d.layer))
+      const maxColumnCount = max(columns, c => c.length) ?? 0
+      if (maxColumnCount > 1) {
+        const availableHeight = Math.max(sankeyHeight - bleed.top - bleed.bottom, 0)
+        const safePadding = availableHeight * (1 - SANKEY_MIN_NODE_BODY_RATIO) / (maxColumnCount - 1)
+        if (safePadding < config.nodePadding) {
+          this._sankey.nodePadding(safePadding)
+          this._sankey({ nodes, links })
+        }
+      }
+    }
 
     // Setting minimum node height
     //   Default: 1px
