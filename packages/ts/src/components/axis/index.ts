@@ -84,8 +84,10 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
     const { config } = this
     const axisRenderHelperGroup = this.g.append('g').attr('opacity', 0)
 
-    // Measure the same tick set that will be labeled, so the margins account for its label bleed
-    this._renderAxis(axisRenderHelperGroup, 0, this._getFittingTickValues()?.fitted)
+    // Measure the full fitted set, so the margins account for its label bleed. Deliberately
+    // not the `labeled` subset: margins from it would depend on the extreme-label drops, which
+    // themselves depend on the margins — an unstable feedback making layout resize-path-dependent
+    this._renderAxis(axisRenderHelperGroup, 0, this._getFittingTickValues()?.fittedTicks)
 
     // Align tick text
     if (config.tickTextAlign) this._alignTickLabels(axisRenderHelperGroup)
@@ -170,8 +172,8 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
     // When `tickSets` is undefined (the option is off or not applicable), `_renderAxis` computes
     // the tick values itself and labels all of them
     const tickSets = this._getFittingTickValues()
-    const renderTickValues = tickSets && mergeTickValues(tickSets.original, tickSets.fitted)
-    const labeledTickKeys = tickSets && new Set(tickSets.fitted.map(tickKey))
+    const renderTickValues = tickSets && mergeTickValues(tickSets.originalTicks, tickSets.fittedTicks)
+    const labeledTickKeys = tickSets && new Set(tickSets.labeledTicks.map(tickKey))
 
     this._renderAxis(selection, duration, renderTickValues, labeledTickKeys)
     this._renderAxisLabel(selection)
@@ -385,7 +387,7 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
    * Returns `undefined` when the search is not applicable, falling back to the default tick generation. */
   private _getFittingTickValues (): TickSets | undefined {
     const { config } = this
-    if (!config.adaptiveTickSets) return undefined
+    if (!config.tickTextAdaptiveSets) return undefined
     if (this._shouldRenderMinMaxTicksOnly()) return undefined
 
     const scale = (config.type === AxisType.X ? this.xScale : this.yScale) as ContinuousScale
@@ -395,11 +397,11 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
     const candidates = configuredTickValues
       ? getTickValueSubsetCandidates(configuredTickValues)
       : getTickValueCandidates(scale, maxNumTicks)
-    const fitted = findFittingTickValues(candidates, values => this._getTickLabelRects(values), TICK_LABEL_OVERLAP_TOLERANCE_PX)
-    if (!fitted) return undefined
+    const fitting = findFittingTickValues(candidates, values => this._getTickLabelRects(values), TICK_LABEL_OVERLAP_TOLERANCE_PX)
+    if (!fitting) return undefined
 
-    const original = configuredTickValues ?? getNestedTickValues(scale, maxNumTicks, candidates[0])
-    return { fitted, original }
+    const originalTicks = configuredTickValues ?? getNestedTickValues(scale, maxNumTicks, candidates[0])
+    return { ...fitting, originalTicks }
   }
 
   /** Fair-share width available to a tick label before it gets wrapped or trimmed */
@@ -443,12 +445,14 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
       let height: number
       if (config.tickTextFitMode === FitMode.Trim) {
         // Approximation of trimSVGText: a trimmed label can't be wider than its width budget
-        width = Math.min(getPreciseStringLengthPx(text, style.fontFamily, style.fontSize, style.fontWeight), textOptions.width)
+        const fullWidth = getPreciseStringLengthPx(text, style.fontFamily, style.fontSize, style.fontWeight)
+        width = Math.min(fullWidth, textOptions.width)
         height = lineHeightPx
       } else {
         const wrapped = getWrappedText({ text, ...style }, textOptions.width, undefined, textOptions.fastMode, textOptions.separator, textOptions.wordBreak)
         const lines = wrapped.flatMap(block => block._lines)
-        width = Math.max(0, ...lines.map(line => getPreciseStringLengthPx(line, style.fontFamily, style.fontSize, style.fontWeight)))
+        const lineWidths = lines.map(line => getPreciseStringLengthPx(line, style.fontFamily, style.fontSize, style.fontWeight))
+        width = Math.max(0, ...lineWidths)
         height = estimateWrappedTextHeight(wrapped)
       }
 
@@ -458,12 +462,23 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
       const textAlign = isFunction(config.tickTextAlign)
         ? config.tickTextAlign(value, i, values as number[] | Date[], tickPosition, this._width, this._height)
         : config.tickTextAlign
-      const x0 = isX
-        ? (textAlign === TextAlign.Left ? 0 : textAlign === TextAlign.Right ? -width : -width / 2)
-        : (this.getPosition() === Position.Left ? -width : 0)
+
+      let x0: number
+      if (!isX) {
+        // Y axis labels extend from the axis towards the chart edge
+        x0 = this.getPosition() === Position.Left ? -width : 0
+      } else if (textAlign === TextAlign.Left) {
+        x0 = 0
+      } else if (textAlign === TextAlign.Right) {
+        x0 = -width
+      } else {
+        // X axis labels are center-anchored by default
+        x0 = -width / 2
+      }
       const y0 = isX ? -lineHeightPx / 2 : -height / 2
 
-      const rect = angleRad ? getRotatedRectAabb({ x: x0, y: y0, width, height }, angleRad) : { x: x0, y: y0, width, height }
+      const localRect = { x: x0, y: y0, width, height }
+      const rect = angleRad ? getRotatedRectAabb(localRect, angleRad) : localRect
       return { ...rect, x: tickPosition[0] + rect.x, y: tickPosition[1] + rect.y }
     })
   }
@@ -525,7 +540,7 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
     const { config } = this
     if (config.minMaxTicksOnly) return true
     // The tick fitting owns the narrow-width behavior when enabled
-    if (config.adaptiveTickSets) return false
+    if (config.tickTextAdaptiveSets) return false
     return config.type === AxisType.X && this._width < config.minMaxTicksOnlyWhenWidthIsLess
   }
 
