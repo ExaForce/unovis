@@ -39,7 +39,7 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
           <VisAxis
             type='x'
             numTicks={25}
-            adaptiveTickSets={true}
+            tickTextAdaptiveSets={true}
             tickTextHideOverlapping={true}
             tickFormat={axis.tickFormat}
             tickTextAngle={axis.tickTextAngle}
