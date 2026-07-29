@@ -221,24 +221,34 @@ export function shallowDiff (o1: Record<string, unknown> = {}, o2: Record<string
   }, {})
 }
 
-export function getStackedExtent<Datum> (data: Datum[], ...acs: NumericAccessor<Datum>[]): (number | undefined)[] {
+export function getStackedExtent<Datum> (
+  data: Datum[],
+  baseline: NumericAccessor<Datum>,
+  ...acs: NumericAccessor<Datum>[]
+): (number | undefined)[] {
   if (!data) return [undefined, undefined]
   if (isArray(acs)) {
-    let minValue = 0
-    let maxValue = 0
+    // The extent has to be derived from the stack bounds, not from the raw sums: with a non-zero
+    // baseline both stacks start at the baseline, so a negative stack can still sit above zero
+    // (and vice versa). Accumulating the same way `getStackedData` does keeps the two in sync.
+    let minValue: number | undefined
+    let maxValue: number | undefined
     data.forEach((d, i) => {
-      let positiveStack = 0
-      let negativeStack = 0
+      const baselineValue = getNumber(d, baseline, i) || 0
+      let positiveStack = baselineValue
+      let negativeStack = baselineValue
       for (const a of acs as NumericAccessor<Datum>[]) {
         const value = getNumber(d, a, i) || 0
         if (value >= 0) positiveStack += value
         else negativeStack += value
       }
 
-      if (positiveStack > maxValue) maxValue = positiveStack
-      if (negativeStack < minValue) minValue = negativeStack
+      if (maxValue === undefined || positiveStack > maxValue) maxValue = positiveStack
+      if (minValue === undefined || negativeStack < minValue) minValue = negativeStack
     })
-    return [minValue, maxValue]
+    // Both stacks start at the baseline, so a zero baseline always keeps 0 within the extent,
+    // matching the pre-baseline behaviour. An empty dataset falls back to a zero extent.
+    return [minValue ?? 0, maxValue ?? 0]
   }
 }
 
