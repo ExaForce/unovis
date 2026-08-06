@@ -389,6 +389,10 @@ export function getWrappedText (
     const blockStartHeight = h
     const dh = text.fontSize * text.lineHeight
     let maxWidth = 0
+    const measure = (line: string): number => fastMode
+      ? estimateStringPixelLength(line, text.fontSize, text.fontWidthToHeightRatio)
+      : getPreciseStringLengthPx(line, text.fontFamily, text.fontSize, text.fontWeight)
+
     // Iterate over lines and handle text overflow based on the height limit if provided
     for (let k = 0; k < lines.length; k += 1) {
       let line = lines[k]
@@ -400,32 +404,30 @@ export function getWrappedText (
       else if (k === 0) h += Math.max(prevBlock.marginBottom, text.marginTop) + prevBlock.fontSize * (prevBlock.lineHeight - 1) + text.fontSize
       else h += dh
 
-      const lineWithEllipsis = `${line} …`
-      const textLengthPx = fastMode
-        ? estimateStringPixelLength(lineWithEllipsis, text.fontSize, text.fontWidthToHeightRatio)
-        : getPreciseStringLengthPx(lineWithEllipsis, text.fontFamily, text.fontSize, text.fontWeight)
-
-      maxWidth = Math.max(textLengthPx, maxWidth)
       if (height && (h + dh) > height && (k !== lines.length - 1)) {
         // Remove hyphen character from the end of the line if it's there
         const lastCharacter = line.charAt(line.length - 1)
         if (lastCharacter === UNOVIS_TEXT_HYPHEN_CHARACTER_DEFAULT) {
-          line = line.substr(0, lines[k].length - 1)
+          line = line.substr(0, line.length - 1)
         }
 
-        if (textLengthPx < width) {
+        const lineWithEllipsis = `${line} …`
+        if (measure(lineWithEllipsis) < width) {
           lines[k] = lineWithEllipsis
         } else {
-          lines[k] = `${lines[k].substr(0, lines[k].length - 2)}…`
+          lines[k] = `${line.substr(0, line.length - 2)}…`
         }
 
+        maxWidth = Math.max(measure(lines[k]), maxWidth)
         lines = lines.slice(0, k + 1)
         break
       }
+
+      maxWidth = Math.max(measure(line), maxWidth)
     }
 
     // Create wrapped text block with its calculated properties
-    blocks.push({ ...text, _lines: lines, _estimatedHeight: h - blockStartHeight, _maxWidth: Math.max(maxWidth, prevBlock?._maxWidth ?? 0) })
+    blocks.push({ ...text, _lines: lines, _estimatedHeight: h - blockStartHeight, _maxWidth: maxWidth })
     if (lines.length) prevBlock = blocks[blocks.length - 1]
   })
 
@@ -542,6 +544,7 @@ export const allowedSvgTextTags = ['text', 'tspan', 'textPath', 'altGlyph', 'alt
  * @param {SVGTextElement} textElement - The SVG text element to render the text into.
  * @param {UnovisText | UnovisText[]} text - The text or array of texts to render.
  * @param {UnovisTextOptions} options - The text options.
+ * @returns {UnovisWrappedText[]} - The wrapped text blocks that were rendered.
  */
 export function renderTextToSvgTextElement (
   textElement: SVGTextElement,
@@ -551,7 +554,7 @@ export function renderTextToSvgTextElement (
   // the `options.verticalAlign` property sets alignment for the entire text block
   // shifting it vertically, irrespective of the dominant baseline.
   dominantBaseline?: string
-): void {
+): UnovisWrappedText[] {
   const wrappedText = getWrappedText(text, options.width, undefined, options.fastMode, options.separator, options.wordBreak)
   const textElementX = options.x ?? +textElement.getAttribute('x')
   const textElementY = options.y ?? +textElement.getAttribute('y')
@@ -579,6 +582,8 @@ export function renderTextToSvgTextElement (
   for (const tspan of renderTextToTspanElements(wrappedText, x, y, dominantBaseline)) {
     textElement.appendChild(tspan)
   }
+
+  return wrappedText
 }
 
 /**
