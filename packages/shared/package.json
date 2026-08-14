@@ -39,10 +39,10 @@
     "@unovis/ts": "workspace:*"
   },
   "devDependencies": {
-    "@angular/core": "^20.3.27",
-    "@angular/common": "^20.3.27",
+    "@angular/core": "^22.1.2",
+    "@angular/common": "^22.1.2",
     "@angular/platform-browser": "^20.3.27",
-    "@angular/compiler": "^20.3.27",
+    "@angular/compiler": "^22.1.2",
     "@angular/platform-browser-dynamic": "^20.3.27",
     "@unovis/angular": "workspace:*",
     "reflect-metadata": "^0.1.14",
@@ -63,7 +63,7 @@
     "react-dom": "^18",
     "react": "^18.3.1",
     "solid-js": "^1.9.3",
-    "svelte": "^4.2.19",
+    "svelte": "^5.55.7",
     "svelte-preprocess": "^4.10.7",
     "typescript": "~5.8.0",
     "d3-array": "3.2.4",
