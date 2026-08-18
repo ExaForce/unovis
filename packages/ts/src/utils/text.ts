@@ -3,10 +3,12 @@ import { sum } from 'd3-array'
 
 // Types
 import { TextAlign, TrimMode, UnovisText, UnovisTextFrameOptions, UnovisTextOptions, UnovisWrappedText, VerticalAlign } from 'types/text'
+import { Rect } from 'types/misc'
 
 // Utils
 import { flatten, isArray, merge } from 'utils/data'
 import { getTextAnchorFromTextAlign } from 'types/svg'
+import { getRotatedRectAabb } from 'utils/misc'
 import { estimateStringPixelLength, getCachedComputedTextLength, getPreciseStringLengthPx } from 'utils/text-measure'
 import { toPx } from 'utils/to-px'
 
@@ -487,6 +489,45 @@ function renderTextToTspanElements (
  */
 export function estimateWrappedTextHeight (blocks: UnovisWrappedText[]): number {
   return sum(blocks, b => b._estimatedHeight)
+}
+
+/**
+ * Estimates the overall bounds of wrapped text blocks without touching the DOM.
+ *
+ * @export
+ * @param {UnovisWrappedText[]} blocks - The wrapped text blocks.
+ * @returns {{ width: number; height: number }} - The estimated width and height of the wrapped text blocks.
+ */
+export function getWrappedTextBounds (blocks: UnovisWrappedText[]): { width: number; height: number } {
+  return {
+    width: blocks.length ? Math.max(...blocks.map(b => b._maxWidth)) : 0,
+    height: estimateWrappedTextHeight(blocks),
+  }
+}
+
+/**
+ * Computes the axis-aligned bounding box of wrapped text blocks as they would be rendered
+ * by `renderTextToSvgTextElement`, relative to the text's anchor point.
+ *
+ * @export
+ * @param {UnovisWrappedText[]} blocks - The wrapped text blocks.
+ * @param {TextAlign | string} textAlign - The horizontal text alignment.
+ * @param {VerticalAlign | string} verticalAlign - The vertical alignment of the text.
+ * @param {number} [rotationDeg=0] - Text rotation in degrees, applied around the anchor point.
+ * @returns {Rect} - The bounding box, in the coordinate system of the anchor point.
+ */
+export function getWrappedTextAabb (
+  blocks: UnovisWrappedText[],
+  textAlign: TextAlign | string,
+  verticalAlign: VerticalAlign | string,
+  rotationDeg = 0
+): Rect {
+  const { width, height } = getWrappedTextBounds(blocks)
+  const x = textAlign === TextAlign.Center ? -width / 2 : textAlign === TextAlign.Right ? -width : 0
+  const y = verticalAlign === VerticalAlign.Middle ? -height / 2 : verticalAlign === VerticalAlign.Bottom ? -height : 0
+
+  const rect: Rect = { x, y, width, height }
+  return rotationDeg ? getRotatedRectAabb(rect, rotationDeg * Math.PI / 180) : rect
 }
 
 export const allowedSvgTextTags = ['text', 'tspan', 'textPath', 'altGlyph', 'altGlyphDef', 'altGlyphItem', 'glyphRef', 'textRef', 'textArea']

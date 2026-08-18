@@ -78,5 +78,6 @@ export type UnovisTextFrameOptions = UnovisTextOptions & {
 
 export type UnovisFontInfo = {
   font: string;
+  fontFamily: string;
   fontSizePx: number;
 }
