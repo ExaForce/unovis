@@ -378,26 +378,27 @@ export function getWrappedText (
   // Break input text into lines based on width and separator
   const textWrapped: Array<string[]> = textArrays.map(block => breakTextIntoLines(block, width, fastMode, separator, wordBreak))
 
-  const firstBlock = textArrays[0]
-  let h = -firstBlock.fontSize * (firstBlock.lineHeight - 1)
+  let h = 0
+  let prevBlock: UnovisWrappedText | undefined // The previous block with rendered lines
   const blocks: UnovisWrappedText[] = []
 
   // Process each text block and its lines based on height limit
   textArrays.forEach((text, i) => {
     let lines = textWrapped[i]
 
-    const prevBlock = i > 0 ? blocks[i - 1] : undefined
-    const prevBlockMarginBottomPx = prevBlock ? prevBlock.marginBottom : 0
-    const marginTopPx = text.marginTop
-    const effectiveMarginPx = Math.max(prevBlockMarginBottomPx, marginTopPx)
-
-    h += effectiveMarginPx
+    const blockStartHeight = h
     const dh = text.fontSize * text.lineHeight
     let maxWidth = 0
     // Iterate over lines and handle text overflow based on the height limit if provided
     for (let k = 0; k < lines.length; k += 1) {
       let line = lines[k]
-      h += dh
+
+      // The very first line adds its own height without the leading; the first line of a subsequent
+      // block also clears the previous block's last line and the margin between the blocks; the
+      // following lines advance by the block's own line height. Mirrors `renderTextToTspanElements`.
+      if (k === 0 && !prevBlock) h += text.marginTop + text.fontSize
+      else if (k === 0) h += Math.max(prevBlock.marginBottom, text.marginTop) + prevBlock.fontSize * (prevBlock.lineHeight - 1) + text.fontSize
+      else h += dh
 
       const lineWithEllipsis = `${line} …`
       const textLengthPx = fastMode
@@ -424,7 +425,8 @@ export function getWrappedText (
     }
 
     // Create wrapped text block with its calculated properties
-    blocks.push({ ...text, _lines: lines, _estimatedHeight: h - (prevBlock?._estimatedHeight || 0), _maxWidth: Math.max(maxWidth, prevBlock?._maxWidth ?? 0) })
+    blocks.push({ ...text, _lines: lines, _estimatedHeight: h - blockStartHeight, _maxWidth: Math.max(maxWidth, prevBlock?._maxWidth ?? 0) })
+    if (lines.length) prevBlock = blocks[blocks.length - 1]
   })
 
   return blocks
@@ -449,11 +451,13 @@ function renderTextToTspanElements (
   y?: number,
   dominantBaseline?: string
 ): SVGTSpanElement[] {
+  let prevBlock: UnovisWrappedText | undefined // The previous block with rendered lines
   return blocks.map((b, i) => {
-    const prevBlock = i > 0 ? blocks[i - 1] : undefined
-    const prevBlockMarginBottomEm = prevBlock ? prevBlock.marginBottom / prevBlock.fontSize : 0
-    const marginTopEm = b.marginTop / b.fontSize
-    const marginEm = Math.max(prevBlockMarginBottomEm, marginTopEm)
+    // The first line of a block is offset by the margin between the blocks (in pixels, because the
+    // blocks can have different font sizes) and by the previous line's height — not this block's
+    // one — so that a block following a larger one doesn't overlap it
+    const marginPx = Math.max(prevBlock?.marginBottom ?? 0, b.marginTop)
+    const firstLineDyPx = prevBlock ? marginPx + prevBlock.fontSize * prevBlock.lineHeight : b.marginTop
 
     const blockTspan = document.createElementNS(SVG_NAMESPACE, 'tspan')
     if (b.fontSize) blockTspan.setAttribute('font-size', `${b.fontSize}`)
@@ -463,10 +467,7 @@ function renderTextToTspanElements (
     if (i === 0 && y) blockTspan.setAttribute('y', `${y}`)
 
     b._lines.forEach((line, k) => {
-      let dy: number
-      if (i === 0 && k === 0) dy = marginEm
-      else if (k === 0) dy = marginEm + b.lineHeight
-      else dy = b.lineHeight
+      const dy = k === 0 ? firstLineDyPx / b.fontSize : b.lineHeight
 
       const lineTspan = document.createElementNS(SVG_NAMESPACE, 'tspan')
       lineTspan.setAttribute('x', `${x}`)
@@ -476,6 +477,7 @@ function renderTextToTspanElements (
       blockTspan.appendChild(lineTspan)
     })
 
+    if (b._lines.length) prevBlock = b
     return blockTspan
   })
 }
