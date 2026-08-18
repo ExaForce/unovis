@@ -3,10 +3,12 @@ import { sum } from 'd3-array'
 
 // Types
 import { TextAlign, TrimMode, UnovisText, UnovisTextFrameOptions, UnovisTextOptions, UnovisWrappedText, VerticalAlign } from '@/types/text'
+import { Rect } from '@/types/misc'
 
 // Utils
 import { flatten, isArray, merge } from '@/utils/data'
 import { getTextAnchorFromTextAlign } from '@/types/svg'
+import { getRotatedRectAabb } from '@/utils/misc'
 import { estimateStringPixelLength, getCachedComputedTextLength, getPreciseStringLengthPx } from '@/utils/text-measure'
 import { toPx } from '@/utils/to-px'
 
@@ -379,20 +381,15 @@ export function getWrappedText (
     breakTextIntoLines(block, block.width ?? width, fastMode, block.separator ?? separator, block.wordBreak ?? wordBreak)
   )
 
-  const firstBlock = textArrays[0]
-  let h = -firstBlock.fontSize * (firstBlock.lineHeight - 1)
+  let h = 0
+  let prevBlock: UnovisWrappedText | undefined // The previous block with rendered lines
   const blocks: UnovisWrappedText[] = []
 
   // Process each text block and its lines based on height limit
   textArrays.forEach((text, i) => {
     let lines = textWrapped[i]
 
-    const prevBlock = i > 0 ? blocks[i - 1] : undefined
-    const prevBlockMarginBottomPx = prevBlock ? prevBlock.marginBottom : 0
-    const marginTopPx = text.marginTop
-    const effectiveMarginPx = Math.max(prevBlockMarginBottomPx, marginTopPx)
-
-    h += effectiveMarginPx
+    const blockStartHeight = h
     const dh = text.fontSize * text.lineHeight
     let maxWidth = 0
     const measure = (line: string): number => fastMode
@@ -402,7 +399,13 @@ export function getWrappedText (
     // Iterate over lines and handle text overflow based on the height limit if provided
     for (let k = 0; k < lines.length; k += 1) {
       let line = lines[k]
-      h += dh
+
+      // The very first line adds its own height without the leading; the first line of a subsequent
+      // block also clears the previous block's last line and the margin between the blocks; the
+      // following lines advance by the block's own line height. Mirrors `renderTextToTspanElements`.
+      if (k === 0 && !prevBlock) h += text.marginTop + text.fontSize
+      else if (k === 0) h += Math.max(prevBlock.marginBottom, text.marginTop) + prevBlock.fontSize * (prevBlock.lineHeight - 1) + text.fontSize
+      else h += dh
 
       if (height && (h + dh) > height && (k !== lines.length - 1)) {
         // Remove hyphen character from the end of the line if it's there
@@ -427,7 +430,8 @@ export function getWrappedText (
     }
 
     // Create wrapped text block with its calculated properties
-    blocks.push({ ...text, _lines: lines, _estimatedHeight: h - (prevBlock?._estimatedHeight || 0), _maxWidth: maxWidth })
+    blocks.push({ ...text, _lines: lines, _estimatedHeight: h - blockStartHeight, _maxWidth: maxWidth })
+    if (lines.length) prevBlock = blocks[blocks.length - 1]
   })
 
   return blocks
@@ -452,11 +456,13 @@ function renderTextToTspanElements (
   y?: number,
   dominantBaseline?: string
 ): SVGTSpanElement[] {
+  let prevBlock: UnovisWrappedText | undefined // The previous block with rendered lines
   return blocks.map((b, i) => {
-    const prevBlock = i > 0 ? blocks[i - 1] : undefined
-    const prevBlockMarginBottomEm = prevBlock ? prevBlock.marginBottom / prevBlock.fontSize : 0
-    const marginTopEm = b.marginTop / b.fontSize
-    const marginEm = Math.max(prevBlockMarginBottomEm, marginTopEm)
+    // The first line of a block is offset by the margin between the blocks (in pixels, because the
+    // blocks can have different font sizes) and by the previous line's height — not this block's
+    // one — so that a block following a larger one doesn't overlap it
+    const marginPx = Math.max(prevBlock?.marginBottom ?? 0, b.marginTop)
+    const firstLineDyPx = prevBlock ? marginPx + prevBlock.fontSize * prevBlock.lineHeight : b.marginTop
 
     const blockTspan = document.createElementNS(SVG_NAMESPACE, 'tspan')
     if (b.className) blockTspan.setAttribute('class', b.className)
@@ -467,10 +473,7 @@ function renderTextToTspanElements (
     if (i === 0 && y) blockTspan.setAttribute('y', `${y}`)
 
     b._lines.forEach((line, k) => {
-      let dy: number
-      if (i === 0 && k === 0) dy = marginEm
-      else if (k === 0) dy = marginEm + b.lineHeight
-      else dy = b.lineHeight
+      const dy = k === 0 ? firstLineDyPx / b.fontSize : b.lineHeight
 
       const lineTspan = document.createElementNS(SVG_NAMESPACE, 'tspan')
       lineTspan.setAttribute('x', `${x}`)
@@ -480,6 +483,7 @@ function renderTextToTspanElements (
       blockTspan.appendChild(lineTspan)
     })
 
+    if (b._lines.length) prevBlock = b
     return blockTspan
   })
 }
@@ -507,6 +511,31 @@ export function getWrappedTextBounds (blocks: UnovisWrappedText[]): { width: num
     width: blocks.length ? Math.max(...blocks.map(b => b._maxWidth)) : 0,
     height: estimateWrappedTextHeight(blocks),
   }
+}
+
+/**
+ * Computes the axis-aligned bounding box of wrapped text blocks as they would be rendered
+ * by `renderTextToSvgTextElement`, relative to the text's anchor point.
+ *
+ * @export
+ * @param {UnovisWrappedText[]} blocks - The wrapped text blocks.
+ * @param {TextAlign | string} textAlign - The horizontal text alignment.
+ * @param {VerticalAlign | string} verticalAlign - The vertical alignment of the text.
+ * @param {number} [rotationDeg=0] - Text rotation in degrees, applied around the anchor point.
+ * @returns {Rect} - The bounding box, in the coordinate system of the anchor point.
+ */
+export function getWrappedTextAabb (
+  blocks: UnovisWrappedText[],
+  textAlign: TextAlign | string,
+  verticalAlign: VerticalAlign | string,
+  rotationDeg = 0
+): Rect {
+  const { width, height } = getWrappedTextBounds(blocks)
+  const x = textAlign === TextAlign.Center ? -width / 2 : textAlign === TextAlign.Right ? -width : 0
+  const y = verticalAlign === VerticalAlign.Middle ? -height / 2 : verticalAlign === VerticalAlign.Bottom ? -height : 0
+
+  const rect: Rect = { x, y, width, height }
+  return rotationDeg ? getRotatedRectAabb(rect, rotationDeg * Math.PI / 180) : rect
 }
 
 export const allowedSvgTextTags = ['text', 'tspan', 'textPath', 'altGlyph', 'altGlyphDef', 'altGlyphItem', 'glyphRef', 'textRef', 'textArea']
