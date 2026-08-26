@@ -66,16 +66,16 @@ export default defineConfig({
       // Mirror the workspace path aliases that `@unovis/ts` uses internally via
       // tsconfig `paths` (see packages/ts/tsconfig.json). Webpack does the same
       // in packages/dev/webpack.config.js. Order matters — more specific first.
-      'types/': `${pkgSrc('ts')}/types/`,
-      'utils/': `${pkgSrc('ts')}/utils/`,
-      'core/': `${pkgSrc('ts')}/core/`,
-      'components/': `${pkgSrc('ts')}/components/`,
-      'containers/': `${pkgSrc('ts')}/containers/`,
-      'styles/': `${pkgSrc('ts')}/styles/`,
-      'data-models/': `${pkgSrc('ts')}/data-models/`,
-      'data/': `${pkgSrc('ts')}/data/`,
-      // Used in packages/react/src/html-components/**/index.tsx
-      'src/utils/react': `${pkgSrc('react')}/utils/react`,
+      '@/types/': `${pkgSrc('ts')}/types/`,
+      '@/utils/': `${pkgSrc('ts')}/utils/`,
+      '@/core/': `${pkgSrc('ts')}/core/`,
+      '@/components/': `${pkgSrc('ts')}/components/`,
+      '@/containers/': `${pkgSrc('ts')}/containers/`,
+      '@/styles/': `${pkgSrc('ts')}/styles/`,
+      '@/data-models/': `${pkgSrc('ts')}/data-models/`,
+      '@/data/': `${pkgSrc('ts')}/data/`,
+      // The react wrappers import their helpers as `src/utils/...` (tsconfig `baseUrl`)
+      'src/utils/': `${pkgSrc('react')}/utils/`,
       '@unovis/ts': pkgSrc('ts'),
       '@unovis/react': pkgSrc('react'),
       // Vue and Svelte framework wrappers point at their built dist/ rather than
