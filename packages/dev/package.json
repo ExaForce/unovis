@@ -43,7 +43,7 @@
     "react": "^19",
     "react-dom": "^19",
     "react-resizable-panels": "^2.1.4",
-    "react-router-dom": "^6.4.5",
+    "react-router-dom": "^6.30.5",
     "serve": "^14.2.3",
     "@emotion/css": "^11.13.0",
     "d3-array": "^3.2.0",
