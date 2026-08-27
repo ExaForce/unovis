@@ -4,9 +4,20 @@ import { min, max } from 'd3-array'
 import { XYComponentCore } from '@/core/xy-component'
 
 // Utils
-import { isNumber, isArray, isEmpty, clamp, getStackedExtentWithBaseline, getString, getNumber, getStackedData, getExtent } from '@/utils/data'
+import {
+  isNumber,
+  isArray,
+  isEmpty,
+  clamp,
+  getStackedExtentWithBaseline,
+  getString,
+  getNumber,
+  getValue,
+  getStackedData,
+  getExtent,
+} from '@/utils/data'
 import { roundedRectPath } from '@/utils/path'
-import { smartTransition } from '@/utils/d3'
+import { smartTransition, applyInlineStyles } from '@/utils/d3'
 import { getColor } from '@/utils/color'
 import { getPattern, getFillPatternValue, UNOVIS_PATTERN_INDEX_ATTR } from '@/utils/pattern'
 
@@ -15,12 +26,16 @@ import { ContinuousScale } from '@/types/scale'
 import { NumericAccessor } from '@/types/accessor'
 import { Spacing } from '@/types/spacing'
 import { Orientation } from '@/types/position'
+import { StyleDeclaration } from '@/types/style'
 
 // Local Types
 import { StackedBarDataRecord } from './types'
 
 // Config
 import { StackedBarDefaultConfig, StackedBarConfigInterface } from './config'
+
+// Constants
+import { MANAGED_BAR_STYLES } from './constants'
 
 // Styles
 import * as s from './style'
@@ -177,23 +192,30 @@ export class StackedBar<Datum> extends XYComponentCore<Datum, StackedBarConfigIn
       .attr('class', s.bar)
       .attr('d', d => this._getBarPath(d, true))
       .attr(UNOVIS_PATTERN_INDEX_ATTR, d => d.stackIndex)
-      .style('fill', d => getColor(d.datum, config.color, d.stackIndex, config.colorKeys?.[d.stackIndex], colorOptions))
-      .style('mask', d => getFillPatternValue(getPattern(d.datum, config.pattern, d.stackIndex)))
+      .style('fill', d => this._getBarStyle(d)?.fill ?? getColor(d.datum, config.color, d.stackIndex, config.colorKeys?.[d.stackIndex], colorOptions))
+      .style('mask', d => this._getBarStyle(d)?.mask ?? getFillPatternValue(getPattern(d.datum, config.pattern, d.stackIndex)))
 
     const barsMerged = barsEnter.merge(bars)
 
-    barsMerged.style('mask', d => getFillPatternValue(getPattern(d.datum, config.pattern, d.stackIndex)))
+    barsMerged.style('mask', d => this._getBarStyle(d)?.mask ?? getFillPatternValue(getPattern(d.datum, config.pattern, d.stackIndex)))
+
+    // Custom per-bar styles; the managed keys are merged into the transitions below instead,
+    // so they keep animating and don't get stomped by the next render
+    applyInlineStyles(barsMerged, d => this._getBarStyle(d), MANAGED_BAR_STYLES)
+
     smartTransition(barsMerged, duration)
       .attr('d', d => this._getBarPath(d))
-      .style('fill', d => getColor(d.datum, config.color, d.stackIndex, config.colorKeys?.[d.stackIndex], colorOptions))
-      .style('cursor', d => getString(d.datum, config.cursor, d.stackIndex))
+      // A re-entering bar can be mid exit fade; bring it back instead of leaving it semi-transparent
+      .style('opacity', d => this._getBarStyle(d)?.opacity ?? 1)
+      .style('fill', d => this._getBarStyle(d)?.fill ?? getColor(d.datum, config.color, d.stackIndex, config.colorKeys?.[d.stackIndex], colorOptions))
+      .style('cursor', d => this._getBarStyle(d)?.cursor ?? getString(d.datum, config.cursor, d.stackIndex))
 
+    // No `interrupt` removal here: an interrupted exit means the next data join has re-adopted the node
+    // (it keeps the `bar` class), so it either re-enters the update selection or exits and fades again.
+    // Removing it on `interrupt` would delete bars that legitimately re-entered on a rapid re-render.
     smartTransition(bars.exit(), duration)
       .style('opacity', 0)
       .remove()
-      // `transition.remove()` only fires on `end`; if the transition is interrupted by a re-render,
-      // the node would linger in the DOM with opacity < 1 and could be picked up by the next data join.
-      .on('interrupt', function () { this.remove() })
   }
 
   _getBarWidth (): number {
@@ -245,6 +267,10 @@ export class StackedBar<Datum> extends XYComponentCore<Datum, StackedBarConfigIn
     return filtered
   }
 
+  private _getBarStyle (d: StackedBarDataRecord<Datum>): StyleDeclaration | null | undefined {
+    return getValue<Datum, StyleDeclaration>(d.datum, this.config.barStyle, d.stackIndex)
+  }
+
   _getBarPath (d: StackedBarDataRecord<Datum>, isEntering = false): string {
     const { config } = this
     const yAccessors = this.getAccessors()
@@ -257,10 +283,10 @@ export class StackedBar<Datum> extends XYComponentCore<Datum, StackedBarConfigIn
     const value = getNumber(d.datum, yAccessors[d.stackIndex], d.index)
     const height = isEntering ? 0 : Math.abs(this.valueScale(d.stacked[0]) - this.valueScale(d.stacked[1]))
     const h = !isEntering && config.barMinHeight1Px && (height < 1) && isFinite(value) && (value !== config.barMinHeightZeroValue) ? 1 : height
-    // Entering bars collapse onto the start of their own span, so they grow out of the place they
-    // belong to instead of flying in from the zero line
+    // Entering bars collapse onto the stack's origin (the baseline, zero by default), so the whole
+    // stack grows out of it instead of each segment growing from the start of its own span
     const y = isEntering
-      ? this.valueScale(d.stacked[0])
+      ? this.valueScale(config.baseline ? getNumber(d.datum, config.baseline, d.index) || 0 : 0)
       : this.valueScale(isNegative ? d.stacked[0] : d.stacked[1]) - (height < 1 && config.barMinHeight1Px ? 1 : 0)
 
     const x = -barWidth / 2
