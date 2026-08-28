@@ -88,6 +88,7 @@ export async function setupMap<T extends GenericDataRecord> (mapContainer: HTMLE
   leaflet: L.Map;
   layer: L.Layer;
   svgOverlay: Selection<SVGSVGElement, unknown, null, undefined>;
+  svgOverlayOffsetTarget: Selection<HTMLDivElement | SVGSVGElement, unknown, null, undefined>;
   svgGroup: Selection<SVGGElement, unknown, SVGElement, undefined>;
 }> {
   const { style, renderer, topoJSONLayer } = config
@@ -167,13 +168,22 @@ export async function setupMap<T extends GenericDataRecord> (mapContainer: HTMLE
     })
   }
 
-  const svgOverlay = select(leafletMap.getPanes().overlayPane).append('svg')
+  const overlayPane = select(leafletMap.getPanes().overlayPane)
+  const svgOverlayWrapper = config.wrapSvgOverlay
+    ? overlayPane.append('div')
+      .style('position', 'absolute')
+      .style('pointer-events', 'none')
+    : undefined
+  const svgOverlay = (svgOverlayWrapper ?? overlayPane).append('svg')
   const svgGroup = svgOverlay.append('g')
 
   return {
     leaflet: leafletMap,
     layer,
     svgOverlay,
+    // Whatever carries the bleed offset: the wrapper when there is one, the overlay itself
+    // otherwise. Callers position this and never have to know which of the two it is.
+    svgOverlayOffsetTarget: svgOverlayWrapper ?? svgOverlay,
     svgGroup,
   }
 }

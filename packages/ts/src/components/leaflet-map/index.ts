@@ -74,6 +74,7 @@ export class LeafletMap<Datum extends GenericDataRecord> extends ComponentCore<D
     leaflet: L.Map;
     layer: L.Layer;
     svgOverlay: Selection<SVGSVGElement, unknown, null, undefined>;
+    svgOverlayOffsetTarget: Selection<HTMLDivElement | SVGSVGElement, unknown, null, undefined>;
     svgGroup: Selection<SVGGElement, unknown, SVGElement, undefined>;
   }
 
@@ -508,11 +509,13 @@ export class LeafletMap<Datum extends GenericDataRecord> extends ComponentCore<D
     const svgExtraPadding = 40 + this._clusterBackgroundRadius // We need it to fit point labels and expanded cluster background circle
     const dx = contentBBox.x - svgExtraPadding
     const dy = contentBBox.y - svgExtraPadding
+    this._map.svgOverlayOffsetTarget
+      .style('left', `${dx}px`)
+      .style('top', `${dy}px`)
+
     this._map.svgOverlay
       .attr('width', contentBBox.width + 2 * svgExtraPadding)
       .attr('height', contentBBox.height + 2 * svgExtraPadding)
-      .style('left', `${dx}px`)
-      .style('top', `${dy}px`)
 
     this._map.svgGroup
       .attr('transform', `translate(${-dx},${-dy})`)

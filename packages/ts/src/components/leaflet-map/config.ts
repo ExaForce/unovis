@@ -56,6 +56,9 @@ export interface LeafletMapConfigInterface<Datum extends GenericDataRecord> exte
    * with `toDataURL()` or `drawImage()`. Costs an extra buffer copy per rendered frame.
    * Has no effect when renderer is `LeafletMapRenderer.Raster`. Default: `false` */
   preserveDrawingBuffer?: boolean;
+  /** Offset the point overlay via a wrapping `div` instead of the `svg` itself, so that tools
+   * rasterizing the SVG by serializing it do not apply the offset twice. Default: `false` */
+  wrapSvgOverlay?: boolean;
 
   // Map events
   /** Function to be called after the map's async initialization is done. Default: `undefined` */
@@ -193,6 +196,7 @@ export const LeafletMapDefaultConfig: LeafletMapConfigInterface<GenericDataRecor
   styleDarkTheme: undefined,
   renderer: LeafletMapRenderer.MapLibre,
   preserveDrawingBuffer: false,
+  wrapSvgOverlay: false,
 
   // Map events
   onMapInitialized: undefined,
