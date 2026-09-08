@@ -35,6 +35,10 @@ export interface XYComponentConfigInterface<Datum> extends ComponentConfigInterf
    * Default: `false`
   */
   excludeFromDomainCalculation?: boolean;
+  /** Bind the component to the container's secondary Y scale, which has its own domain but shares
+   * the primary scale's range. On an Axis component this also marks it as the secondary Y axis.
+   * Default: `undefined` */
+  useSecondaryYScale?: boolean;
 }
 
 export const XYComponentDefaultConfig: XYComponentConfigInterface<unknown> = {
@@ -46,4 +50,5 @@ export const XYComponentDefaultConfig: XYComponentConfigInterface<unknown> = {
   xScale: undefined,
   yScale: undefined,
   excludeFromDomainCalculation: false,
+  useSecondaryYScale: undefined,
 }

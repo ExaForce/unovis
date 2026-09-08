@@ -127,6 +127,7 @@ export class XYContainer<Datum> extends ContainerCore {
     config.crosshair?.setData(data)
     config.xAxis?.setData(data)
     config.yAxis?.setData(data)
+    config.yAxisSecondary?.setData(data)
 
     // Hide tooltip and crosshair if the data has changed
     // Important: We still want to do `setData` for the components above even if the data hasn't changed
@@ -154,6 +155,10 @@ export class XYContainer<Datum> extends ContainerCore {
     if (containerConfig.yAxis) {
       this.config.yAxis.config.type = AxisType.Y
       this.element.appendChild(containerConfig.yAxis.element)
+    }
+    if (containerConfig.yAxisSecondary) {
+      this.config.yAxisSecondary.config.type = AxisType.Y
+      this.element.appendChild(containerConfig.yAxisSecondary.element)
     }
 
     // Re-insert elements to the DOM
@@ -204,7 +209,7 @@ export class XYContainer<Datum> extends ContainerCore {
       }
     })
 
-    this._updateScales(...this.components, config.xAxis, config.yAxis, config.crosshair)
+    this._updateScales(...this.components, config.xAxis, config.yAxis, config.yAxisSecondary, config.crosshair)
     if (!preventRender) this.render()
   }
 
@@ -225,7 +230,7 @@ export class XYContainer<Datum> extends ContainerCore {
     }
 
     // Pass size and margin to the components
-    const components = clean([...this.components, config.xAxis, config.yAxis, config.crosshair, config.annotations])
+    const components = clean([...this.components, config.xAxis, config.yAxis, config.yAxisSecondary, config.crosshair, config.annotations])
     const margin = this._getMargin()
     for (const c of components) {
       c.setSize(this.width, this.height, this.containerWidth, this.containerHeight)
@@ -234,7 +239,7 @@ export class XYContainer<Datum> extends ContainerCore {
     }
 
     // Update Scales of all the components at once to calculate required paddings and sync them
-    this._updateScales(...this.components, config.xAxis, config.yAxis, config.crosshair)
+    this._updateScales(...this.components, config.xAxis, config.yAxis, config.yAxisSecondary, config.crosshair)
   }
 
   protected _render (customDuration?: number): void {
@@ -312,13 +317,52 @@ export class XYContainer<Datum> extends ContainerCore {
     this._updateScalesRange(...c)
   }
 
+  private _isSecondaryY<T extends XYComponentCore<Datum>> (c: T): boolean {
+    return Boolean(c.config.useSecondaryYScale) || (this.config.yAxisSecondary !== undefined && c === (this.config.yAxisSecondary as unknown as T))
+  }
+
   private _setScales<T extends XYComponentCore<Datum>> (...components: T[]): void {
     const { config } = this
     if (!components) return
 
     // Set the X and Y scales
     if (config.xScale) components.forEach(c => c.setScale(ScaleDimension.X, config.xScale))
-    if (config.yScale) components.forEach(c => c.setScale(ScaleDimension.Y, config.yScale))
+    if (config.yScale) components.forEach(c => { if (!this._isSecondaryY(c)) c.setScale(ScaleDimension.Y, config.yScale) })
+    if (config.yScaleSecondary) components.forEach(c => { if (this._isSecondaryY(c)) c.setScale(ScaleDimension.Y, config.yScaleSecondary) })
+  }
+
+  private _applyScaleDomain<T extends XYComponentCore<Datum>> (
+    dimension: ScaleDimension,
+    domainComponents: T[],
+    targetComponents: T[],
+    configuredDomain: [number | undefined, number | undefined] | undefined,
+    minConstraint: [number | undefined, number | undefined] | undefined,
+    maxConstraint: [number | undefined, number | undefined] | undefined
+  ): void {
+    const { config } = this
+    const [min, max] = extent(
+      mergeArrays(
+        domainComponents.map(c => c.getDataExtent(dimension, config.scaleByDomain))
+      ) as number[]
+    ) // Components with undefined dimension accessors will return [undefined, undefined] but d3.extent will take care of that
+
+    const domainMin = configuredDomain?.[0] ?? min ?? 0
+    const domainMax = configuredDomain?.[1] ?? max ?? 1
+    const domain = [
+      clamp(domainMin, minConstraint?.[0] ?? Number.NEGATIVE_INFINITY, minConstraint?.[1] ?? Number.POSITIVE_INFINITY),
+      clamp(domainMax, maxConstraint?.[0] ?? Number.NEGATIVE_INFINITY, maxConstraint?.[1] ?? Number.POSITIVE_INFINITY),
+    ]
+
+    // Extend the X and Y domains if they're empty and `preventEmptyDomain` was explicitly set to `true`
+    // or just the X domain if there is no data provided and `preventEmptyDomain` set to `null`
+    if (domain[0] === domain[1]) {
+      const hasDataProvided = domainComponents.some(c => c.datamodel.data?.length > 0)
+      if (config.preventEmptyDomain || (config.preventEmptyDomain === null && (!hasDataProvided || dimension === ScaleDimension.Y))) {
+        domain[1] = domain[0] + 1
+      }
+    }
+
+    targetComponents.forEach(c => c.setScaleDomain(dimension, domain))
   }
 
   private _updateScalesDomain<T extends XYComponentCore<Datum>> (...components: T[]): void {
@@ -327,35 +371,16 @@ export class XYContainer<Datum> extends ContainerCore {
 
     const componentsWithDomain = components.filter(c => !c.config.excludeFromDomainCalculation)
 
-    // Loop over all the dimensions
-    Object.values(ScaleDimension).forEach((dimension: ScaleDimension) => {
-      const [min, max] = extent(
-        mergeArrays(
-          componentsWithDomain.map(c => c.getDataExtent(dimension, config.scaleByDomain))
-        ) as number[]
-      ) // Components with undefined dimension accessors will return [undefined, undefined] but d3.extent will take care of that
+    this._applyScaleDomain(ScaleDimension.X, componentsWithDomain, components, config.xDomain, config.xDomainMinConstraint, config.xDomainMaxConstraint)
 
-      const configuredDomain = dimension === ScaleDimension.Y ? config.yDomain : config.xDomain
-      const configuredDomainMinConstraint = dimension === ScaleDimension.Y ? config.yDomainMinConstraint : config.xDomainMinConstraint
-      const configuredDomainMaxConstraint = dimension === ScaleDimension.Y ? config.yDomainMaxConstraint : config.xDomainMaxConstraint
-      const domainMin = configuredDomain?.[0] ?? min ?? 0
-      const domainMax = configuredDomain?.[1] ?? max ?? 1
-      const domain = [
-        clamp(domainMin, configuredDomainMinConstraint?.[0] ?? Number.NEGATIVE_INFINITY, configuredDomainMinConstraint?.[1] ?? Number.POSITIVE_INFINITY),
-        clamp(domainMax, configuredDomainMaxConstraint?.[0] ?? Number.NEGATIVE_INFINITY, configuredDomainMaxConstraint?.[1] ?? Number.POSITIVE_INFINITY),
-      ]
-
-      // Extend the X and Y domains if they're empty and `preventEmptyDomain` was explicitly set to `true`
-      // or just the X domain if there is no data provided and `preventEmptyDomain` set to `null`
-      if (domain[0] === domain[1]) {
-        const hasDataProvided = componentsWithDomain.some(c => c.datamodel.data?.length > 0)
-        if (config.preventEmptyDomain || (config.preventEmptyDomain === null && (!hasDataProvided || dimension === ScaleDimension.Y))) {
-          domain[1] = domain[0] + 1
-        }
-      }
-
-      components.forEach(c => c.setScaleDomain(dimension, domain))
-    })
+    const hasSecondaryY = components.some(c => this._isSecondaryY(c))
+    if (!hasSecondaryY) {
+      this._applyScaleDomain(ScaleDimension.Y, componentsWithDomain, components, config.yDomain, config.yDomainMinConstraint, config.yDomainMaxConstraint)
+    } else {
+      // Secondary-scale components get their own domain; the primary domain uses the rest.
+      this._applyScaleDomain(ScaleDimension.Y, componentsWithDomain.filter(c => !this._isSecondaryY(c)), components.filter(c => !this._isSecondaryY(c)), config.yDomain, config.yDomainMinConstraint, config.yDomainMaxConstraint)
+      this._applyScaleDomain(ScaleDimension.Y, componentsWithDomain.filter(c => this._isSecondaryY(c)), components.filter(c => this._isSecondaryY(c)), config.ySecondaryDomain, undefined, undefined)
+    }
   }
 
   private _updateScalesRange<T extends XYComponentCore<Datum>> (...components: T[]): void {
@@ -390,10 +415,10 @@ export class XYContainer<Datum> extends ContainerCore {
   }
 
   private _renderAxes (duration: number): void {
-    const { config: { xAxis, yAxis } } = this
+    const { config: { xAxis, yAxis, yAxisSecondary } } = this
     const margin = this._getMargin()
 
-    const axes = clean([xAxis, yAxis])
+    const axes = clean([xAxis, yAxis, yAxisSecondary])
     axes.forEach(axis => {
       const offset = axis.getOffset(margin)
       axis.g.attr('transform', `translate(${offset.left},${offset.top})`)
@@ -402,10 +427,10 @@ export class XYContainer<Datum> extends ContainerCore {
   }
 
   private _setAutoMargin (): void {
-    const { config: { xAxis, yAxis } } = this
+    const { config: { xAxis, yAxis, yAxisSecondary } } = this
 
     // At first we need to set the domain to the scales
-    const components = clean([...this.components, xAxis, yAxis])
+    const components = clean([...this.components, xAxis, yAxis, yAxisSecondary])
     this._setScales(...components)
     this._updateScalesDomain(...components)
 
@@ -417,7 +442,7 @@ export class XYContainer<Datum> extends ContainerCore {
     for (let i = 0; i < numIterations; i += 1) {
       const axisMargin: Spacing = { top: 0, bottom: 0, left: 0, right: 0 }
       this._updateScalesRange(...components)
-      const axes = clean([xAxis, yAxis])
+      const axes = clean([xAxis, yAxis, yAxisSecondary])
       axes.forEach(axis => {
         axis.preRender()
 
@@ -467,7 +492,7 @@ export class XYContainer<Datum> extends ContainerCore {
   }
 
   public destroy (): void {
-    const { components, config: { tooltip, crosshair, annotations, xAxis, yAxis } } = this
+    const { components, config: { tooltip, crosshair, annotations, xAxis, yAxis, yAxisSecondary } } = this
     super.destroy()
 
     for (const c of components) c?.destroy()
@@ -476,5 +501,6 @@ export class XYContainer<Datum> extends ContainerCore {
     annotations?.destroy()
     xAxis?.destroy()
     yAxis?.destroy()
+    yAxisSecondary?.destroy()
   }
 }

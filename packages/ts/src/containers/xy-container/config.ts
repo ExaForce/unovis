@@ -68,11 +68,21 @@ export interface XYContainerConfigInterface<Datum> extends ContainerConfigInterf
   yRange?: [number, number];
   /** Y Axis direction. Default: `Direction.North` */
   yDirection?: Direction.South | Direction.North | string;
+  /** Scale for the secondary Y dimension, e.g. Scale.scaleLinear(), shared by the components with
+   * `useSecondaryYScale` set. It has its own domain but shares the primary Y scale's range.
+   * Default: `undefined` */
+  yScaleSecondary?: ContinuousScale;
+  /** Scale domain for the secondary Y dimension. By default it is calculated automatically from
+   * the data of the components with `useSecondaryYScale` set. */
+  ySecondaryDomain?: [number | undefined, number | undefined];
 
   /** X Axis component instance. Default: `undefined` */
   xAxis?: Axis<Datum>;
   /** Y Axis component instance. Default: `undefined` */
   yAxis?: Axis<Datum>;
+  /** Secondary Y Axis component instance, rendered against the secondary Y scale.
+   * Default: `undefined` */
+  yAxisSecondary?: Axis<Datum>;
   /** Enables automatic calculation of chart margins based on the size of the axes. Default: `true` */
   autoMargin?: boolean;
   /** Tooltip component. Default: `undefined` */
@@ -121,6 +131,7 @@ export const XYContainerDefaultConfig: XYContainerConfigInterface<unknown> = {
   annotations: undefined,
   xAxis: undefined,
   yAxis: undefined,
+  yAxisSecondary: undefined,
   autoMargin: true,
 
   xScale: undefined,
@@ -135,6 +146,8 @@ export const XYContainerDefaultConfig: XYContainerConfigInterface<unknown> = {
   yDomainMaxConstraint: undefined,
   yRange: undefined,
   yDirection: Direction.North,
+  yScaleSecondary: undefined,
+  ySecondaryDomain: undefined,
 
   preventEmptyDomain: null,
   scaleByDomain: false,
