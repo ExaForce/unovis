@@ -13,6 +13,7 @@ import { smartTransition } from '@/utils/d3'
 import { getColor } from '@/utils/color'
 import { getPattern, getFillPatternValue, UNOVIS_PATTERN_INDEX_ATTR } from '@/utils/pattern'
 import { textAlignToAnchor, trimSVGText } from '@/utils/text'
+import { getCachedComputedTextLength } from '@/utils/text-measure'
 import { arrowPolylinePath } from '@/utils/path'
 import { guid } from '@/utils/misc'
 
@@ -138,13 +139,15 @@ export class Timeline<Datum> extends XYComponentCore<Datum, TimelineConfigInterf
       if (config.rowLabelWidth ?? config.labelWidth) {
         this._labelWidth = (config.rowLabelWidth ?? config.labelWidth) + marginLeft + marginRight
       } else {
-        const labels = rowLabels.map(l => this._labelsGroup.append('text')
-          .attr('class', s.label)
-          .text(l.formattedLabel || '')
-          .call(trimSVGText, config.rowMaxLabelWidth ?? config.maxLabelWidth, config.rowLabelTrimMode as TrimMode))
-
-        const labelWidth = max(labels.map(l => l.node().getBBox().width)) || 0
-        labels.forEach(l => l.remove())
+        // A single measuring element is enough: text widths come from the canvas-backed
+        // cache, so no per-row DOM node or `getBBox` (which forces layout) is needed
+        const measureLabel = this._labelsGroup.append('text').attr('class', s.label)
+        const labelWidth = max(rowLabels.map(l => {
+          measureLabel.text(l.formattedLabel || '')
+          trimSVGText(measureLabel, config.rowMaxLabelWidth ?? config.maxLabelWidth, config.rowLabelTrimMode as TrimMode)
+          return getCachedComputedTextLength(measureLabel.node())
+        })) || 0
+        measureLabel.remove()
 
         this._labelWidth = labelWidth ? labelWidth + marginLeft + marginRight : 0
       }
