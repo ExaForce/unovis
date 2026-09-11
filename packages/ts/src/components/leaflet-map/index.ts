@@ -2,7 +2,6 @@ import { select, Selection } from 'd3-selection'
 import { packSiblings } from 'd3-hierarchy'
 import type L from 'leaflet'
 import Supercluster, { ClusterFeature, PointFeature } from 'supercluster'
-import { StyleSpecification } from 'maplibre-gl'
 
 // Core
 import { ComponentCore } from '@/core/component'
@@ -18,6 +17,7 @@ import { GenericDataRecord } from '@/types/data'
 import { ResizeObserver } from '@/utils/resize-observer'
 import { clamp, isNil, getNumber, getString, isString } from '@/utils/data'
 import { isDarkThemeEnabled } from '@/utils/style'
+import { StyleSpecification } from './renderer/map-style'
 import { constraintMapViewThrottled } from './renderer/mapboxgl-utils'
 import {
   projectPoint,
@@ -293,7 +293,9 @@ export class LeafletMap<Datum extends GenericDataRecord> extends ComponentCore<D
     if (this.config.renderer === LeafletMapRenderer.MapLibre) {
       const maplibreMap = layer.getMaplibreMap()
       maplibreMap.setStyle?.(theme)
-      updateTopoJson(maplibreMap, this.config)
+      // `setStyle` reloads the style asynchronously, so we must wait until it's loaded before updating sources/layers
+      if (maplibreMap.isStyleLoaded()) updateTopoJson(maplibreMap, this.config)
+      else maplibreMap.once('styledata', () => updateTopoJson(maplibreMap, this.config))
     } else {
       if (typeof theme !== 'string') {
         console.warn('Unovis | Leaflet Map: Invalid style. Provide a URL string for raster rendering mode.')

@@ -9,6 +9,9 @@ const path = require('path')
 const isDevelopment = process.env.NODE_ENV !== 'production'
 const publicPath = process.env.UNOVIS_EXAMPLES_BASE || '/'
 const baseHref = publicPath.endsWith('/') ? publicPath : `${publicPath}/`
+
+// maplibre-gl's `dist` directory, resolved through pnpm's nested layout.
+const maplibreDist = path.dirname(require.resolve('maplibre-gl/dist/maplibre-gl.mjs'))
 module.exports = {
   entry: './src/index.tsx',
   devtool: 'source-map',
@@ -56,11 +59,39 @@ module.exports = {
         resourceQuery: /raw/,
         type: 'asset/source',
       },
+      {
+        // maplibre-gl's worker imports its `maplibre-gl-shared*.mjs` sibling via a relative path,
+        //   so both must be emitted next to each other with their original (unhashed) file names.
+        //   Gated behind the `?maplibreWorkerAsset` query marker (used by the `new URL(...)` calls in
+        //   `map.ts`) so the normal ESM `import` inside maplibre-gl(-dev).mjs is unaffected and keeps
+        //   its real named exports. Matches the `-dev` builds too (see the maplibre-gl alias below).
+        test: /maplibre-gl-(worker|shared)(-dev)?\.mjs$/,
+        resourceQuery: /maplibreWorkerAsset/,
+        type: 'asset/resource',
+        generator: { filename: '[name][ext]' },
+      },
+      {
+        // maplibre-gl(-dev).mjs builds its worker Blob URL with a dynamic `new URL(var, import.meta.url)`
+        //   that webpack can't statically resolve; relaxing the `new URL()` parser removes the
+        //   "Critical dependency" warning at its source. The module type is left as webpack's default
+        //   so the ESM named exports stay intact.
+        test: /maplibre-gl(-dev)?\.mjs$/,
+        parser: { url: false },
+      },
     ],
   },
   resolve: {
     extensions: ['.ts', '.js', '.json', '.tsx'],
     alias: {
+      // maplibre-gl 6.x ships ESM split across `maplibre-gl.mjs` + `maplibre-gl-shared.mjs`. webpack
+      //   mis-links a namespace access to a *minified* renamed export (`Transform#clone` reads the
+      //   shared module's transform helper), so the map crashes on construction with
+      //   "e.apply is not a function". The non-minified `*-dev.mjs` build links correctly. This dev
+      //   gallery isn't size-sensitive, so pin it (and its worker sibling) to the dev build.
+      'maplibre-gl$': path.join(maplibreDist, 'maplibre-gl-dev.mjs'),
+      'maplibre-gl/dist/maplibre-gl-worker.mjs': path.join(maplibreDist, 'maplibre-gl-worker-dev.mjs'),
+      'maplibre-gl/dist/maplibre-gl-shared.mjs': path.join(maplibreDist, 'maplibre-gl-shared-dev.mjs'),
+
       // React
       react: path.resolve('./node_modules/react'),
 
