@@ -9,8 +9,7 @@ import { Rect } from '@/types/misc'
 import { flatten, isArray, merge } from '@/utils/data'
 import { getTextAnchorFromTextAlign } from '@/types/svg'
 import { getRotatedRectAabb } from '@/utils/misc'
-import { estimateStringPixelLength, getCachedComputedTextLength, getPreciseStringLengthPx } from '@/utils/text-measure'
-import { toPx } from '@/utils/to-px'
+import { estimateStringPixelLength, getCachedComputedTextLength, getCachedFontSizePx, getPreciseStringLengthPx } from '@/utils/text-measure'
 
 // Styles
 import { getFontWidthToHeightRatio, UNOVIS_TEXT_DEFAULT, UNOVIS_TEXT_SEPARATOR_DEFAULT, UNOVIS_TEXT_HYPHEN_CHARACTER_DEFAULT } from '@/styles/index'
@@ -180,7 +179,7 @@ export function wrapSVGText (
  * @param {number} [maxWidth=50] - The maximum width of the text element.
  * @param {TrimMode} [trimType=TrimMode.Middle] - The type of trim (start, middle, or end).
  * @param {boolean} [fastMode=false] - Whether to use a fast estimation method for text length calculation.
- * @param {number} [fontSize=0] - The font size of the text.
+ * @param {number} [fontSize] - The font size of the text. Only used in fast mode; resolved from the element's computed style when omitted.
  * @param {number} [fontWidthToHeightRatio=getFontWidthToHeightRatio()] - The font width to height ratio.
  * @returns {boolean} True if the text was trimmed, false otherwise.
  */
@@ -189,7 +188,7 @@ export function trimSVGText (
   maxWidth = 50,
   trimType = TrimMode.Middle,
   fastMode = false,
-  fontSize = toPx(window.getComputedStyle(svgTextSelection.node())?.fontSize || UNOVIS_TEXT_DEFAULT.fontSize),
+  fontSize?: number,
   fontWidthToHeightRatio = getFontWidthToHeightRatio()
 ): boolean {
   const text = svgTextSelection.text() || ''
@@ -200,7 +199,8 @@ export function trimSVGText (
     // Fast path: estimate width from a uniform per-character width. Cheap but
     // approximate — it ignores per-glyph width and the appended ellipsis, so the
     // result can slightly overflow `maxWidth`.
-    const textWidth = estimateStringPixelLength(text, fontSize, fontWidthToHeightRatio)
+    // The font size is resolved lazily (and cached) because `getComputedStyle` forces a style recalc.
+    const textWidth = estimateStringPixelLength(text, fontSize || getCachedFontSizePx(svgTextSelection.node()), fontWidthToHeightRatio)
     const tolerance = 1.1
     const maxCharacters = Math.ceil(textLength * maxWidth / (tolerance * textWidth))
     if (maxCharacters < textLength) {
