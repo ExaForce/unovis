@@ -23,14 +23,16 @@ import { hideOverlappingLabels } from '@/utils/text-overlap'
 import { UNOVIS_TEXT_DEFAULT } from '@/styles/index'
 
 // Local Types
-import { AxisType, TickSets, TickValues } from './types'
+import { AxisTimeTickUnit, AxisType, TickSets, TickValues } from './types'
 
 // Local Utils
 import {
   findFittingTickValues,
+  findUniformFittingTickValues,
   getNestedTickValues,
   getTickValueCandidates,
   getTickValueSubsetCandidates,
+  getTimeTickBaseGrid,
   mergeTickValues,
   tickKey,
 } from './tick-fit'
@@ -65,6 +67,9 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
   private _defaultNumTicks = 3
   private _collideTickLabelsAnimFrameId: ReturnType<typeof requestAnimationFrame>
   private _tickTextStyleCached: TickTextStyle
+  /** Calendar unit of the uniform time tick grid, passed to `tickFormat`;
+   * `undefined` outside the `tickTextAdaptiveSets: 'uniform'` mode */
+  private _timeTickUnit: AxisTimeTickUnit | undefined
 
   protected events = {}
 
@@ -330,7 +335,7 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
     // Fair-share label width counts labeled ticks only, matching what the tick fitting measured
     const textMaxWidth = this._getTickTextMaxWidth(labeledTickKeys?.size ?? tickCount)
     tickText.each((value: number | Date, i: number, elements: ArrayLike<SVGTextElement>) => {
-      let text = config.tickFormat?.(value, i, tickValues as number[] | Date[]) ?? `${value}`
+      let text = config.tickFormat?.(value, i, tickValues as number[] | Date[], this._timeTickUnit) ?? `${value}`
       const textElement = elements[i] as SVGTextElement
       const tickTextStyle = this._getTickTextStyle(textElement)
 
@@ -387,12 +392,33 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
    * Returns `undefined` when the search is not applicable, falling back to the default tick generation. */
   private _getFittingTickValues (): TickSets | undefined {
     const { config } = this
+    this._timeTickUnit = undefined
     if (!config.tickTextAdaptiveSets) return undefined
     if (this._shouldRenderMinMaxTicksOnly()) return undefined
 
     const scale = (config.type === AxisType.X ? this.xScale : this.yScale) as ContinuousScale
     const maxNumTicks = Math.ceil(this._getNumTicks())
     const configuredTickValues = this._getConfiguredTickValues()
+
+    // The uniform mode steps over a calendar-unit grid with a constant step, unlike the
+    // "nice" d3 time tick sets whose day steps reset at month boundaries. Time scales only —
+    // the nice numeric sets are already uniform; degenerate domains fall through to them
+    if (config.tickTextAdaptiveSets === 'uniform' && !configuredTickValues && scale.domain()[0] instanceof Date) {
+      const grid = getTimeTickBaseGrid(scale.domain(), maxNumTicks)
+      if (grid) {
+        // Set before the search: the label predictions inside it pass the unit to `tickFormat`
+        this._timeTickUnit = grid.unit
+        const tickSets = findUniformFittingTickValues(
+          grid.values,
+          maxNumTicks,
+          values => this._getTickLabelRects(values),
+          TICK_LABEL_OVERLAP_TOLERANCE_PX,
+          grid.unit
+        )
+        if (tickSets) return tickSets
+        this._timeTickUnit = undefined
+      }
+    }
 
     const candidates = configuredTickValues
       ? getTickValueSubsetCandidates(configuredTickValues)
@@ -438,7 +464,7 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
     const angleRad = (config.tickTextAngle ?? 0) / 180 * Math.PI
 
     return values.map((value, i) => {
-      const text = config.tickFormat?.(value, i, values as number[] | Date[]) ?? `${value}`
+      const text = config.tickFormat?.(value, i, values as number[] | Date[], this._timeTickUnit) ?? `${value}`
 
       // Label size, computed the same way _renderAxis will compute it
       let width: number

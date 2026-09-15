@@ -5,6 +5,14 @@ export enum AxisType {
 
 export type TickValues = (number | Date)[]
 
+/** Tick generation mode of `tickTextAdaptiveSets`: `nice` fits the "nice" d3 tick sets,
+ * `uniform` places time scale ticks over a calendar-unit grid with a constant step */
+export type AxisTickSetMode = 'nice' | 'uniform'
+
+/** Calendar unit of the uniform time tick grid, passed to `tickFormat`
+ * (see `getTimeTickBaseGrid`) */
+export type AxisTimeTickUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'year'
+
 /** Result of the adaptive tick fitting */
 export type TickSets = {
   /** The largest set whose labels fit, all of its ticks are rendered */

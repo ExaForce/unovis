@@ -1,7 +1,7 @@
 import { XYComponentConfigInterface, XYComponentDefaultConfig } from '@/core/xy-component/config'
 
 // Types
-import { AxisType } from '@/components/axis/types'
+import { AxisTickSetMode, AxisTimeTickUnit, AxisType } from '@/components/axis/types'
 import { Position } from '@/types/position'
 import { FitMode, TrimMode, TextAlign } from '@/types/text'
 
@@ -41,8 +41,12 @@ export interface AxisConfigInterface<Datum> extends Partial<XYComponentConfigInt
    * Has no effect when `tickTextAdaptiveSets` is enabled.
    * Default: `250` */
   minMaxTicksOnlyWhenWidthIsLess?: number;
-  /** Tick label formatter function. Default: `undefined` */
-  tickFormat?: ((tick: number | Date, i: number, ticks: number[] | Date[]) => string);
+  /** Tick label formatter function. When `tickTextAdaptiveSets: 'uniform'` places the ticks
+   * over a calendar-unit grid, the unit comes in as the fourth argument, so the formatter can
+   * pick one matching date format for the whole set (it is `undefined` otherwise). With
+   * `tickTextAdaptiveSets` enabled, `ticks` differs between the label fitting (the candidate
+   * set) and the render (all tick marks) — don't rely on its contents there. Default: `undefined` */
+  tickFormat?: ((tick: number | Date, i: number, ticks: number[] | Date[], timeUnit?: AxisTimeTickUnit) => string);
   /** Explicitly set tick values. Default: `undefined` */
   tickValues?: number[];
   /** Set the approximate number of axis ticks (will be passed to D3's axis constructor). Default: `undefined` */
@@ -70,12 +74,19 @@ export interface AxisConfigInterface<Datum> extends Partial<XYComponentConfigInt
   /** Text rotation angle for ticks. Default: `undefined` */
   tickTextAngle?: number;
   /** Adaptively pick the number of ticks so that their labels don't overlap: the axis renders the
-   * largest "nice" tick set that fits (measured off-screen), degrading to smaller sets on narrow
+   * largest tick set that fits (measured off-screen), degrading to smaller sets on narrow
    * charts. `numTicks` (or its width-based default) acts as the upper bound. With explicit
    * `tickValues`, every-k-th subsets of them are fitted instead.
+   * `true` (same as `'nice'`) fits the "nice" d3 tick sets. On time scales those can be uneven —
+   * the 2-day sets reset at month boundaries (Jul 29, Jul 31, Aug 1) and label month starts
+   * differently — so `'uniform'` instead steps over a calendar-unit grid with a constant step,
+   * passing the chosen unit to `tickFormat` for one uniform label format. On units with a
+   * natural cycle the step snaps to the cycle's divisors or whole multiples (e.g. 1/2/3/4/6/12
+   * hours) and the labels prefer cycle-aligned positions (:00 / :15 / :30 rather than :05).
+   * On non-time scales (and with explicit `tickValues`) `'uniform'` behaves like `'nice'`.
    * Has no effect when `minMaxTicksOnly` is set, and disables the width-based
    * `minMaxTicksOnlyWhenWidthIsLess` fallback. Default: `undefined` */
-  tickTextAdaptiveSets?: boolean;
+  tickTextAdaptiveSets?: boolean | AxisTickSetMode;
   /** Hide tick labels that overlap with each other.
    * To define overlapping, a simple bounding box collision detection algorithm is used.
    * Which means the result won't be accurate when `tickTextAngle` is specified.
