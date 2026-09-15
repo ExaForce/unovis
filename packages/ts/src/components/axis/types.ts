@@ -5,6 +5,10 @@ export enum AxisType {
 
 export type TickValues = (number | Date)[]
 
+export type AxisTickSetMode = 'nice' | 'uniform'
+
+export type AxisTimeTickUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'year'
+
 /** Result of the adaptive tick fitting */
 export type TickSets = {
   /** The largest set whose labels fit, all of its ticks are rendered */
