@@ -84,6 +84,8 @@ export interface AxisConfigInterface<Datum> extends Partial<XYComponentConfigInt
    * natural cycle the step snaps to the cycle's divisors or whole multiples (e.g. 1/2/3/4/6/12
    * hours) and the labels prefer cycle-aligned positions (:00 / :15 / :30 rather than :05).
    * On non-time scales (and with explicit `tickValues`) `'uniform'` behaves like `'nice'`.
+   * The fitted labels render on a single line unless wider than the axis itself (or than
+   * `tickTextWidth`, when set) — the fair-share wrapping of fixed tick sets doesn't apply to them.
    * Has no effect when `minMaxTicksOnly` is set, and disables the width-based
    * `minMaxTicksOnlyWhenWidthIsLess` fallback. Default: `undefined` */
   tickTextAdaptiveSets?: boolean | AxisTickSetMode;

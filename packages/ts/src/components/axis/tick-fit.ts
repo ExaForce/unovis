@@ -101,8 +101,8 @@ function dropCollidingExtremes (
   // A two-tick candidate loses both labels above — keep the first one, a single label always fits
   if (!labeledTicks.length) labeledTicks.push(fittedTicks[0])
 
-  // The remaining labels get a wider fair share of the axis after the drop,
-  // so the subset is re-measured before getting accepted
+  // The new extreme labels may be aligned differently (`tickTextAlign` sees their position
+  // in the set), so the subset is re-measured before getting accepted
   if (fitsWithoutOverlap(getLabelRects(labeledTicks), tolerance)) return { fittedTicks, labeledTicks }
   return undefined
 }
