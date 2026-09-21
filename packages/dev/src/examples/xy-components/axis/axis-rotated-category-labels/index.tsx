@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { VisXYContainer, VisAxis, VisGroupedBar } from '@unovis/react'
-import { Axis, TextAlign } from '@unovis/ts'
+import { Axis, TextAlign, TrimMode } from '@unovis/ts'
 import { ExampleViewerDurationProps } from '@src/components/ExampleViewer/index'
 
 export const title = 'Rotated Category Labels'
@@ -33,6 +33,8 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
   const [width, setWidth] = useState(728)
   const [tickTextOverlapTolerance, setTickTextOverlapTolerance] = useState(0)
   const [tickTextWidth, setTickTextWidth] = useState(0)
+  const [tickTextMaxLines, setTickTextMaxLines] = useState(0)
+  const [tickTextTrimType, setTickTextTrimType] = useState<TrimMode>(TrimMode.Middle)
   const [labeledCount, setLabeledCount] = useState(data.length)
 
   const onRenderComplete = (svg: SVGSVGElement): void => {
@@ -64,6 +66,16 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
         <label>tickTextWidth: {tickTextWidth ? `${tickTextWidth}px` : 'auto'}</label>
       </div>
       <div style={{ marginBottom: 10 }}>
+        <input type="range" min={0} max={4} value={tickTextMaxLines} onChange={e => setTickTextMaxLines(Number(e.target.value))} style={{ marginRight: 10, width: 300 }}/>
+        <label>tickTextMaxLines: {tickTextMaxLines || 'unlimited'}</label>
+      </div>
+      <div style={{ marginBottom: 10 }}>
+        <select value={tickTextTrimType} onChange={e => setTickTextTrimType(e.target.value as TrimMode)} style={{ marginRight: 10 }}>
+          {Object.values(TrimMode).map(mode => <option key={mode} value={mode}>{mode}</option>)}
+        </select>
+        <label>tickTextTrimType</label>
+      </div>
+      <div style={{ marginBottom: 10 }}>
         <b>Labeled bars: {labeledCount} of {data.length}</b>
       </div>
       <VisXYContainer<FailureMode> data={data} width={width} height={300} xDomain={[-0.5, data.length - 0.5]} onRenderComplete={onRenderComplete}>
@@ -79,6 +91,8 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
           tickTextAdaptiveSets={true}
           tickTextOverlapTolerance={tickTextOverlapTolerance}
           tickTextWidth={tickTextWidth || undefined}
+          tickTextMaxLines={tickTextMaxLines || undefined}
+          tickTextTrimType={tickTextTrimType}
           duration={props.duration}
         />
         <VisAxis type='y' label='% of Failures' duration={props.duration}/>
