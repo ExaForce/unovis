@@ -186,10 +186,14 @@ export class VisAxisComponent<Datum> implements AxisConfigInterface<Datum>, Afte
 
   /** Hide tick labels that overlap with each other.
    * To define overlapping, a simple bounding box collision detection algorithm is used.
-   * Which means the result won't be accurate when `tickTextAngle` is specified.
    * Consider combining with `tickTextAdaptiveSets` to keep the shown ticks evenly spaced.
    * Default: `undefined` */
   @Input() tickTextHideOverlapping?: boolean
+
+  /** Minimum gap between tick labels in pixels: labels closer than that count as overlapping for
+   * `tickTextHideOverlapping` and `tickTextAdaptiveSets`. A negative value lets labels overlap by
+   * that much before they do. Default: `0` */
+  @Input() tickTextOverlapTolerance?: number
 
   /** The spacing in pixels between the tick and it's label. Default: `8` */
   @Input() tickPadding?: number
@@ -218,8 +222,8 @@ export class VisAxisComponent<Datum> implements AxisConfigInterface<Datum>, Afte
   }
 
   private getConfig (): AxisConfigInterface<Datum> {
-    const { duration, events, attributes, position, type, fullSize, label, labelFontSize, labelMargin, labelTextFitMode, labelTextTrimType, labelTextSeparator, labelColor, gridLine, tickLine, domainLine, minMaxTicksOnly, minMaxTicksOnlyShowGridLines, minMaxTicksOnlyWhenWidthIsLess, tickFormat, tickValues, numTicks, tickSpacing, tickTextFitMode, tickTextWidth, tickTextSeparator, tickTextForceWordBreak, tickTextTrimType, tickTextFontSize, tickTextAlign, tickTextColor, tickTextAngle, tickTextAdaptiveSets, tickTextHideOverlapping, tickPadding, tickSize } = this
-    const config = { duration, events, attributes, position, type, fullSize, label, labelFontSize, labelMargin, labelTextFitMode, labelTextTrimType, labelTextSeparator, labelColor, gridLine, tickLine, domainLine, minMaxTicksOnly, minMaxTicksOnlyShowGridLines, minMaxTicksOnlyWhenWidthIsLess, tickFormat, tickValues, numTicks, tickSpacing, tickTextFitMode, tickTextWidth, tickTextSeparator, tickTextForceWordBreak, tickTextTrimType, tickTextFontSize, tickTextAlign, tickTextColor, tickTextAngle, tickTextAdaptiveSets, tickTextHideOverlapping, tickPadding, tickSize }
+    const { duration, events, attributes, position, type, fullSize, label, labelFontSize, labelMargin, labelTextFitMode, labelTextTrimType, labelTextSeparator, labelColor, gridLine, tickLine, domainLine, minMaxTicksOnly, minMaxTicksOnlyShowGridLines, minMaxTicksOnlyWhenWidthIsLess, tickFormat, tickValues, numTicks, tickSpacing, tickTextFitMode, tickTextWidth, tickTextSeparator, tickTextForceWordBreak, tickTextTrimType, tickTextFontSize, tickTextAlign, tickTextColor, tickTextAngle, tickTextAdaptiveSets, tickTextHideOverlapping, tickTextOverlapTolerance, tickPadding, tickSize } = this
+    const config = { duration, events, attributes, position, type, fullSize, label, labelFontSize, labelMargin, labelTextFitMode, labelTextTrimType, labelTextSeparator, labelColor, gridLine, tickLine, domainLine, minMaxTicksOnly, minMaxTicksOnlyShowGridLines, minMaxTicksOnlyWhenWidthIsLess, tickFormat, tickValues, numTicks, tickSpacing, tickTextFitMode, tickTextWidth, tickTextSeparator, tickTextForceWordBreak, tickTextTrimType, tickTextFontSize, tickTextAlign, tickTextColor, tickTextAngle, tickTextAdaptiveSets, tickTextHideOverlapping, tickTextOverlapTolerance, tickPadding, tickSize }
     const keys = Object.keys(config) as (keyof AxisConfigInterface<Datum>)[]
     keys.forEach(key => { if (config[key] === undefined) delete config[key] })
 
