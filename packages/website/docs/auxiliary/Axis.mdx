@@ -164,6 +164,19 @@ _Axis_ accepts a `TrimMode` or a string. For example, when we configure `tickTex
   options={['start', 'middle', 'end']}
   property="tickTextTrimType"/>
 
+### Tick Label Max Lines
+Wrapped tick labels can take as many lines as they need by default. Set `tickTextMaxLines` to cap them:
+longer labels get trimmed to fit the lines, according to `tickTextTrimType`.
+<XYWrapperWithInput
+  {...axisProps()}
+  inputType="range"
+  inputProps={{ min: 1, max: 4, step: 1 }}
+  tickTextWidth={40}
+  data={generateTimeSeries(10)}
+  hiddenProps={{gridLine: false, x: d => d.timestamp, tickFormat: d=> new Date(d).toDateString(), tickTextTrimType: "end"}}
+  defaultValue={2}
+  property="tickTextMaxLines"/>
+
 ### Force Word Break
 In addition, you can enable a forced word break for overflowing tick labels with the `tickTextForceWordBreak` property.
 <XYWrapperWithInput
