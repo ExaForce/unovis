@@ -90,6 +90,7 @@ export interface AxisConfigInterface<Datum> extends Partial<XYComponentConfigInt
    * On non-time scales (and with explicit `tickValues`) `'uniform'` behaves like `'nice'`.
    * The fitted labels render on a single line unless wider than the axis itself (or than
    * `tickTextWidth`, when set) — the fair-share wrapping of fixed tick sets doesn't apply to them.
+   * Rotated fitted labels also wrap when they'd grow deeper than a third of the container height.
    * Has no effect when `minMaxTicksOnly` is set, and disables the width-based
    * `minMaxTicksOnlyWhenWidthIsLess` fallback. Default: `undefined` */
   tickTextAdaptiveSets?: boolean | AxisTickSetMode;
