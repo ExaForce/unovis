@@ -177,6 +177,19 @@ longer labels get trimmed to fit the lines, according to `tickTextTrimType`.
   defaultValue={2}
   property="tickTextMaxLines"/>
 
+### Balanced Tick Labels
+A wrapped tick label fills its lines greedily, so it can end with a short line. Set `tickTextBalanced` to `true` to even
+out the lines instead, the way CSS `text-wrap: balance` does: the label keeps its number of lines, but they break at the
+narrowest width that still fits them.
+<XYWrapperWithInput
+  {...axisProps()}
+  inputType="checkbox"
+  tickTextWidth={80}
+  data={generateTimeSeries(10)}
+  hiddenProps={{gridLine: false, x: d => d.timestamp, tickFormat: d=> new Date(d).toDateString()}}
+  defaultValue={true}
+  property="tickTextBalanced"/>
+
 ### Force Word Break
 In addition, you can enable a forced word break for overflowing tick labels with the `tickTextForceWordBreak` property.
 <XYWrapperWithInput
