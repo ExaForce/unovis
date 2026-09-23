@@ -354,8 +354,22 @@ function breakTextIntoLines (
   }).flat()
 }
 
+/** Measures a line of a text block the way `breakTextIntoLines` does */
+function measureTextBlockLine (textBlock: UnovisText, line: string, fastMode: boolean): number {
+  const fontSize = textBlock.fontSize ?? UNOVIS_TEXT_DEFAULT.fontSize
+  return fastMode
+    ? estimateStringPixelLength(line, fontSize, textBlock.fontWidthToHeightRatio ?? UNOVIS_TEXT_DEFAULT.fontWidthToHeightRatio)
+    : getPreciseStringLengthPx(line, textBlock.fontFamily ?? UNOVIS_TEXT_DEFAULT.fontFamily, fontSize, textBlock.fontWeight)
+}
+
+/** Whether any of the lines of a text block is wider than `width` */
+function hasLinesWiderThan (textBlock: UnovisText, lines: string[], width: number | undefined, fastMode: boolean): boolean {
+  return Boolean(width) && lines.some(line => measureTextBlockLine(textBlock, line, fastMode) > width)
+}
+
 /**
- * Trims a text block (see `trimString`) just enough for it to break into at most `maxLines` lines.
+ * Trims a text block (see `trimString`) just enough for it to break into at most `maxLines` lines,
+ * none of them wider than `width`. Never trims it down to a bare ellipsis.
  *
  * @param {UnovisText} textBlock - The text block to trim and break into lines.
  * @param {number | undefined} width - The maximum width of a line in pixels.
@@ -378,8 +392,10 @@ function trimTextIntoLines (
   const text = `${textBlock.text}`
   const breakTrimmed = (length: number): string[] =>
     breakTextIntoLines({ ...textBlock, text: trimString(text, length, trimMode) }, width, fastMode, separator, wordBreak)
+  const fits = (lines: string[]): boolean =>
+    lines.length <= maxLines && !hasLinesWiderThan(textBlock, lines, width, fastMode)
 
-  // Fewer characters break into fewer lines, so the longest length that fits can be searched for
+  // Fewer characters break into fewer lines, so the longest length within `maxLines` can be searched for
   let low = 0
   let high = text.length
   while (high - low > 1) {
@@ -387,7 +403,14 @@ function trimTextIntoLines (
     if (breakTrimmed(middle).length <= maxLines) low = middle
     else high = middle
   }
-  return breakTrimmed(low)
+
+  // A word wider than the line overflows it without adding lines, so the length is stepped down until
+  // the lines fit the width too — but not below the shortest trim still keeping any of the text
+  let minLength = 1
+  while (minLength < text.length && trimString(text, minLength, trimMode).length <= 1) minLength += 1 // A bare ellipsis
+  let length = Math.max(low, minLength)
+  while (length > minLength && !fits(breakTrimmed(length))) length -= 1
+  return breakTrimmed(length)
 }
 
 /**
@@ -417,10 +440,11 @@ export function getWrappedText (
   // Merge input text with default values and convert it to an array if it's not already
   const textArrays = Array.isArray(text) ? text.map(t => merge(UNOVIS_TEXT_DEFAULT, t)) : [merge(UNOVIS_TEXT_DEFAULT, text)]
 
-  // Break input text into lines based on width and separator, trimming the text when it takes more lines than allowed
+  // Break input text into lines based on width and separator. With `maxLines` set, the text gets trimmed
+  // when it takes more lines than allowed or has a word overflowing the width
   const textWrapped: Array<string[]> = textArrays.map(block => {
     const lines = breakTextIntoLines(block, width, fastMode, separator, wordBreak)
-    return maxLines && lines.length > maxLines
+    return maxLines && (lines.length > maxLines || hasLinesWiderThan(block, lines, width, fastMode))
       ? trimTextIntoLines(block, width, fastMode, separator, wordBreak, maxLines, trimMode)
       : lines
   })
@@ -436,9 +460,7 @@ export function getWrappedText (
     const blockStartHeight = h
     const dh = text.fontSize * text.lineHeight
     let maxWidth = 0
-    const measure = (line: string): number => fastMode
-      ? estimateStringPixelLength(line, text.fontSize, text.fontWidthToHeightRatio)
-      : getPreciseStringLengthPx(line, text.fontFamily, text.fontSize, text.fontWeight)
+    const measure = (line: string): number => measureTextBlockLine(text, line, fastMode)
 
     // Iterate over lines and handle text overflow based on the height limit if provided
     for (let k = 0; k < lines.length; k += 1) {
