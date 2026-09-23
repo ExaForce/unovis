@@ -35,7 +35,7 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
   const [tickTextWidth, setTickTextWidth] = useState(0)
   const [tickTextMaxLines, setTickTextMaxLines] = useState(0)
   const [tickTextTrimType, setTickTextTrimType] = useState<TrimMode>(TrimMode.Middle)
-  const [tickTextBalanced, setTickTextBalanced] = useState(true)
+  const [tickTextWrapBalanced, setTickTextWrapBalanced] = useState(true)
   const [labeledCount, setLabeledCount] = useState(data.length)
 
   const onRenderComplete = (svg: SVGSVGElement): void => {
@@ -78,8 +78,8 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
       </div>
       <div style={{ marginBottom: 10 }}>
         <label>
-          <input type="checkbox" checked={tickTextBalanced} onChange={e => setTickTextBalanced(e.target.checked)} style={{ marginRight: 6 }}/>
-          tickTextBalanced
+          <input type="checkbox" checked={tickTextWrapBalanced} onChange={e => setTickTextWrapBalanced(e.target.checked)} style={{ marginRight: 6 }}/>
+          tickTextWrapBalanced
         </label>
       </div>
       <div style={{ marginBottom: 10 }}>
@@ -100,7 +100,7 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
           tickTextWidth={tickTextWidth || undefined}
           tickTextMaxLines={tickTextMaxLines || undefined}
           tickTextTrimType={tickTextTrimType}
-          tickTextBalanced={tickTextBalanced}
+          tickTextWrapBalanced={tickTextWrapBalanced}
           duration={props.duration}
         />
         <VisAxis type='y' label='% of Failures' duration={props.duration}/>

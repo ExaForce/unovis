@@ -38,7 +38,7 @@ const labelStyle: React.CSSProperties = { font: '11px monospace', color: '#888',
 
 export const component = (props: ExampleViewerDurationProps): React.ReactNode => {
   const [tickTextMaxLines, setTickTextMaxLines] = useState(2)
-  const [tickTextBalanced, setTickTextBalanced] = useState(false)
+  const [tickTextWrapBalanced, setTickTextWrapBalanced] = useState(false)
 
   return (
     <div style={{ marginLeft: 8 }}>
@@ -52,8 +52,8 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
       </div>
       <div style={{ marginBottom: 10 }}>
         <label>
-          <input type="checkbox" checked={tickTextBalanced} onChange={e => setTickTextBalanced(e.target.checked)} style={{ marginRight: 6 }}/>
-          tickTextBalanced
+          <input type="checkbox" checked={tickTextWrapBalanced} onChange={e => setTickTextWrapBalanced(e.target.checked)} style={{ marginRight: 6 }}/>
+          tickTextWrapBalanced
         </label>
       </div>
       {Object.values(TrimMode).map(trimMode => (
@@ -68,7 +68,7 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
               tickTextWidth={80}
               tickTextMaxLines={tickTextMaxLines}
               tickTextTrimType={trimMode}
-              tickTextBalanced={tickTextBalanced}
+              tickTextWrapBalanced={tickTextWrapBalanced}
               duration={props.duration}
             />
             <VisAxis type='y' duration={props.duration}/>
@@ -87,7 +87,7 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
           tickTextSeparator={[' ', '-', '.', ',', '_']}
           tickTextMaxLines={tickTextMaxLines}
           tickTextTrimType={TrimMode.Middle}
-          tickTextBalanced={tickTextBalanced}
+          tickTextWrapBalanced={tickTextWrapBalanced}
           duration={props.duration}
         />
         <VisAxis type='y' duration={props.duration}/>
