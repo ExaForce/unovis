@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { VisXYContainer, VisAxis, VisGroupedBar } from '@unovis/react'
-import { TrimMode } from '@unovis/ts'
+import { TextAlign, TrimMode } from '@unovis/ts'
 import { ExampleViewerDurationProps } from '@src/components/ExampleViewer/index'
 
 export const title = 'Tick Label Max Lines'
@@ -23,6 +23,17 @@ const data: Datum[] = [
 
 const tickValues = data.map(d => d.index)
 const tickFormat = (tick: number | Date): string => data[tick as number]?.label ?? ''
+
+// Labels ending in words too long for a rotated label on a short chart
+const rotatedData: Datum[] = [
+  { index: 0, label: 'FA_06 (TX FAIL WET2_ALIGNMENT)', value: 8.95 },
+  { index: 1, label: 'FAA_11 (RX RESPONSIVITY LOW)', value: 5.72 },
+  { index: 2, label: 'FAA_41 (TX_INSUFFICIENT EPOXY 3410)', value: 3.88 },
+  { index: 3, label: 'FAA_33 (LENS CONTAMINATION)', value: 5.5 },
+  { index: 4, label: 'FAA_19 (SUBMOUNT SOLDER VOID)', value: 3.78 },
+  { index: 5, label: 'FAA_52 (PD DARK CURRENT HIGH)', value: 2.15 },
+]
+const rotatedTickFormat = (tick: number | Date): string => rotatedData[tick as number]?.label ?? ''
 const labelStyle: React.CSSProperties = { font: '11px monospace', color: '#888', margin: '12px 0 2px' }
 
 export const component = (props: ExampleViewerDurationProps): React.ReactNode => {
@@ -56,6 +67,22 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
           </VisXYContainer>
         </div>
       ))}
+      <div style={labelStyle}>-90°, 220px high chart, tickTextTrimType: middle — no line deeper than a third of the height</div>
+      <VisXYContainer<Datum> data={rotatedData} width={500} height={220} xDomain={[-0.5, rotatedData.length - 0.5]}>
+        <VisGroupedBar x={d => d.index} y={d => d.value} duration={props.duration}/>
+        <VisAxis
+          type='x'
+          tickValues={tickValues}
+          tickFormat={rotatedTickFormat}
+          tickTextAngle={-90}
+          tickTextAlign={TextAlign.Right}
+          tickTextSeparator={[' ', '-', '.', ',', '_']}
+          tickTextMaxLines={tickTextMaxLines}
+          tickTextTrimType={TrimMode.Middle}
+          duration={props.duration}
+        />
+        <VisAxis type='y' duration={props.duration}/>
+      </VisXYContainer>
     </div>
   )
 }
