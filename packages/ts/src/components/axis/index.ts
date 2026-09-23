@@ -487,7 +487,7 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
       wordBreak: config.tickTextForceWordBreak,
       maxLines: config.tickTextMaxLines,
       trimMode: config.tickTextTrimType as TrimMode,
-      balance: config.tickTextBalanced,
+      balance: config.tickTextWrapBalanced,
       fastMode: false,
     }
   }

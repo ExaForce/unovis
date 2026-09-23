@@ -67,7 +67,7 @@ export interface AxisConfigInterface<Datum> extends Partial<XYComponentConfigInt
   tickTextMaxLines?: number;
   /** Balance the lengths of a wrapped tick label's lines, so that it doesn't end with a short line,
    * like CSS `text-wrap: balance`. The label keeps its number of lines. Default: `false` */
-  tickTextBalanced?: boolean;
+  tickTextWrapBalanced?: boolean;
   /** Tick text trim mode, for `FitMode.Trim` and for labels exceeding `tickTextMaxLines`:
    * `TrimMode.Start`, `TrimMode.Middle` or `TrimMode.End`. Default: `TrimMode.Middle` */
   tickTextTrimType?: TrimMode | `${TrimMode}`;
@@ -134,7 +134,7 @@ export const AxisDefaultConfig: AxisConfigInterface<unknown> = {
   tickTextSeparator: undefined,
   tickTextForceWordBreak: false,
   tickTextMaxLines: undefined,
-  tickTextBalanced: false,
+  tickTextWrapBalanced: false,
   tickTextTrimType: TrimMode.Middle,
   tickTextFitMode: FitMode.Wrap,
   tickTextFontSize: null,
