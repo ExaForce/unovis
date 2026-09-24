@@ -69,6 +69,8 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
   /** Calendar unit of the uniform time tick grid, passed to `tickFormat`;
    * `undefined` outside the `tickTextAdaptiveSets: 'uniform'` mode */
   private _timeTickUnit: AxisTimeTickUnit | undefined
+  private _labelSpace: { baseWidth: number; left: number; right: number } | undefined
+  private _fittingPlotWidth: number | undefined
 
   protected events = {}
 
@@ -105,6 +107,13 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
     this._requiredMargin = this._getRequiredMargin(this._axisSizeBBox)
 
     axisRenderHelperGroup.remove()
+  }
+
+  /** The horizontal space of an X axis, set by the container before `preRender`: the plot width with
+   * no margin taken by the tick labels, and the margins the other axes take, which the labels reach
+   * into for free. The tick fitting then places each candidate set at the plot width its own labels leave */
+  public setLabelSpace (baseWidth: number, left: number, right: number): void {
+    this._labelSpace = { baseWidth, left, right }
   }
 
   public getPosition (): Position {
@@ -401,13 +410,15 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
     if (this._shouldRenderMinMaxTicksOnly()) return undefined
 
     const scale = (config.type === AxisType.X ? this.xScale : this.yScale) as ContinuousScale
-    const maxNumTicks = Math.ceil(this._getNumTicks())
     const configuredTickValues = this._getConfiguredTickValues()
+    const isUniform = config.tickTextAdaptiveSets === 'uniform' && !configuredTickValues && scale.domain()[0] instanceof Date
+    this._setFittingPlotWidth(scale, configuredTickValues, isUniform)
+    const maxNumTicks = Math.ceil(this._getNumTicks(this._fittingPlotWidth ?? this._width))
 
     // The uniform mode steps over a calendar-unit grid with a constant step, unlike the
     // "nice" d3 time tick sets whose day steps reset at month boundaries. Time scales only —
     // the nice numeric sets are already uniform; degenerate domains fall through to them
-    if (config.tickTextAdaptiveSets === 'uniform' && !configuredTickValues && scale.domain()[0] instanceof Date) {
+    if (isUniform) {
       const grid = getTimeTickBaseGrid(scale.domain(), maxNumTicks)
       if (grid) {
         // Set before the search: the label predictions inside it pass the unit to `tickFormat`
@@ -445,13 +456,13 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
    * sets share the axis fairly, as nothing else keeps their labels apart; the fitted sets are spaced by
    * the label geometry already, so a fitted label only wraps when wider than the whole axis — or, when
    * rotated, when it would grow into the margin deeper than the rotated labels' depth bound */
-  private _getTickTextMaxWidth (labelCount: number, fitted: boolean): number {
+  private _getTickTextMaxWidth (labelCount: number, fitted: boolean, plotWidth = this._width): number {
     const { config } = this
     if (config.tickTextWidth) return config.tickTextWidth
     if (config.type !== AxisType.X) return this._containerWidth / 5
 
     // The slot a labeled tick owns: a fair share of the axis, or the whole axis for fitted sets
-    const slotWidth = fitted ? this._width : this._containerWidth / (labelCount + 1)
+    const slotWidth = fitted ? plotWidth : this._containerWidth / (labelCount + 1)
     if (!config.tickTextAngle) return slotWidth
 
     const rotatedWidth = getRotatedTickTextMaxWidth(
@@ -482,14 +493,63 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
     }
   }
 
+  /** Predicts tick label rects for the tick fitting, at the plot width set by `_setFittingPlotWidth` */
+  private _getTickLabelRects (values: TickValues): Rect[] {
+    return this._predictTickLabelRects(values, this._fittingPlotWidth ?? this._width)
+  }
+
+  /** Sets the plot width the tick fitting works at. With a label space (see `setLabelSpace`) it's the width
+   * left once the outermost candidate labels — those of the densest set — take their margins: the chosen
+   * set is never shown narrower than that, and the choice doesn't depend on the current margins */
+  private _setFittingPlotWidth (scale: ContinuousScale, configuredTickValues: TickValues | null, isUniform: boolean): void {
+    this._fittingPlotWidth = undefined
+    if (this.config.type !== AxisType.X || !this._labelSpace) return
+
+    const densestNumTicks = Math.ceil(this._getNumTicks(this._labelSpace.baseWidth))
+    const grid = isUniform ? getTimeTickBaseGrid(scale.domain(), densestNumTicks) : undefined
+    const values = configuredTickValues ?? grid?.values ?? scale.ticks(densestNumTicks)
+    this._timeTickUnit = grid?.unit
+
+    let plotWidth = this._labelSpace.baseWidth
+    for (let pass = 0; pass < 4; pass += 1) {
+      const nextPlotWidth = this._getPlotWidthLeftByLabels(this._predictTickLabelRects(values, plotWidth), plotWidth)
+      const settled = Math.abs(nextPlotWidth - plotWidth) < 0.5
+      plotWidth = nextPlotWidth
+      if (settled) break
+    }
+    this._fittingPlotWidth = plotWidth
+    this._timeTickUnit = undefined
+  }
+
+  /** Plot width left once the X labels given by their rects (placed at `plotWidth`) take their margins:
+   * the labels reach into the margins of the other axes for free and extend them by the rest */
+  private _getPlotWidthLeftByLabels (rects: Rect[], plotWidth: number): number {
+    const { baseWidth, left, right } = this._labelSpace
+    const angleRad = (this.config.tickTextAngle ?? 0) / 180 * Math.PI
+    const boxes = angleRad ? rects.map(rect => getRotatedRectAabb(rect, angleRad)) : rects
+    const bleedLeft = Math.max(0, ...boxes.map(box => -box.x))
+    const bleedRight = Math.max(0, ...boxes.map(box => box.x + box.width - plotWidth))
+    return Math.max(0, baseWidth - Math.max(0, bleedLeft - left) - Math.max(0, bleedRight - right))
+  }
+
+  /** Tick position along the axis at the given plot width, as if the scale range stretched with the plot */
+  private _getTickPosition (value: number | Date, plotWidth: number): number {
+    const isX = this.config.type === AxisType.X
+    const scale = (isX ? this.xScale : this.yScale) as ContinuousScale
+    const position = scale(value as never)
+    const [rangeStart, rangeEnd] = scale.range()
+    if (!isX || plotWidth === this._width || rangeEnd === rangeStart) return position
+
+    return rangeStart + (position - rangeStart) * (rangeEnd + plotWidth - this._width - rangeStart) / (rangeEnd - rangeStart)
+  }
+
   /** Predicts tick label rects using the same text wrapping and cached measurements
    * the renderer itself relies on. X axis rects are in the labels' own (rotated) frame */
-  private _getTickLabelRects (values: TickValues): Rect[] {
+  private _predictTickLabelRects (values: TickValues, plotWidth: number): Rect[] {
     const { config } = this
     const isX = config.type === AxisType.X
-    const scale = (isX ? this.xScale : this.yScale) as ContinuousScale
     const style = this._getTickTextStyle()
-    const textOptions = this._getTickTextOptions(this._getTickTextMaxWidth(values.length, true))
+    const textOptions = this._getTickTextOptions(this._getTickTextMaxWidth(values.length, true, plotWidth))
     const lineHeightPx = style.fontSize * UNOVIS_TEXT_DEFAULT.lineHeight
     const angleRad = (config.tickTextAngle ?? 0) / 180 * Math.PI
     const axisPosition = this.getPosition()
@@ -521,10 +581,10 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
       }
 
       // Label extent relative to its anchor at the tick position
-      const position = scale(value as never)
+      const position = this._getTickPosition(value, plotWidth)
       const tickPosition: [number, number] = isX ? [position, 0] : [0, position]
       const textAlign = isFunction(config.tickTextAlign)
-        ? config.tickTextAlign(value, i, values as number[] | Date[], tickPosition, this._width, this._height)
+        ? config.tickTextAlign(value, i, values as number[] | Date[], tickPosition, plotWidth, this._height)
         : config.tickTextAlign
 
       let x0: number
@@ -581,14 +641,14 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
     return this._tickTextStyleCached
   }
 
-  private _getNumTicks (): number {
+  private _getNumTicks (plotWidth = this._width): number {
     const { config: { type, numTicks, tickSpacing } } = this
 
     if (numTicks) return numTicks
 
     if (type === AxisType.X) {
       const xRange = this.xScale.range() as [number, number]
-      const width = xRange[1] - xRange[0]
+      const width = xRange[1] - xRange[0] + plotWidth - this._width
       return Math.max(1, Math.floor(width / tickSpacing))
     }
 
