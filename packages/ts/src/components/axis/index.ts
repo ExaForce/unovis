@@ -90,10 +90,9 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
     const { config } = this
     const axisRenderHelperGroup = this.g.append('g').attr('opacity', 0)
 
-    // Measure the full fitted set, so the margins account for its label bleed. Deliberately
-    // not the `labeled` subset: margins from it would depend on the extreme-label drops, which
-    // themselves depend on the margins — an unstable feedback making layout resize-path-dependent
-    this._renderAxis(axisRenderHelperGroup, 0, this._getFittingTickValues()?.fittedTicks)
+    // Measure only the labels the axis shows. The tick fitting places each candidate at the plot width
+    // its own margins leave (see `setLabelSpace`), so these margins don't feed back into the choice
+    this._renderAxis(axisRenderHelperGroup, 0, this._getFittingTickValues()?.labeledTicks)
 
     // Align tick text
     if (config.tickTextAlign) this._alignTickLabels(axisRenderHelperGroup)
