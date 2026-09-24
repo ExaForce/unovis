@@ -442,8 +442,13 @@ export class XYContainer<Datum> extends ContainerCore {
     for (let i = 0; i < numIterations; i += 1) {
       const axisMargin: Spacing = { top: 0, bottom: 0, left: 0, right: 0 }
       this._updateScalesRange(...components)
-      const axes = clean([xAxis, yAxis, yAxisSecondary])
+      const axes = clean([yAxis, yAxisSecondary, xAxis])
       axes.forEach(axis => {
+        if (axis === xAxis) {
+          const { margin } = this.config
+          const baseWidth = this.containerWidth - margin.left - margin.right - axisMargin.left - axisMargin.right
+          xAxis.setLabelSpace(Math.max(0, baseWidth), axisMargin.left, axisMargin.right)
+        }
         axis.preRender()
 
         const m = axis.getRequiredMargin()
