@@ -17,7 +17,7 @@ const data: Datum[] = [{ x: 0, y: 1 }, { x: 1, y: 2 }]
 const nextFrame = (): Promise<void> => new Promise(resolve => requestAnimationFrame(() => resolve()))
 
 describe('Container styles (jsdom)', () => {
-  it('prevents text selection on touch screens, keeping the XY container\'s own class', () => {
+  it('prevents text selection on touch screens, keeping the XY container\'s own class', async () => {
     const element = document.createElement('div')
     document.body.appendChild(element)
     const container = new XYContainer(element, { components: [] })
@@ -26,7 +26,12 @@ describe('Container styles (jsdom)', () => {
     expect(svg.classList).toContain(s.root)
     expect(svg.classList.length).toBe(2)
 
-    const css = [...document.querySelectorAll('style')].map(style => style.textContent).join('').replace(/\s/g, '')
+    // jsdom's CSSOM drops properties it doesn't know (like `-webkit-touch-callout`), so we read the rules as they get inserted
+    vi.resetModules()
+    const insertRule = vi.spyOn(CSSStyleSheet.prototype, 'insertRule')
+    await import('./style')
+    const css = insertRule.mock.calls.map(([rule]) => rule).join('').replace(/\s/g, '')
+    insertRule.mockRestore()
     const touchRule = css.match(new RegExp(`@media\\(hover:none\\)and\\(pointer:coarse\\){\\.${s.root}{([^}]*)}}`))?.[1]
     expect(touchRule).toContain('-webkit-user-select:none')
     expect(touchRule).toContain('-webkit-touch-callout:none')
