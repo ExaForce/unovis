@@ -60,7 +60,11 @@ export function VisXYContainerFC<Datum> (props: PropsWithChildren<VisXYContainer
     yAxis: Array
       .from(container.current?.querySelectorAll<VisComponentElement<Axis<Datum>>>('vis-axis') ?? [])
       .map(c => c.__component__)
-      .find(c => c.config.type === AxisType.Y),
+      .find(c => c.config.type === AxisType.Y && !c.config.useSecondaryYScale),
+    yAxisSecondary: Array
+      .from(container.current?.querySelectorAll<VisComponentElement<Axis<Datum>>>('vis-axis') ?? [])
+      .map(c => c.__component__)
+      .find(c => c.config.type === AxisType.Y && c.config.useSecondaryYScale),
     margin: { top: 5, left: 5, right: 5, bottom: 5 },
     ...props,
   })
