@@ -608,9 +608,6 @@ importers:
 
   packages/ts:
     dependencies:
-      '@emotion/css':
-        specifier: ^11.7.1
-        version: 11.13.5
       '@juggle/resize-observer':
         specifier: ^3.3.1
         version: 3.4.0
@@ -692,6 +689,9 @@ importers:
       '@types/leaflet':
         specifier: 1.7.6
         version: 1.7.6
+      '@types/stylis':
+        specifier: ~4.2.0
+        version: 4.2.7
       '@types/supercluster':
         specifier: ^5.0.2
         version: 5.0.3
@@ -806,6 +806,9 @@ importers:
       striptags:
         specifier: ^3.2.0
         version: 3.2.0
+      stylis:
+        specifier: ~4.2.0
+        version: 4.2.0
       supercluster:
         specifier: ^7.1.5
         version: 7.1.5
@@ -4394,6 +4397,9 @@ packages:
 
   '@types/source-list-map@0.1.6':
     resolution: {integrity: sha512-5JcVt1u5HDmlXkwOD2nslZVllBBc7HDuOICfiZah2Z0is8M8g+ddAEawbmd3VjedfDHBzxCaXLs07QEmb7y54g==}
+
+  '@types/stylis@4.2.7':
+    resolution: {integrity: sha512-VgDNokpBoKF+wrdvhAAfS55OMQpL6QRglwTwNC3kIgBrzZxA4WsFj+2eLfEA/uMUDzBcEhYmjSbwQakn/i3ajA==}
 
   '@types/supercluster@5.0.3':
     resolution: {integrity: sha512-XMSqQEr7YDuNtFwSgaHHOjsbi0ZGL62V9Js4CW45RBuRYlNWSW/KDqN+RFFE7HdHcGhJPtN0klKvw06r9Kg7rg==}
@@ -18346,6 +18352,8 @@ snapshots:
       '@types/node': 16.18.126
 
   '@types/source-list-map@0.1.6': {}
+
+  '@types/stylis@4.2.7': {}
 
   '@types/supercluster@5.0.3':
     dependencies:

@@ -1,4 +1,4 @@
-import { css, injectGlobal } from '@emotion/css'
+import { css, injectGlobal } from '@/styles/css'
 import { darkThemeCssSelectors } from '@/utils/theme'
 
 

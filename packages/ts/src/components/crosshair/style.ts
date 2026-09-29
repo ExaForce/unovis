@@ -1,4 +1,4 @@
-import { css } from '@emotion/css'
+import { css } from '@/styles/css'
 import { getCssVarNames, injectGlobalCssVariables } from '@/utils/style'
 
 export const root = css`

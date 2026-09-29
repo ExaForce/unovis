@@ -1,4 +1,4 @@
-import { css, injectGlobal } from '@emotion/css'
+import { css, injectGlobal } from '@/styles/css'
 
 export const globalStyles = injectGlobal`
   :root {

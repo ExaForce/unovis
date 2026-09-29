@@ -1,4 +1,4 @@
-import { css } from '@emotion/css'
+import { css } from '@/styles/css'
 
 // Utils
 import { getCssVarNames, injectGlobalCssVariables } from '@/utils/style'
