@@ -1,6 +1,5 @@
 | Name                              | License period | License type | Installed version | Author                                                            |
 | :-------------------------------- | :------------- | :----------- | :---------------- | :---------------------------------------------------------------- |
-| @juggle/resize-observer           | perpetual      | Apache-2.0   | 3.4.0             | Juggle                                                            |
 | d3-array                          | perpetual      | ISC          | 3.2.4             | Mike Bostock http://bost.ocks.org/mike                            |
 | d3-shape                          | perpetual      | ISC          | 3.2.0             | Mike Bostock http://bost.ocks.org/mike                            |
 | d3-hierarchy                      | perpetual      | ISC          | 3.1.2             | Mike Bostock http://bost.ocks.org/mike                            |

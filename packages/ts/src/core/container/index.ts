@@ -5,7 +5,6 @@ import { Sizing } from '@/types/component'
 
 // Utils
 import { isEqual, clamp, merge } from '@/utils/data'
-import { ResizeObserver } from '@/utils/resize-observer'
 
 // Config
 import { ContainerDefaultConfig, ContainerConfigInterface } from './config'
@@ -141,7 +140,8 @@ export class ContainerCore {
   }
 
   protected _setUpResizeObserver (): void {
-    if (this._resizeObserver) return
+    // Environments without ResizeObserver (e.g. jsdom) render without resizing
+    if (this._resizeObserver || !globalThis.ResizeObserver) return
 
     const containerRect = this._container.getBoundingClientRect()
     this._containerSize = { width: containerRect.width, height: containerRect.height }
