@@ -123,11 +123,8 @@ export class VisAxisComponent<Datum> implements AxisConfigInterface<Datum>, Afte
    * Default: `250` */
   @Input() minMaxTicksOnlyWhenWidthIsLess?: number
 
-  /** Tick label formatter function. When `tickTextAdaptiveSets: 'uniform'` places the ticks
-   * over a calendar-unit grid, the unit comes in as the fourth argument, so the formatter can
-   * pick one matching date format for the whole set (it is `undefined` otherwise). With
-   * `tickTextAdaptiveSets` enabled, `ticks` differs between the label fitting (the candidate
-   * set) and the render (all tick marks) — don't rely on its contents there. Default: `undefined` */
+  /** Tick label formatter function. `timeUnit` is set by `tickTextAdaptiveSets: AxisTickSetMode.Uniform` only.
+   * Default: `undefined` */
   @Input() tickFormat?: ((tick: number | Date, i: number, ticks: number[] | Date[], timeUnit?: AxisTimeTickUnit) => string)
 
   /** Explicitly set tick values. Default: `undefined` */
@@ -180,19 +177,14 @@ export class VisAxisComponent<Datum> implements AxisConfigInterface<Datum>, Afte
    * largest tick set that fits (measured off-screen), degrading to smaller sets on narrow
    * charts. `numTicks` (or its width-based default) acts as the upper bound. With explicit
    * `tickValues`, every-k-th subsets of them are fitted instead.
-   * `true` (same as `'nice'`) fits the "nice" d3 tick sets. On time scales those can be uneven —
-   * the 2-day sets reset at month boundaries (Jul 29, Jul 31, Aug 1) and label month starts
-   * differently — so `'uniform'` instead steps over a calendar-unit grid with a constant step,
-   * passing the chosen unit to `tickFormat` for one uniform label format. On units with a
-   * natural cycle the step snaps to the cycle's divisors or whole multiples (e.g. 1/2/3/4/6/12
-   * hours) and the labels prefer cycle-aligned positions (:00 / :15 / :30 rather than :05).
-   * On non-time scales (and with explicit `tickValues`) `'uniform'` behaves like `'nice'`.
+   * `AxisTickSetMode.Uniform` (time scales only) keeps the step constant across month boundaries, unlike
+   * the "nice" d3 sets that `true` and `AxisTickSetMode.Nice` use, and reports its calendar unit to `tickFormat`.
    * The fitted labels render on a single line unless wider than the axis itself (or than
    * `tickTextWidth`, when set) — the fair-share wrapping of fixed tick sets doesn't apply to them.
    * Rotated fitted labels also wrap when they'd grow deeper than a third of the container height.
    * Has no effect when `minMaxTicksOnly` is set, and disables the width-based
    * `minMaxTicksOnlyWhenWidthIsLess` fallback. Default: `undefined` */
-  @Input() tickTextAdaptiveSets?: boolean | AxisTickSetMode
+  @Input() tickTextAdaptiveSets?: boolean | AxisTickSetMode | `${AxisTickSetMode}`
 
   /** Hide tick labels that overlap with each other.
    * To define overlapping, a simple bounding box collision detection algorithm is used.
