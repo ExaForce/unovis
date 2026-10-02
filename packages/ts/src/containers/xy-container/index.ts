@@ -449,8 +449,8 @@ export class XYContainer<Datum> extends ContainerCore {
       axes.forEach(axis => {
         if (axis === xAxis) {
           const { margin } = this.config
-          const baseWidth = this.containerWidth - margin.left - margin.right - axisMargin.left - axisMargin.right
-          xAxis.setLabelSpace(Math.max(0, baseWidth), axisMargin.left, axisMargin.right)
+          const width = this.containerWidth - margin.left - margin.right - axisMargin.left - axisMargin.right
+          xAxis.setLabelSpace(Math.max(0, width), axisMargin.left, axisMargin.right)
         }
         axis.preRender()
 
