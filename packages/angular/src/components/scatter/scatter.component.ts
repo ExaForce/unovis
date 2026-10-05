@@ -14,6 +14,7 @@ import {
   SymbolType,
   StringAccessor,
   Position,
+  ScaleDimension,
 } from '@unovis/ts'
 import { VisXYComponent } from '../../core'
 
@@ -151,6 +152,17 @@ export class VisScatterComponent<Datum> implements ScatterConfigInterface<Datum>
 
   /** Point stroke width. Default: `undefined` */
   @Input() strokeWidth?: NumericAccessor<Datum>
+
+  /** Move the points along this axis so they don't overlap, keeping their position on the other axis exact
+   * (a beeswarm layout). Default: `undefined` */
+  @Input() spreadAxis?: ScaleDimension | `${ScaleDimension}`
+
+  /** How far a point's edge can be moved from its position along `spreadAxis`, in that axis' domain units.
+   * When the points don't fit, all of them shrink by one common factor. Default: `undefined` (the plot area) */
+  @Input() spreadMax?: number
+
+  /** Gap between the spread points in pixels. Default: `1` */
+  @Input() spreadPadding?: number
   @Input() data: Datum[]
 
   component: Scatter<Datum> | undefined
@@ -172,8 +184,8 @@ export class VisScatterComponent<Datum> implements ScatterConfigInterface<Datum>
   }
 
   private getConfig (): ScatterConfigInterface<Datum> {
-    const { duration, events, attributes, x, y, id, color, colorKeys, xScale, yScale, excludeFromDomainCalculation, pattern, size, sizeScale, sizeRange, shape, label, labelColor, labelHideOverlapping, cursor, labelTextBrightnessRatio, labelPosition, strokeColor, strokeWidth } = this
-    const config = { duration, events, attributes, x, y, id, color, colorKeys, xScale, yScale, excludeFromDomainCalculation, pattern, size, sizeScale, sizeRange, shape, label, labelColor, labelHideOverlapping, cursor, labelTextBrightnessRatio, labelPosition, strokeColor, strokeWidth }
+    const { duration, events, attributes, x, y, id, color, colorKeys, xScale, yScale, excludeFromDomainCalculation, pattern, size, sizeScale, sizeRange, shape, label, labelColor, labelHideOverlapping, cursor, labelTextBrightnessRatio, labelPosition, strokeColor, strokeWidth, spreadAxis, spreadMax, spreadPadding } = this
+    const config = { duration, events, attributes, x, y, id, color, colorKeys, xScale, yScale, excludeFromDomainCalculation, pattern, size, sizeScale, sizeRange, shape, label, labelColor, labelHideOverlapping, cursor, labelTextBrightnessRatio, labelPosition, strokeColor, strokeWidth, spreadAxis, spreadMax, spreadPadding }
     const keys = Object.keys(config) as (keyof ScatterConfigInterface<Datum>)[]
     keys.forEach(key => { if (config[key] === undefined) delete config[key] })
 
