@@ -38,8 +38,11 @@ export interface ScatterConfigInterface<Datum> extends XYComponentConfigInterfac
   cursor?: StringAccessor<Datum>;
   /** Point color brightness ratio for switching between dark and light text label color. Default: `0.65` */
   labelTextBrightnessRatio?: number;
-  /** Label position. Default: `Position.Bottom` */
-  labelPosition?: GenericAccessor<Position | string, Datum>;
+  /** Label position, or a list of positions to try in order. With a list and `labelHideOverlapping`, a label takes the
+   * first position where it doesn't overlap other points and labels and stays within the chart; `Position.Center` fits
+   * when the label can be at least as large inside the point as outside of it. A label that fits nowhere is hidden until
+   * the point is hovered. Default: `Position.Bottom` */
+  labelPosition?: GenericAccessor<Position | string | (Position | string)[], Datum>;
   /** Point stroke color. Default: `undefined` */
   strokeColor?: ColorAccessor<Datum>;
   /** Point stroke width. Default: `undefined` */
