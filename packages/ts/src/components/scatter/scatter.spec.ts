@@ -8,10 +8,12 @@ import { Spacing } from '@/types/spacing'
 // Local
 import { Scatter } from './index'
 import { ScatterConfigInterface } from './config'
-import { ScatterPoint } from './types'
+import { ScatterPoint, ScatterPointGroupNode } from './types'
+import { collideLabels } from './modules/utils'
+import { updateLabels } from './modules/point'
 import * as s from './style'
 
-type Datum = { x: number; y: number }
+type Datum = { x: number; y: number; label?: string }
 
 const WIDTH = 600
 const HEIGHT = 300
@@ -127,3 +129,79 @@ describe('Scatter spread', () => {
     }
   })
 })
+
+const FONT_SIZE = 12
+
+/** Resolves the labels the way the scatter does on the next frame, and reads the outcome off the nodes */
+function resolveLabels (scatter: Scatter<Datum>): Record<string, { position: string; visible: boolean; anchor: string | null }> {
+  const points = scatter.g.selectAll<SVGGElement, ScatterPoint<Datum>>(`.${s.point}`)
+  collideLabels(points, scatter.xScale, scatter.yScale, FONT_SIZE, { x: 0, y: 0, width: WIDTH, height: HEIGHT })
+  updateLabels(points, scatter.config)
+  return Object.fromEntries(points.nodes().map((node: ScatterPointGroupNode) => {
+    const label = node.querySelector('text')
+    return [select<SVGGElement, ScatterPoint<Datum>>(node).datum().label, {
+      position: node._labelPosition,
+      visible: node._labelVisible,
+      anchor: label.style.textAnchor || null,
+    }]
+  }))
+}
+
+describe('Scatter label positions', () => {
+  // 6px per X unit: B sits 30px to the right of A, right where A's label would go
+  const neighbours: Datum[] = [{ x: 50, y: 50, label: 'Alpha' }, { x: 55, y: 50, label: 'Bravo' }]
+  const config: ScatterConfigInterface<Datum> = { x: d => d.x, y: d => d.y, size: 10, label: d => d.label }
+
+  it('moves a label to the next position when the first one overlaps a point', () => {
+    const { scatter } = renderScatter({ ...config, labelPosition: ['right', 'left'] }, neighbours, [0, 100], [0, 100])
+    const labels = resolveLabels(scatter)
+    expect(labels.Alpha).toEqual({ position: 'left', visible: true, anchor: 'end' })
+    expect(labels.Bravo).toEqual({ position: 'right', visible: true, anchor: null })
+  })
+
+  it('hides a label with a single position that overlaps, as before', () => {
+    const { scatter } = renderScatter({ ...config, labelPosition: 'right' }, neighbours, [0, 100], [0, 100])
+    const labels = resolveLabels(scatter)
+    expect(labels.Alpha.visible).toBe(false)
+    expect(labels.Bravo.visible).toBe(true)
+  })
+
+  it('skips the fallback positions that leave the chart', () => {
+    const atEdge: Datum[] = [{ x: 1, y: 50, label: 'Alpha' }, { x: 6, y: 50, label: 'Bravo' }]
+    const { scatter } = renderScatter({ ...config, labelPosition: ['right', 'left'] }, atEdge, [0, 100], [0, 100])
+    expect(resolveLabels(scatter).Alpha.visible).toBe(false)
+  })
+
+  it('puts a label inside the point only when it can be as large there as outside', () => {
+    const data: Datum[] = [{ x: 20, y: 50, label: 'Big' }, { x: 80, y: 50, label: 'Small' }]
+    const { scatter } = renderScatter({
+      ...config,
+      size: d => (d.label === 'Big' ? 80 : 10),
+      labelPosition: ['center', 'right'],
+    }, data, [0, 100], [0, 100])
+    const labels = resolveLabels(scatter)
+    expect(labels.Big.position).toBe('center')
+    expect(labels.Small.position).toBe('right')
+  })
+
+  it('treats a list of one position as a list, so a central label that doesn\'t fit is hidden', () => {
+    const point: Datum[] = [{ x: 50, y: 50, label: 'Alpha' }]
+    const { scatter: listed } = renderScatter({ ...config, labelPosition: ['center'] }, point, [0, 100], [0, 100])
+    expect(resolveLabels(listed).Alpha.visible).toBe(false)
+
+    const { scatter: single } = renderScatter({ ...config, labelPosition: 'center' }, point, [0, 100], [0, 100])
+    expect(resolveLabels(single).Alpha).toMatchObject({ position: 'center', visible: true })
+  })
+
+  it('stops the color transition of a label that moves', () => {
+    const { scatter } = renderScatter({ ...config, labelPosition: ['center', 'right'] }, [{ x: 50, y: 50, label: 'Alpha' }], [0, 100], [0, 100])
+    scatter.render(600)
+    const text = scatter.g.select<SVGTextElement>('text').node()
+    const getTransitions = (): unknown => (text as unknown as Record<string, unknown>).__transition
+    expect(getTransitions()).toBeDefined()
+    expect(resolveLabels(scatter).Alpha.position).toBe('right')
+    expect(getTransitions()).toBeUndefined()
+    expect(text.style.fill).toBe('')
+  })
+})
+
