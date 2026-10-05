@@ -21,6 +21,14 @@ export function isLabelPositionCenter (labelPosition: Position | `${Position}`):
   (labelPosition !== Position.Left) && (labelPosition !== Position.Right)
 }
 
+export function getPointPosition<Datum> (
+  d: ScatterPoint<Datum>,
+  xScale: ContinuousScale,
+  yScale: ContinuousScale
+): [number, number] {
+  return [xScale(d._point.xValue) + d._point.xOffsetPx, yScale(d._point.yValue) + d._point.yOffsetPx]
+}
+
 export function getCentralLabelFontSize (pointDiameter: number, textLength: number): number {
   return textLength ? 0.7 * pointDiameter / Math.pow(textLength, 0.5) : 0
 }
@@ -51,8 +59,7 @@ export function getEstimatedLabelBBox<Datum> (
   yScale: ContinuousScale,
   fontSizePx: number
 ): Rect {
-  const x = xScale(d._point.xValue)
-  const y = yScale(d._point.yValue)
+  const [x, y] = getPointPosition(d, xScale, yScale)
   const pointDiameter = d._point.sizePx
 
   const pointLabelText = d._point.label ?? ''
@@ -110,7 +117,7 @@ export function collideLabels<Datum> (
       const datum2 = group2.datum()
 
       // Calculate bounding rect of the second point's circle
-      const p2Pos = [xScale(datum2._point.xValue), yScale(datum2._point.yValue)]
+      const p2Pos = getPointPosition(datum2, xScale, yScale)
       const p2Radius = datum2._point.sizePx / 2
       const point2BoundingRect = {
         x: p2Pos[0] - p2Radius,

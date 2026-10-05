@@ -17,6 +17,8 @@ export type ScatterPoint<D> = D & {
     cursor: string | null;
     groupIndex: number;
     pointIndex: number;
+    xOffsetPx: number;
+    yOffsetPx: number;
   };
 }
 
