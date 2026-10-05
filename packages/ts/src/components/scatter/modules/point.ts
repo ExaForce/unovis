@@ -20,7 +20,7 @@ import { ScatterConfigInterface } from '../config'
 import { ScatterPoint } from '../types'
 
 // Local Utils
-import { getCentralLabelFontSize, getLabelShift } from './utils'
+import { getCentralLabelFontSize, getLabelShift, getPointPosition } from './utils'
 
 export function createPoints<Datum> (
   selection: Selection<SVGGElement, ScatterPoint<Datum>, SVGGElement, ScatterPoint<Datum>[]>,
@@ -33,7 +33,7 @@ export function createPoints<Datum> (
     .style('fill', d => d._point.color)
     .style('mask', d => d._point.mask)
 
-  selection.attr('transform', d => `translate(${xScale(d._point.xValue)},${yScale(d._point.yValue)}) scale(0)`)
+  selection.attr('transform', d => `translate(${getPointPosition(d, xScale, yScale)}) scale(0)`)
 }
 
 export function updatePoints<Datum> (
@@ -121,7 +121,7 @@ export function updatePoints<Datum> (
   })
 
   smartTransition(selection, duration)
-    .attr('transform', d => `translate(${xScale(d._point.xValue)},${yScale(d._point.yValue)}) scale(1)`)
+    .attr('transform', d => `translate(${getPointPosition(d, xScale, yScale)}) scale(1)`)
 }
 
 export function removePoints<Datum> (
@@ -131,7 +131,7 @@ export function removePoints<Datum> (
   duration: number
 ): void {
   smartTransition(selection, duration)
-    .attr('transform', d => `translate(${xScale(d._point.xValue)},${yScale(d._point.yValue)}) scale(0)`)
+    .attr('transform', d => `translate(${getPointPosition(d, xScale, yScale)}) scale(0)`)
     .remove()
 }
 
