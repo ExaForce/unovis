@@ -26,7 +26,7 @@ import { ScatterPointGroupNode, ScatterPoint } from './types'
 import { ScatterDefaultConfig, ScatterConfigInterface } from './config'
 
 // Modules
-import { createPoints, updatePoints, removePoints } from './modules/point'
+import { createPoints, updatePoints, updateLabels, removePoints } from './modules/point'
 import { collideLabels, getEstimatedLabelBBox } from './modules/utils'
 import { spread, getSpreadBleed, getSpreadExtent } from './modules/spread'
 
@@ -175,7 +175,9 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
     this._collideLabelsAnimFrameId = requestAnimationFrame(() => {
       // Filter out points that don't have a label
       const pointsSelectionWithLabels = this._points.filter(d => !!d._point.label)
-      collideLabels(pointsSelectionWithLabels, this.config, this.xScale, this.yScale)
+      const fontSizePx = getCSSVariableValueInPixels('var(--vis-scatter-point-label-text-font-size)', this.element)
+      collideLabels(pointsSelectionWithLabels, this.xScale, this.yScale, fontSizePx, { x: 0, y: 0, width: this._width, height: this._height })
+      updateLabels(pointsSelectionWithLabels, this.config)
     })
   }
 
@@ -232,6 +234,9 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
         const yValue = getNumber(d, y, j)
         if (xValue == null || yValue == null) return acc
 
+        const labelPosition = getValue(d, config.labelPosition, i)
+        const labelPositions = (isArray(labelPosition) ? labelPosition : [labelPosition]) as Position[]
+
         const pointSize = getNumber(d, config.size, i)
         const pointSizeScaled = config.sizeRange ? this._sizeScale(pointSize) : pointSize
         const pointSizeXDomain = (this.xScale.invert(pointSizeScaled) as number) - (this.xScale.invert(0) as number)
@@ -256,7 +261,8 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
               shape: getString(d, config.shape, j) as SymbolType,
               label: getString(d, config.label, j),
               labelColor: getColor(d, config.labelColor, j, config.colorKeys?.[j], colorOptionsNoFallback),
-              labelPosition: getValue(d, config.labelPosition, i) as Position,
+              labelPosition: labelPositions[0],
+              labelPositions,
               cursor: getString(d, config.cursor, j),
               groupIndex: j,
               pointIndex: i,
