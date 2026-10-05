@@ -1,9 +1,12 @@
 import { select, Selection } from 'd3-selection'
 import { Position } from '@/types/position'
 
+// Styles
+import { UNOVIS_TEXT_DEFAULT } from '@/styles'
+
 // Utils
 import { rectIntersect } from '@/utils/misc'
-import { estimateStringPixelLength, getCachedFontSizePx } from '@/utils/text-measure'
+import { estimateStringPixelLength, getCachedFontSizePx, measureTextWidth } from '@/utils/text-measure'
 import { getValue } from '@/utils/data'
 
 // Types
@@ -16,13 +19,37 @@ import { ScatterPoint, ScatterPointGroupNode } from '../types'
 // Config
 import { ScatterConfigInterface } from '../config'
 
+const CENTRAL_LABEL_REFERENCE_FONT_SIZE = 100
+const CENTRAL_LABEL_FIT = 0.9
+
 export function isLabelPositionCenter (labelPosition: Position | `${Position}`): boolean {
   return (labelPosition !== Position.Top) && (labelPosition !== Position.Bottom) &&
   (labelPosition !== Position.Left) && (labelPosition !== Position.Right)
 }
 
-export function getCentralLabelFontSize (pointDiameter: number, textLength: number): number {
-  return textLength ? 0.7 * pointDiameter / Math.pow(textLength, 0.5) : 0
+export function getPointPosition<Datum> (
+  d: ScatterPoint<Datum>,
+  xScale: ContinuousScale,
+  yScale: ContinuousScale
+): [number, number] {
+  return [xScale(d._point.xValue) + d._point.xOffsetPx, yScale(d._point.yValue) + d._point.yOffsetPx]
+}
+
+/** The font of a point label at the size `getCentralLabelFontSize` measures the text at */
+export function getCentralLabelReferenceFont (textElement: SVGTextElement): string {
+  const style = window.getComputedStyle(textElement)
+  return `${style.fontStyle || 'normal'} ${style.fontWeight || 'normal'} ${CENTRAL_LABEL_REFERENCE_FONT_SIZE}px ${style.fontFamily || 'sans-serif'}`
+}
+
+/** The font size at which the label's box, one line tall, fits into `CENTRAL_LABEL_FIT` of the point's diameter.
+ * The text width grows linearly with the font size, so it's measured once with `referenceFont`, or estimated without it */
+export function getCentralLabelFontSize (text: string, pointDiameter: number, referenceFont?: string): number {
+  if (!text) return 0
+
+  const widthPerFontPx = referenceFont
+    ? measureTextWidth(text, referenceFont) / CENTRAL_LABEL_REFERENCE_FONT_SIZE
+    : estimateStringPixelLength(text, 1)
+  return CENTRAL_LABEL_FIT * pointDiameter / Math.hypot(widthPerFontPx, UNOVIS_TEXT_DEFAULT.lineHeight)
 }
 
 export function getLabelShift (
@@ -51,13 +78,11 @@ export function getEstimatedLabelBBox<Datum> (
   yScale: ContinuousScale,
   fontSizePx: number
 ): Rect {
-  const x = xScale(d._point.xValue)
-  const y = yScale(d._point.yValue)
+  const [x, y] = getPointPosition(d, xScale, yScale)
   const pointDiameter = d._point.sizePx
 
   const pointLabelText = d._point.label ?? ''
-  const textLength = pointLabelText.length
-  const centralLabelFontSize = getCentralLabelFontSize(pointDiameter, textLength)
+  const centralLabelFontSize = getCentralLabelFontSize(pointLabelText, pointDiameter)
 
   const width = estimateStringPixelLength(pointLabelText, isLabelPositionCenter(labelPosition) ? centralLabelFontSize : fontSizePx, 0.6)
   const height = fontSizePx
@@ -110,7 +135,7 @@ export function collideLabels<Datum> (
       const datum2 = group2.datum()
 
       // Calculate bounding rect of the second point's circle
-      const p2Pos = [xScale(datum2._point.xValue), yScale(datum2._point.yValue)]
+      const p2Pos = getPointPosition(datum2, xScale, yScale)
       const p2Radius = datum2._point.sizePx / 2
       const point2BoundingRect = {
         x: p2Pos[0] - p2Radius,

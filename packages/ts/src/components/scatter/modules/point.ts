@@ -20,7 +20,7 @@ import { ScatterConfigInterface } from '../config'
 import { ScatterPoint } from '../types'
 
 // Local Utils
-import { getCentralLabelFontSize, getLabelShift } from './utils'
+import { getCentralLabelFontSize, getCentralLabelReferenceFont, getLabelShift, getPointPosition } from './utils'
 
 export function createPoints<Datum> (
   selection: Selection<SVGGElement, ScatterPoint<Datum>, SVGGElement, ScatterPoint<Datum>[]>,
@@ -35,7 +35,7 @@ export function createPoints<Datum> (
   selection.append('text')
     .style('pointer-events', 'none')
 
-  selection.attr('transform', d => `translate(${xScale(d._point.xValue)},${yScale(d._point.yValue)}) scale(0)`)
+  selection.attr('transform', d => `translate(${getPointPosition(d, xScale, yScale)}) scale(0)`)
 }
 
 export function updatePoints<Datum> (
@@ -46,6 +46,7 @@ export function updatePoints<Datum> (
   duration: number
 ): void {
   const symbolGenerator = symbol()
+  let labelReferenceFont: string | undefined
 
   selection.each((d, index, elements) => {
     const group: Selection<SVGGElement, ScatterPoint<Datum>, SVGGElement, ScatterPoint<Datum>[]> = select(elements[index])
@@ -75,8 +76,8 @@ export function updatePoints<Datum> (
     const isLabelPositionCenter = (labelPosition !== Position.Top) && (labelPosition !== Position.Bottom) &&
       (labelPosition !== Position.Left) && (labelPosition !== Position.Right)
     const pointLabelText = d._point.label ?? ''
-    const textLength = pointLabelText.length
-    const centralLabelFontSize = getCentralLabelFontSize(pointDiameter, textLength)
+    if (isLabelPositionCenter && pointLabelText && !labelReferenceFont) labelReferenceFont = getCentralLabelReferenceFont(label.node() as SVGTextElement)
+    const centralLabelFontSize = isLabelPositionCenter ? getCentralLabelFontSize(pointLabelText, pointDiameter, labelReferenceFont) : 0
 
     let labelColor = d._point.labelColor
     if (!labelColor && isLabelPositionCenter) {
@@ -90,7 +91,7 @@ export function updatePoints<Datum> (
     label.html(pointLabelText)
       .attr('x', labelShift[0])
       .attr('y', labelShift[1])
-      .style('font-size', isLabelPositionCenter ? centralLabelFontSize : null)
+      .style('font-size', isLabelPositionCenter ? `${centralLabelFontSize}px` : null)
       .style('text-anchor', () => {
         switch (labelPosition) {
           case Position.Right: return null
@@ -113,7 +114,7 @@ export function updatePoints<Datum> (
   })
 
   smartTransition(selection, duration)
-    .attr('transform', d => `translate(${xScale(d._point.xValue)},${yScale(d._point.yValue)}) scale(1)`)
+    .attr('transform', d => `translate(${getPointPosition(d, xScale, yScale)}) scale(1)`)
 }
 
 export function removePoints<Datum> (
@@ -123,7 +124,7 @@ export function removePoints<Datum> (
   duration: number
 ): void {
   smartTransition(selection, duration)
-    .attr('transform', d => `translate(${xScale(d._point.xValue)},${yScale(d._point.yValue)}) scale(0)`)
+    .attr('transform', d => `translate(${getPointPosition(d, xScale, yScale)}) scale(0)`)
     .remove()
 }
 

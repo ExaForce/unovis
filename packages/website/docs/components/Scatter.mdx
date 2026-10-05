@@ -6,7 +6,7 @@ import CodeBlock from '@theme/CodeBlock'
 import Details from "@theme/Details"
 import { PropsTable } from '@site/src/components/PropsTable'
 import { generateScatterDataRecords } from '../utils/data'
-import { XYWrapper, XYWrapperWithInput } from '../wrappers/xy-wrapper'
+import { XYWrapper, XYWrapperWithInput, axis } from '../wrappers/xy-wrapper'
 
 export const scatterProps = (n = 10, colored = false) => ({
   name: "Scatter",
@@ -14,6 +14,24 @@ export const scatterProps = (n = 10, colored = false) => ({
   x: d => d.x,
   y: d => d.y,
 });
+
+export const gaussian = (mean, sd) => mean + sd * (Math.random() + Math.random() + Math.random() - 1.5) * 2
+export const generateSwarmData = (n, groups = 1) => Array(n).fill(0).map((_, i) => ({
+  group: i % groups,
+  value: Math.round(4 * gaussian(5 + 2 * (i % groups), 1 + 0.5 * (i % groups))) / 4,
+}))
+
+export const swarmGroups = ['Group A', 'Group B', 'Group C']
+export const groupSwarmProps = () => ({
+  name: "Scatter",
+  data: generateSwarmData(240, swarmGroups.length),
+  x: d => d.group,
+  y: d => d.value,
+  size: 8,
+  spreadAxis: 'x',
+  containerProps: { xDomain: [-0.5, swarmGroups.length - 0.5] },
+  components: [axis('x', { tickValues: [0, 1, 2], tickFormat: i => swarmGroups[i] }), axis('y')],
+})
 
 ## Basic Configuration
 The _Scatter_ component has been designed to work together with _XYContainer_. The minimal _Scatter_ configuration looks like:
@@ -50,6 +68,50 @@ In tha case if you provide a constant value to `size`, every resulting size valu
 Fox example, if `sizeRange` is set to `[10,50]`, that will make the default size equal to 30px (or `(min + max)/2`).
 <XYWrapper {...scatterProps()} size={() => 10 * Math.random()} sizeRange={[10, 50]}/>
 
+## Spreading Points
+When many points have close values, they pile up on top of each other. Set `spreadAxis` to `'x'` or `'y'` to move
+the points along that axis just enough to stop the overlap, while their position on the other axis stays exact. This
+turns the scatter into a beeswarm, where the shape of the swarm shows how the values are distributed.
+
+The points are placed one by one, largest first, each as close to its own position as it can get. So the larger
+points end up in the middle of the swarm, and the smaller ones fill in around them.
+
+In this example every point has the same `y`, and `spreadAxis` is set to `'y'`. A symmetric `yDomain` puts the line
+of points in the middle of the chart, so the swarm can grow to both sides of it.
+<XYWrapper
+  name="Scatter"
+  data={generateSwarmData(200)}
+  x={d => d.value}
+  y={0}
+  size={8}
+  spreadAxis="y"
+  containerProps={{ yDomain: [-1, 1] }}
+  components={[axis('x')]}
+/>
+
+### Limiting the Spread
+By default the points can spread across the whole plot area. When you have several swarms along the same axis, for
+example one per category, limit how far the points can move with `spreadMax`. It's set in the domain units of
+`spreadAxis` and applies to the edge of the point. With categories placed at `0, 1, 2…`, a `spreadMax` of `0.45`
+keeps every swarm within 45% of the distance to the next category, leaving a gap between the neighbouring swarms.
+Above `0.5` the swarms would reach into each other.
+
+For categories, also set the domain to `[-0.5, n - 0.5]`, where `n` is the number of categories. Every category then
+gets a slot one unit wide, the edge ones included, and the categories stay in place whatever `spreadMax` is. Without
+it, _Scatter_ takes the room the first and the last swarm need at the edges of the chart, so the categories move
+closer to the edges as `spreadMax` goes down.
+
+If a swarm doesn't fit, all the points shrink by the same factor until every swarm fits, so the sizes stay
+comparable across the whole chart. The padding between the points shrinks with them. The points can shrink until the
+smallest of them is 1px across; if even that's not enough, they are pushed into their limits and may overlap.
+<XYWrapperWithInput {...groupSwarmProps()} property="spreadMax" inputType="range" inputProps={{ min: 0.05, max: 0.5, step: 0.05 }} defaultValue={0.45}/>
+
+### Padding
+`spreadPadding` sets the gap between the neighbouring points in pixels. It's `1` by default.
+<XYWrapperWithInput {...groupSwarmProps()} spreadMax={0.45} property="spreadPadding" inputType="range" inputProps={{ min: 0, max: 4, step: 0.5 }} defaultValue={1}/>
+
+Note that _Crosshair_ follows the values of the points, not their positions in the swarm.
+
 ## Point Labels
 You can also place labels on _Scatter's_ points by passing a string accessor function to the `label` property.
 <XYWrapper {...scatterProps(15, true)} size={20} label={d => d.label}/>
@@ -62,7 +124,8 @@ Note that setting this property overrides `labelTextBrightnessRatio`.
 
 ### Label Position
 You can change a point's label position with the `labelPosition` property, which accepts a  _Position_ or _Position_ accessor
-function. Supported values are `Position.Center`, `Position.Bottom` (default), `Position.Left`, `Position.Right` and `Position.Top`
+function. Supported values are `Position.Center`, `Position.Bottom` (default), `Position.Left`, `Position.Right` and `Position.Top`.
+Labels with `Position.Center` take the largest font size at which the text, measured in the label's font, fits inside the point.
 
 <XYWrapperWithInput {...scatterProps(15, true)} hiddenProps={{ size: d => d.size, label: d => d.label}} property='labelPosition' inputType="select" options={['bottom', 'center', 'left', 'right', 'top']}/>
 
