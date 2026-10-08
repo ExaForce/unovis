@@ -234,6 +234,7 @@ export class LeafletFlowMap<
     this.renderer?.destroy()
     this.canvasElement?.removeEventListener('mousemove', this.onCanvasMouseMoveBound)
     this.canvasElement?.removeEventListener('click', this.onCanvasClickBound)
+    this.onCanvasMouseMoveBound.cancel()
     super.destroy()
   }
 

@@ -341,6 +341,13 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
     this.hide(event)
   }
 
+  public destroy (): void {
+    // Cancel a pending render, so nothing runs (e.g. `onCrosshairMove`) after the Crosshair is destroyed
+    window.cancelAnimationFrame(this._animFrameId)
+    this.container?.on('.crosshair', null)
+    super.destroy()
+  }
+
   _showTooltip (datum: Datum | undefined, xValue: number, pos: [number, number], nearestDatumIndex: number | undefined): void {
     const { config, datamodel } = this
     const tooltip = config.tooltip ?? this.tooltip

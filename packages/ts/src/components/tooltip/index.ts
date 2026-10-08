@@ -358,7 +358,8 @@ export class Tooltip {
     // the `path` of the event and trigger corresponding callbacks
     // We also attach to the container itself: a gap between triggers (e.g. between bars) can be
     // covered by a sibling component's element, which the per-component listener below never sees
-    const elements = [...this.components.map(c => c.element), this._container]
+    // Destroyed components don't have an element anymore
+    const elements = [...this.components.map(c => c.element), this._container].filter(Boolean)
     elements.forEach(element => {
       const selection = select(element)
 
@@ -467,6 +468,8 @@ export class Tooltip {
   }
 
   public destroy (): void {
+    this._setUpEventsThrottled.cancel()
+    this._setContainerPositionThrottled.cancel()
     this._mutationObserver.disconnect()
     window.clearTimeout(this._hideDelayTimeoutId)
     window.clearTimeout(this._showDelayTimeoutId)

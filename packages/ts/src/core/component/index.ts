@@ -172,6 +172,8 @@ export class ComponentCore<
   }
 
   public destroy (): void {
+    this._setUpComponentEventsThrottled.cancel()
+    this._setCustomAttributesThrottled.cancel()
     this.g?.remove()
     this.element = undefined
   }
