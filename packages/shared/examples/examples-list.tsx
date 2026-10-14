@@ -48,6 +48,7 @@ export const examples: ExampleCollection[] = [
       require('./basic-scatter-plot').default,
       require('./sized-scatter-plot').default,
       require('./shaped-scatter-plot').default,
+      require('./beeswarm-scatter-plot').default,
     ],
   },
   {
