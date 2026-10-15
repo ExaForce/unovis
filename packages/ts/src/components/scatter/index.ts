@@ -16,7 +16,7 @@ import { Spacing } from '@/types/spacing'
 import { SymbolType } from '@/types/symbol'
 import { NumericAccessor } from '@/types/accessor'
 import { Position } from '@/types/position'
-import { ContinuousScale } from '@/types/scale'
+import { ContinuousScale, ScaleDimension } from '@/types/scale'
 
 // Local Types
 import { ScatterPointGroupNode, ScatterPoint } from './types'
@@ -25,8 +25,9 @@ import { ScatterPointGroupNode, ScatterPoint } from './types'
 import { ScatterDefaultConfig, ScatterConfigInterface } from './config'
 
 // Modules
-import { createPoints, updatePoints, removePoints } from './modules/point'
+import { createPoints, updatePoints, updateLabels, removePoints } from './modules/point'
 import { collideLabels, getEstimatedLabelBBox } from './modules/utils'
+import { spread, getSpreadBleed, getSpreadExtent } from './modules/spread'
 
 // Styles
 import * as s from './style'
@@ -106,12 +107,20 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
     const left = extent.minX < xRangeStart ? coeff * (xRangeStart - extent.minX) : 0
     const right = extent.maxX > xRangeEnd ? coeff * (extent.maxX - xRangeEnd) : 0
 
-    return { top, bottom, left, right }
+    const spreadBleed = getSpreadBleed(pointDataFlat, this.config, this.xScale, this.yScale)
+    return {
+      top: Math.max(top, spreadBleed.top),
+      bottom: Math.max(bottom, spreadBleed.bottom),
+      left: Math.max(left, spreadBleed.left),
+      right: Math.max(right, spreadBleed.right),
+    }
   }
 
   _render (customDuration?: number): void {
     const { config } = this
     const duration = isNumber(customDuration) ? customDuration : config.duration
+
+    if (config.spreadAxis) this._spreadPoints()
 
     // Groups
     const pointGroups = this.g
@@ -163,9 +172,33 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
 
     cancelAnimationFrame(this._collideLabelsAnimFrameId)
     this._collideLabelsAnimFrameId = requestAnimationFrame(() => {
-      // Filter out points that don't have a label
-      const pointsSelectionWithLabels = this._points.filter(d => !!d._point.label)
-      collideLabels(pointsSelectionWithLabels, this.config, this.xScale, this.yScale)
+      const fontSizePx = getCSSVariableValueInPixels('var(--vis-scatter-point-label-text-font-size)', this.element)
+      collideLabels(this._points, this.xScale, this.yScale, fontSizePx, { x: 0, y: 0, width: this._width, height: this._height })
+      updateLabels(this._points.filter(d => !!d._point.label), this.config)
+    })
+  }
+
+  /** Lays the points out at the final scale ranges, which are set only after `bleed` has prepared the points.
+   * Rebuilds the points first, so that every render shrinks the configured sizes rather than the shrunk ones */
+  private _spreadPoints (): void {
+    const { config } = this
+    const isSpreadX = config.spreadAxis === ScaleDimension.X
+
+    this._pointData = this._getOnScreenData()
+    const points = flatten(this._pointData)
+    const items = points.map(d => {
+      const x = this.xScale(d._point.xValue)
+      const y = this.yScale(d._point.yValue)
+      const [extentStart, extentEnd] = getSpreadExtent(d, config, this.xScale, this.yScale) ?? [0, isSpreadX ? this._width : this._height]
+      const radius = (d._point.sizePx + (d._point.strokeWidthPx ?? 0)) / 2
+      return { anchor: isSpreadX ? x : y, value: isSpreadX ? y : x, radius, min: extentStart, max: extentEnd }
+    })
+
+    const { offsets, scale } = spread(items, config.spreadPadding ?? 0)
+    points.forEach((d, i) => {
+      d._point.sizePx *= scale
+      if (isSpreadX) d._point.xOffsetPx = offsets[i]
+      else d._point.yOffsetPx = offsets[i]
     })
   }
 
@@ -198,6 +231,9 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
         const yValue = getNumber(d, y, j)
         if (xValue == null || yValue == null) return acc
 
+        const labelPosition = getValue(d, config.labelPosition, i)
+        const labelPositions = (isArray(labelPosition) ? labelPosition : [labelPosition]) as Position[]
+
         const pointSize = getNumber(d, config.size, i)
         const pointSizeScaled = config.sizeRange ? this._sizeScale(pointSize) : pointSize
         const pointSizeXDomain = (this.xScale.invert(pointSizeScaled) as number) - (this.xScale.invert(0) as number)
@@ -222,17 +258,20 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
               shape: getString(d, config.shape, j) as SymbolType,
               label: getString(d, config.label, j),
               labelColor: getColor(d, config.labelColor, j, config.colorKeys?.[j], colorOptionsNoFallback),
-              labelPosition: getValue(d, config.labelPosition, i) as Position,
+              labelPosition: labelPositions[0],
+              labelPositions,
               cursor: getString(d, config.cursor, j),
               groupIndex: j,
               pointIndex: i,
+              xOffsetPx: 0,
+              yOffsetPx: 0,
             },
           })
         }
 
         return acc
       }, []) ?? []
-    }).map(points => config.cullOverlappingPoints ? this._cullOverlappingPoints(points) : points)
+    }).map(points => config.cullOverlappingPoints && !config.spreadAxis ? this._cullOverlappingPoints(points) : points)
   }
 
   /** Keeps one point per pixel, dropping the ones that would be painted underneath */
