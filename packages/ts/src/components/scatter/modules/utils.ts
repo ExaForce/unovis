@@ -5,6 +5,7 @@ import { Position } from '@/types/position'
 import { UNOVIS_TEXT_DEFAULT } from '@/styles'
 
 // Utils
+import { clamp } from '@/utils/data'
 import { getRectFitTranslation, rectIntersect } from '@/utils/misc'
 import { estimateStringPixelLength, measureTextWidth } from '@/utils/text-measure'
 
@@ -78,10 +79,10 @@ export function getEstimatedLabelBBox<Datum> (
   const pointDiameter = d._point.sizePx
 
   const pointLabelText = d._point.label ?? ''
-  const centralLabelFontSize = getCentralLabelFontSize(pointLabelText, pointDiameter)
+  const labelFontSize = isLabelPositionCenter(labelPosition) ? getCentralLabelFontSize(pointLabelText, pointDiameter) : fontSizePx
 
-  const width = estimateStringPixelLength(pointLabelText, isLabelPositionCenter(labelPosition) ? centralLabelFontSize : fontSizePx, 0.6)
-  const height = fontSizePx
+  const width = estimateStringPixelLength(pointLabelText, labelFontSize, 0.6)
+  const height = labelFontSize
 
   const labelShift = getLabelShift(labelPosition, pointDiameter)
   const dx = labelPosition === Position.Left ? -width
@@ -99,10 +100,15 @@ export function getEstimatedLabelBBox<Datum> (
   return bbox
 }
 
-/** Picks every label the first of its point's `labelPositions` where it fits, and hides the labels that fit nowhere.
- * The positions after the first must also stay within `bounds`, as `bleed` makes room for the first one only. A hovered
- * label takes its first fitting position, or its first one, hiding the labels in its way. The result is left on the
- * nodes (`_labelPosition`, `_labelVisible`) for `updateLabels` to render */
+function isRectOverlappingCircle (rect: Rect, [x, y]: [number, number], radius: number): boolean {
+  const dx = x - clamp(x, rect.x, rect.x + rect.width)
+  const dy = y - clamp(y, rect.y, rect.y + rect.height)
+  return dx * dx + dy * dy < radius * radius
+}
+
+/** Puts every label at the first of its `labelPositions` that overlaps no point, labeled or not, and no visible label
+ * (inside its point, none drawn above it), and stays within `bounds` unless it's the first one, which `bleed` makes room
+ * for. A label that fits nowhere is hidden, or, when hovered, takes its first position and hides the labels in its way */
 export function collideLabels<Datum> (
   selection: Selection<SVGGElement, ScatterPoint<Datum>, SVGGElement, ScatterPoint<Datum>[]>,
   xScale: ContinuousScale,
@@ -112,9 +118,12 @@ export function collideLabels<Datum> (
 ): void {
   const nodes = selection.nodes() as ScatterPointGroupNode[]
   const data = nodes.map(node => select<SVGGElement, ScatterPoint<Datum>>(node).datum())
-  nodes.forEach((node, i) => {
-    node._labelVisible = true
-    node._labelPosition = data[i]._point.labelPosition
+  const positions = data.map(d => getPointPosition(d, xScale, yScale))
+  const radii = data.map(d => (d._point.sizePx + (d._point.strokeWidthPx ?? 0)) / 2)
+  const labelBoxes = data.map((d, i) => {
+    nodes[i]._labelVisible = !!d._point.label
+    nodes[i]._labelPosition = d._point.labelPosition
+    return d._point.label ? getEstimatedLabelBBox(d, d._point.labelPosition, xScale, yScale, fontSizePx) : undefined
   })
 
   let referenceFont: string | undefined
@@ -123,15 +132,16 @@ export function collideLabels<Datum> (
     return getCentralLabelFontSize(data[i]._point.label, data[i]._point.sizePx, referenceFont) >= fontSizePx
   }
 
-  const getBlockers = (i: number, rect: Rect, findAll: boolean): number[] => {
+  const isDrawnBelow = (j: number, i: number): boolean =>
+    !!(nodes[i].compareDocumentPosition(nodes[j]) & Node.DOCUMENT_POSITION_PRECEDING)
+
+  const getBlockers = (i: number, rect: Rect, isCenter: boolean, findAll: boolean): number[] => {
     const blockers: number[] = []
     for (let j = 0; j < nodes.length; j += 1) {
       if (i === j) continue
-      const [x, y] = getPointPosition(data[j], xScale, yScale)
-      const r = data[j]._point.sizePx / 2
-      const isBlocked = rectIntersect(rect, { x: x - r, y: y - r, width: 2 * r, height: 2 * r }, 2) || (nodes[j]._labelVisible &&
-        rectIntersect(rect, getEstimatedLabelBBox(data[j], nodes[j]._labelPosition, xScale, yScale, fontSizePx), 0.25))
-      if (!isBlocked) continue
+      const isBlocked = isRectOverlappingCircle(rect, positions[j], radii[j]) ||
+        (nodes[j]._labelVisible && rectIntersect(rect, labelBoxes[j], 0.25))
+      if (!isBlocked || (isCenter && isDrawnBelow(j, i))) continue
       blockers.push(j)
       if (!findAll) break
     }
@@ -141,20 +151,26 @@ export function collideLabels<Datum> (
   nodes.forEach((node, i) => {
     if (!node._labelVisible) return
 
-    const positions = data[i]._point.labelPositions
-    const position = positions.find((candidate, k) => {
-      if (isLabelPositionCenter(candidate)) return positions.length === 1 || fitsInside(i)
+    const candidates = data[i]._point.labelPositions
+    let rect: Rect | undefined
+    const position = candidates.find((candidate, k) => {
+      const isCenter = isLabelPositionCenter(candidate)
+      if (isCenter && candidates.length === 1) return true
+      if (isCenter && !fitsInside(i)) return false
 
-      const rect = getEstimatedLabelBBox(data[i], candidate, xScale, yScale, fontSizePx)
-      const fit = getRectFitTranslation(rect, bounds)
-      if (k > 0 && (fit.dx || fit.dy)) return false
-      return !getBlockers(i, rect, false).length
+      rect = getEstimatedLabelBBox(data[i], candidate, xScale, yScale, fontSizePx)
+      if (k > 0) {
+        const fit = getRectFitTranslation(rect, bounds)
+        if (fit.dx || fit.dy) return false
+      }
+      return !getBlockers(i, rect, isCenter, false).length
     })
 
-    if (position !== undefined) node._labelPosition = position
-    else if (node._forceShowLabel) {
-      const rect = getEstimatedLabelBBox(data[i], node._labelPosition, xScale, yScale, fontSizePx)
-      for (const j of getBlockers(i, rect, true)) nodes[j]._labelVisible = false
+    if (position !== undefined) {
+      node._labelPosition = position
+      labelBoxes[i] = rect ?? labelBoxes[i]
+    } else if (node._forceShowLabel) {
+      for (const j of getBlockers(i, labelBoxes[i], isLabelPositionCenter(node._labelPosition), true)) nodes[j]._labelVisible = false
     } else node._labelVisible = false
   })
 }
