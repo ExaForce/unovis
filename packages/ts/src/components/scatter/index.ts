@@ -189,11 +189,9 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
 
     cancelAnimationFrame(this._collideLabelsAnimFrameId)
     this._collideLabelsAnimFrameId = requestAnimationFrame(() => {
-      // Filter out points that don't have a label
-      const pointsSelectionWithLabels = this._points.filter(d => !!d._point.label)
       const fontSizePx = getCSSVariableValueInPixels('var(--vis-scatter-point-label-text-font-size)', this.element)
-      collideLabels(pointsSelectionWithLabels, this.xScale, this.yScale, fontSizePx, { x: 0, y: 0, width: this._width, height: this._height })
-      updateLabels(pointsSelectionWithLabels, this.config)
+      collideLabels(this._points, this.xScale, this.yScale, fontSizePx, { x: 0, y: 0, width: this._width, height: this._height })
+      updateLabels(this._points.filter(d => !!d._point.label), this.config)
     })
   }
 
