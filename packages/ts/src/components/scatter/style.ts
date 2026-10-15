@@ -1,4 +1,9 @@
 import { css, injectGlobal } from '@/styles/css'
+import { darkThemeCssSelectors } from '@/utils/theme'
+
+export const root = css`
+  label: scatter-component;
+`
 
 export const globalStyles = injectGlobal`
   :root {
@@ -16,11 +21,15 @@ export const globalStyles = injectGlobal`
     --vis-scatter-point-label-text-font-size: 12px;
     // Undefined by default to allow proper fallback to var(--vis-font-family)
     /* --vis-scatter-point-label-text-font-family: */
-  }
-`
+    // Undefined by default to allow fallback to var(--vis-scatter-point-label-text-color-dark)
+    /* --vis-scatter-point-label-text-color: */
 
-export const root = css`
-  label: scatter-component;
+    --vis-dark-scatter-point-label-text-color: #e8e9ef;
+  }
+
+  ${darkThemeCssSelectors} ${`.${root}`} {
+    --vis-scatter-point-label-text-color: var(--vis-dark-scatter-point-label-text-color);
+  }
 `
 
 export const pointGroup = css`
@@ -51,7 +60,7 @@ export const point = css`
     font-weight: var(--vis-scatter-point-label-text-font-weight);
     font-size: var(--vis-scatter-point-label-text-font-size);
     font-family: var(--vis-scatter-point-label-text-font-family, var(--vis-font-family));
-    fill: var(--vis-scatter-point-label-text-color-dark);
+    fill: var(--vis-scatter-point-label-text-color, var(--vis-scatter-point-label-text-color-dark));
     user-select: none;
   }
 `
