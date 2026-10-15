@@ -205,6 +205,9 @@ The _Scatter_ component supports additional styling via CSS variables that you c
 
 <XYWrapper {...scatterProps(50)} showAxes={true} height={250} excludeTabs label={d => d.label} size={20} labelTextBrightnessRatio={0.5} className="custom-scatter"/>
 
+The labels outside the points take `--vis-scatter-point-label-text-color`, and until it's set,
+`--vis-scatter-point-label-text-color-dark`: the darker of the two colors central labels pick from to contrast with the point.
+
 <details open>
   <summary>Supported CSS variables and their default values</summary>
   <CodeBlock language="css">
@@ -222,6 +225,10 @@ The _Scatter_ component supports additional styling via CSS variables that you c
 --vis-scatter-point-label-text-font-weight: 500;
 --vis-scatter-point-label-text-font-size: 12px;
 --vis-scatter-point-label-text-font-family
+--vis-scatter-point-label-text-color
+ 
+/* Dark Theme */
+--vis-dark-scatter-point-label-text-color: #e8e9ef;
 `}
   </CodeBlock>
 </details>
