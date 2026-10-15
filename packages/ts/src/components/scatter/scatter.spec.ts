@@ -129,9 +129,10 @@ const FONT_SIZE = 12
 /** Resolves the labels the way the scatter does on the next frame, and reads the outcome off the nodes */
 function resolveLabels (scatter: Scatter<Datum>): Record<string, { position: string; visible: boolean; anchor: string | null }> {
   const points = scatter.g.selectAll<SVGGElement, ScatterPoint<Datum>>(`.${s.point}`)
+  const labeledPoints = points.filter(d => !!d._point.label)
   collideLabels(points, scatter.xScale, scatter.yScale, FONT_SIZE, { x: 0, y: 0, width: WIDTH, height: HEIGHT })
-  updateLabels(points, scatter.config)
-  return Object.fromEntries(points.nodes().map((node: ScatterPointGroupNode) => {
+  updateLabels(labeledPoints, scatter.config)
+  return Object.fromEntries(labeledPoints.nodes().map((node: ScatterPointGroupNode) => {
     const label = node.querySelector('text')
     return [select<SVGGElement, ScatterPoint<Datum>>(node).datum().label, {
       position: node._labelPosition,
@@ -158,6 +159,40 @@ describe('Scatter label positions', () => {
     const labels = resolveLabels(scatter)
     expect(labels.Alpha.visible).toBe(false)
     expect(labels.Bravo.visible).toBe(true)
+  })
+
+  it('treats the points without labels as obstacles too', () => {
+    const { scatter } = renderScatter({ ...config, labelPosition: ['right', 'left'] }, [{ x: 50, y: 50, label: 'Alpha' }, { x: 55, y: 50 }], [0, 100], [0, 100])
+    expect(resolveLabels(scatter).Alpha.position).toBe('left')
+  })
+
+  it('doesn\'t let a label cover a point even by a couple of pixels', () => {
+    // 3px per Y unit: the label's box ends 6px below A's centre, B's circle starts 4px below it
+    const data: Datum[] = [{ x: 50, y: 50, label: 'Alpha' }, { x: 55, y: 47, label: 'Bravo' }]
+    const { scatter } = renderScatter({ ...config, labelPosition: d => (d.label === 'Alpha' ? ['right', 'left'] : 'bottom') }, data, [0, 100], [0, 100])
+    expect(resolveLabels(scatter).Alpha.position).toBe('left')
+  })
+
+  it('moves a label out of its point when another point covers it', () => {
+    const data: Datum[] = [{ x: 20, y: 50, label: 'Big' }, { x: 24, y: 50 }]
+    const size = (d: Datum): number => (d.label ? 80 : 10)
+    const { scatter } = renderScatter({ ...config, size, labelPosition: ['center', 'right'] }, data, [0, 100], [0, 100])
+    expect(resolveLabels(scatter).Big.position).toBe('right')
+  })
+
+  it('lets a label stay inside its point when the point is drawn above the one under it', () => {
+    const data: Datum[] = [{ x: 20, y: 50, label: 'Under' }, { x: 24, y: 50, label: 'Over' }]
+    const { scatter } = renderScatter({ ...config, size: 80, labelPosition: ['center', 'left'] }, data, [0, 100], [0, 100])
+    const labels = resolveLabels(scatter)
+    expect(labels.Under.position).toBe('left')
+    expect(labels.Over).toMatchObject({ position: 'center', visible: true })
+  })
+
+  it('keeps a single central label in place whatever covers it, as before', () => {
+    const data: Datum[] = [{ x: 20, y: 50, label: 'Big' }, { x: 24, y: 50 }]
+    const size = (d: Datum): number => (d.label ? 80 : 10)
+    const { scatter } = renderScatter({ ...config, size, labelPosition: 'center' }, data, [0, 100], [0, 100])
+    expect(resolveLabels(scatter).Big).toMatchObject({ position: 'center', visible: true })
   })
 
   it('skips the fallback positions that leave the chart', () => {
