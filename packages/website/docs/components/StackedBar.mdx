@@ -203,6 +203,16 @@ Consider the following example, with data mainly clumped in the domain `0 < x < 
 ## Ordinal Data
 Read our guide about using ordinal/categorical values with _XY Components_ [here](/docs/guides/tips-and-tricks/#displaying-ordinal-values)
 
+## Crosshair
+_Crosshair_ snaps to a whole column by default, with a circle on the end of every segment. With `snapMode: 'xy'` it snaps
+to the segment under the pointer instead: every segment answers for its part of the column, and the outermost ones for the
+rest of it up to the edges of the chart, so that the pointer anywhere in a column picks one of its segments. `template`
+gets the index of the segment's `y` accessor as the last argument, to show its value.
+<XYWrapper {...stackedBarProps()} showAxes y={[d => d.y, d => d.y1, d => -d.y2]} components={[
+  { name: 'Crosshair', key: 'crosshair', props: { snapMode: 'xy', template: (d, x, data, i, series) => `${[d.y, d.y1, -d.y2][series].toFixed(1)}` } },
+  { name: 'Tooltip', key: 'tooltip', props: {} },
+]}/>
+
 ## Events
 ```ts
 import { StackedBar } from '@unovis/ts'
