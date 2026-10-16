@@ -367,6 +367,22 @@ describe('Crosshair over spread Scatter points', () => {
     expect(lineX).toBe(valueX)
   })
 
+  it('responds over the part of a large point that sticks out of the Y scale', () => {
+    const element = document.createElement('div')
+    document.body.appendChild(element)
+    const scatter = new Scatter<SwarmDatum>({ x: d => d.x, y: d => d.y, size: 60 })
+    const crosshair = new Crosshair<SwarmDatum>({ snapMode: CrosshairSnapMode.XY, duration: 0 })
+    const container = new XYContainer<SwarmDatum>(element, { width: 500, height: 300, components: [scatter], crosshair }, [{ x: 1, y: 10 }, { x: 2, y: 0 }])
+    container.render(0)
+    vi.advanceTimersToNextFrame()
+
+    const top = scatter.yScale(10) - 20
+    expect(top).toBeLessThan(Math.min(...scatter.yScale.range()))
+    container.svg.node().dispatchEvent(pointerEvent('pointermove', { pointerType: 'mouse', clientX: scatter.xScale(1), clientY: top }))
+    vi.advanceTimersToNextFrame()
+    expect(isShown(crosshair as unknown as Crosshair<Datum>)).toBe(true)
+  })
+
   it('draws the circle on the snapped point when snapping along X only', () => {
     const { svg, scatter, crosshair, points, onCrosshairMove } = renderSwarm('y', CrosshairSnapMode.X)
     const { index, circle, lineX } = pointAt(svg, crosshair, onCrosshairMove, [points[0].x, points[0].y])
@@ -458,6 +474,36 @@ describe('Crosshair over grouped bars', () => {
     expect(isShown(crosshair)).toBe(true)
     expect(onCrosshairMove.mock.lastCall[4]).toBe(2)
     expect(getCircles(crosshair)[0][1]).toBeCloseTo(short.top)
+  })
+
+  it('responds over the bars that stick out of the X scale into the bleed', () => {
+    const { svg, bars, crosshair, rendered, onCrosshairMove } = renderGroupedBars(CrosshairSnapMode.XY, null)
+    const bar = rendered.find(b => b.index === 1 && b.seriesIndex === 2)
+    expect(bar.x).toBeGreaterThan(Math.max(...bars.xScale.range()))
+    svg.dispatchEvent(pointerEvent('pointermove', { pointerType: 'mouse', clientX: bar.x, clientY: bar.top + 5 }))
+    vi.advanceTimersToNextFrame()
+
+    expect(isShown(crosshair)).toBe(true)
+    expect(onCrosshairMove.mock.lastCall.slice(2, 3)).toEqual([1])
+    expect(onCrosshairMove.mock.lastCall[4]).toBe(2)
+  })
+
+  it('still hides outside of the plot area', () => {
+    const { svg, crosshair } = renderGroupedBars(CrosshairSnapMode.XY, null)
+    svg.dispatchEvent(pointerEvent('pointermove', { pointerType: 'mouse', clientX: (crosshair as unknown as { _width: number })._width + 5, clientY: 100 }))
+    vi.advanceTimersToNextFrame()
+    expect(isShown(crosshair)).toBe(false)
+  })
+
+  it('follows the pointer into the bleed without snapping to data', () => {
+    const { svg, bars, crosshair, rendered } = renderGroupedBars(CrosshairSnapMode.X, null, { snapToData: false })
+    const bar = rendered.find(b => b.index === 1 && b.seriesIndex === 2)
+    svg.dispatchEvent(pointerEvent('pointermove', { pointerType: 'mouse', clientX: bar.x, clientY: 150 }))
+    vi.advanceTimersToNextFrame()
+
+    expect(bar.x).toBeGreaterThan(Math.max(...bars.xScale.range()))
+    expect(isShown(crosshair)).toBe(true)
+    expect(Math.abs(Number(crosshair.line.attr('x1')) - bar.x)).toBeLessThan(1)
   })
 
   it('puts every circle of the group on its bar when snapping along X, keeping the line in the middle of the group', () => {
