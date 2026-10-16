@@ -7,6 +7,7 @@ export type CrosshairCircle = {
   id?: string;
   strokeColor?: string;
   strokeWidth?: number;
+  offset?: [number, number];
 }
 
 export type CrosshairAccessors<Datum> = {

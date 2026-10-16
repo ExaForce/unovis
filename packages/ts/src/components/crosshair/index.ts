@@ -13,8 +13,9 @@ import { getColor } from '@/utils/color'
 
 // Types
 import { Position } from '@/types/position'
-import { FindNearestDirection } from '@/types/data'
+import { FindNearestDirection, SnapDirection } from '@/types/data'
 import { Spacing } from '@/types/spacing'
+import { CrosshairPointOffset } from '@/core/xy-component/types'
 
 // Local Types
 import { CrosshairAccessors, CrosshairCircle } from './types'
@@ -55,6 +56,14 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
   private _colorKeys: string[] = []
   public set colorKeys (colorKeys: string[]) { this._colorKeys = colorKeys }
   public get colorKeys (): string[] { return this.config.colorKeys ?? this._colorKeys }
+
+  private _pointOffset: ((index: number, circleIndex: number) => CrosshairPointOffset | undefined) | undefined
+  public set pointOffset (pointOffset: ((index: number, circleIndex: number) => CrosshairPointOffset | undefined) | undefined) { this._pointOffset = pointOffset }
+  /** Follows the components' accessors, so it's ignored when the Crosshair has its own */
+  public get pointOffset (): ((index: number, circleIndex: number) => CrosshairPointOffset | undefined) | undefined {
+    const { config } = this
+    return (config.x || config.y || config.yStacked) ? undefined : this._pointOffset
+  }
 
   public set accessors (accessors: CrosshairAccessors<Datum>) { this._accessors = accessors }
   public get accessors (): CrosshairAccessors<Datum> {
@@ -140,6 +149,7 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
     // Squared pixel distance from the pointer to the snapped datum (only set in `CrosshairSnapMode.XY` mode).
     // Feeds the `nearestDistance` calculation below.
     let nearestDistanceSq: number | undefined
+    let nearestSeriesIndex: number | undefined
     if (config.snapToData) {
       if (!this.accessors.y && !this.accessors.yStacked && datamodel.data?.length) {
         console.warn('Unovis | Crosshair: Y accessors have not been configured. Please check if they\'re present in the configuration object')
@@ -156,11 +166,22 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
       // or there's no pointer Y available yet.
       const useXYMode = config.snapMode === CrosshairSnapMode.XY && !isForceShowAtDefined && this._yPx !== undefined
       if (useXYMode) {
-        const nearest = getNearest2D(datamodel.data, [this._xPx, this._yPx], this.xScale, this.yScale, this.accessors.x, this.accessors.y, this.accessors.yStacked, this.accessors.baseline)
+        const pointOffset = this.pointOffset
+        const stackedCount = this.accessors.yStacked?.length ?? 0
+        const getSnapOffset = (index: number, seriesIndex: number): { offset: [number, number]; direction?: SnapDirection } | undefined => {
+          if (seriesIndex < stackedCount) return { offset: [0, 0], direction: SnapDirection.X }
+          const offset = pointOffset?.(index, seriesIndex)
+          return offset && { offset: offset.circle, direction: offset.direction }
+        }
+        const nearest = getNearest2D(
+          datamodel.data, [this._xPx, this._yPx], this.xScale, this.yScale,
+          this.accessors.x, this.accessors.y, this.accessors.yStacked, this.accessors.baseline, getSnapOffset
+        )
         if (nearest) {
           nearestDatum = nearest.datum
           nearestDatumIndex = nearest.index
           nearestDistanceSq = nearest.distanceSq
+          nearestSeriesIndex = nearest.seriesIndex < stackedCount ? undefined : nearest.seriesIndex
         }
       } else {
         nearestDatum = getNearest(datamodel.data, xValue, this.accessors.x)
@@ -173,6 +194,8 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
     const xClamped = config.snapToData && nearestDatum
       ? clamp(Math.round(this.xScale(getNumber(nearestDatum, this.accessors.x, nearestDatumIndex))), 0, this._width)
       : clamp(xPx, xRange[0], xRange[1])
+    const lines = nearestSeriesIndex !== undefined ? this.pointOffset?.(nearestDatumIndex, nearestSeriesIndex)?.lines : undefined
+    const lineX = lines ? clamp(Math.round(xClamped + lines[0]), 0, this._width) : xClamped
 
     const isCrosshairWithinXRange = (xPx >= xRange[0]) && (xPx <= xRange[1])
     const isCrosshairWithinYRange = (this._yPx >= Math.min(yRange[0], yRange[1])) && (this._yPx <= Math.max(yRange[0], yRange[1]))
@@ -203,16 +226,16 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
         const screenX = (isContainerBody ? xPx + containerRect.left : xPx) + this._containerMargin.left
         const screenY = this._height / 2 + (isContainerBody ? containerRect.top : 0)
         const pos = [screenX, screenY] as [number, number]
-        this._showTooltip(nearestDatum, tooltipXValue, pos, leftNearestDatumIndex)
+        this._showTooltip(nearestDatum, tooltipXValue, pos, leftNearestDatumIndex, nearestSeriesIndex)
       } else if (this._mouseEvent) {
         const pos = (isContainerBody ? [this._mouseEvent.clientX, this._mouseEvent.clientY] : pointer(this._mouseEvent, container)) as [number, number]
-        this._showTooltip(nearestDatum, tooltipXValue, pos, leftNearestDatumIndex)
+        this._showTooltip(nearestDatum, tooltipXValue, pos, leftNearestDatumIndex, nearestSeriesIndex)
       }
     } else this._hideTooltip()
 
     // Trigger `onCrosshairMove` if the render was triggered by a mouse move event
     if (this._mouseEvent) {
-      config.onCrosshairMove?.(shouldShow ? this.xScale.invert(this._xPx) as number : undefined, nearestDatum, nearestDatumIndex, this._mouseEvent)
+      config.onCrosshairMove?.(shouldShow ? this.xScale.invert(this._xPx) as number : undefined, nearestDatum, nearestDatumIndex, this._mouseEvent, nearestSeriesIndex)
       this._mouseEvent = undefined
     }
 
@@ -225,17 +248,17 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
 
     const circleData = isFunction(config.getCircles)
       ? config.getCircles(xValue, datamodel.data, this.yScale, leftNearestDatumIndex)
-      : this.getCircleData(nearestDatum, nearestDatumIndex)
+      : this.getCircleData(nearestDatum, nearestDatumIndex, nearestSeriesIndex)
 
     this.line
       .attr('y1', 0)
       .attr('y2', this._height)
 
     smartTransition(this.line, duration, easeLinear)
-      .attr('x1', xClamped)
-      .attr('x2', xClamped)
+      .attr('x1', lineX)
+      .attr('x2', lineX)
 
-    const lineHorizontalY = config.showHorizontalLine ? this.getLineHorizontalY(circleData) : undefined
+    const lineHorizontalY = config.showHorizontalLine ? this.getLineHorizontalY(circleData, lines?.[1]) : undefined
     this.lineHorizontal
       .style('display', lineHorizontalY === undefined ? 'none' : null)
       .attr('x1', 0)
@@ -255,15 +278,15 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
       .append('circle')
       .attr('class', s.circle)
       .attr('r', 0)
-      .attr('cx', xClamped)
-      .attr('cy', d => d.y)
+      .attr('cx', d => xClamped + (d.offset?.[0] ?? 0))
+      .attr('cy', d => d.y + (d.offset?.[1] ?? 0))
       .style('fill', d => d.color)
       .style('stroke', d => d.strokeColor)
       .style('stroke-width', d => d.strokeWidth)
 
     smartTransition(circlesEnter.merge(circles), duration, easeLinear)
-      .attr('cx', xClamped)
-      .attr('cy', d => d.y)
+      .attr('cx', d => xClamped + (d.offset?.[0] ?? 0))
+      .attr('cy', d => d.y + (d.offset?.[1] ?? 0))
       .attr('r', config.circleRadius)
       .style('opacity', d => d.opacity)
       .style('fill', d => d.color)
@@ -346,13 +369,13 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
     this.container?.on('.crosshair', null)
   }
 
-  _showTooltip (datum: Datum | undefined, xValue: number, pos: [number, number], nearestDatumIndex: number | undefined): void {
+  _showTooltip (datum: Datum | undefined, xValue: number, pos: [number, number], nearestDatumIndex: number | undefined, seriesIndex?: number): void {
     const { config, datamodel } = this
     const tooltip = config.tooltip ?? this.tooltip
     if (!tooltip || !pos) return
 
     const [x, y] = pos
-    const content = config.template(datum, xValue, datamodel.data, nearestDatumIndex)
+    const content = config.template(datum, xValue, datamodel.data, nearestDatumIndex, seriesIndex)
     // Force set `followCursor` to `true` because we don't want Crosshair's tooltip to be hoverable
     tooltip.config.followCursor = true
 
@@ -376,19 +399,21 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
     return [undefined, undefined]
   }
 
-  /** Y position of the horizontal crosshair line: the circle closest to the pointer (i.e. the snapped data point),
-   * or the pointer position itself when there are no circles to snap to. `undefined` when there's nothing to draw */
-  private getLineHorizontalY (circles: CrosshairCircle[]): number | undefined {
+  /** Y position of the horizontal crosshair line: the value of the circle closest to the pointer (i.e. the snapped data point)
+   * moved by `lineOffsetY`, or the pointer position itself when there are no circles to snap to. `undefined` when there's nothing to draw */
+  private getLineHorizontalY (circles: CrosshairCircle[], lineOffsetY = 0): number | undefined {
     const yPx = this._yPx
-    const circleYs = circles.filter(c => c.opacity !== 0 && isFinite(c.y)).map(c => c.y)
-    const y = (yPx === undefined ? circleYs[0] : least(circleYs, cy => Math.abs(cy - yPx))) ?? yPx
+    const visibleCircles = circles.filter(c => c.opacity !== 0 && isFinite(c.y))
+    const circle = yPx === undefined ? visibleCircles[0] : least(visibleCircles, c => Math.abs(c.y + (c.offset?.[1] ?? 0) - yPx))
+    const y = circle ? circle.y + lineOffsetY : yPx
     return isFinite(y) ? clamp(Math.round(y), 0, this._height) : undefined
   }
 
-  private getCircleData (datum: Datum, datumIndex: number): CrosshairCircle[] {
+  private getCircleData (datum: Datum, datumIndex: number, seriesIndex?: number): CrosshairCircle[] {
     const { config } = this
     const colorOptions = { colorFn: this._colorFunction }
     const colorKeys = this.colorKeys
+    const pointOffset = this.pointOffset
 
     if (config.snapToData && datum) {
       const yAccessors = this.accessors.y ?? []
@@ -402,6 +427,7 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
           color: getColor(datum, config.color, index, colorKeys?.[index], colorOptions),
           strokeColor: config.strokeColor ? getColor(datum, config.strokeColor, index, colorKeys?.[index], colorOptions) : undefined,
           strokeWidth: config.strokeWidth ? getNumber(datum, config.strokeWidth, index) : undefined,
+          offset: pointOffset?.(datumIndex, index)?.circle,
         }))
 
       const regularValues: CrosshairCircle[] = yAccessors
@@ -415,10 +441,11 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
             color: getColor(datum, config.color, circleIndex, colorKeys?.[circleIndex], colorOptions),
             strokeColor: config.strokeColor ? getColor(datum, config.strokeColor, circleIndex, colorKeys?.[circleIndex], colorOptions) : undefined,
             strokeWidth: config.strokeWidth ? getNumber(datum, config.strokeWidth, circleIndex) : undefined,
+            offset: pointOffset?.(datumIndex, circleIndex)?.circle,
           }
         })
 
-      return stackedValues.concat(regularValues).filter(d => isNumber(d.y))
+      return stackedValues.concat(regularValues).filter((d, i) => (seriesIndex === undefined || i === seriesIndex) && isNumber(d.y))
     }
 
     return []
