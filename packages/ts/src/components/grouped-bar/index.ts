@@ -1,8 +1,9 @@
-import { scaleBand } from 'd3-scale'
+import { scaleBand, ScaleBand } from 'd3-scale'
 import { min, max, range } from 'd3-array'
 
 // Core
 import { XYComponentCore } from '@/core/xy-component'
+import { XYComponentPointOffset } from '@/core/xy-component/types'
 
 // Utils
 import { clamp, getExtent, getMax, getMin, getNumber, getString, getValue, isArray, isEmpty, isNumber } from '@/utils/data'
@@ -40,6 +41,7 @@ export class GroupedBar<Datum> extends XYComponentCore<Datum, GroupedBarConfigIn
   }
 
   private _barData: Datum[] = []
+  private _innerBandScale: ScaleBand<number> | undefined
 
   constructor (config?: GroupedBarConfigInterface<Datum>) {
     super()
@@ -86,6 +88,26 @@ export class GroupedBar<Datum> extends XYComponentCore<Datum, GroupedBarConfigIn
     return this.config.orientation === Orientation.Vertical
   }
 
+  /** A bar's slot is its place in the group, it answers for its whole column, and it's drawn up to its end, which is past
+   * the value when `barMinHeight` stretches it */
+  getPointOffset (index: number, yAccessorIndex: number): XYComponentPointOffset | undefined {
+    const datum = this.datamodel.data?.[index]
+    if (!this._innerBandScale || datum === undefined) return undefined
+    const value = getNumber(datum, this.getAccessors()[yAccessorIndex], index)
+    if (!isNumber(value)) return undefined
+
+    const acrossOffset = this._innerBandScale(yAccessorIndex) + this._innerBandScale.bandwidth() / 2
+    const valuePx = this.valueScale(value)
+    const zeroPx = this.valueScale(0)
+    const { barMinHeight } = this.config
+    const direction = this._getValueAxisDirection() === Direction.North ? -1 : 1
+    const endPx = Math.abs(zeroPx - valuePx) < barMinHeight ? zeroPx + direction * barMinHeight : valuePx
+    const columnLength = this.isVertical() ? this._height : this._width
+    return this.isVertical()
+      ? { drawn: [acrossOffset, endPx - valuePx], hit: [[acrossOffset, -valuePx], [acrossOffset, columnLength - valuePx]], slot: [acrossOffset, 0] }
+      : { drawn: [endPx - valuePx, acrossOffset], hit: [[-valuePx, acrossOffset], [columnLength - valuePx, acrossOffset]], slot: [0, acrossOffset] }
+  }
+
   _render (customDuration?: number): void {
     const { config } = this
     const duration = isNumber(customDuration)
@@ -104,6 +126,7 @@ export class GroupedBar<Datum> extends XYComponentCore<Datum, GroupedBarConfigIn
       .range(innerBandScaleRange)
       .paddingInner(config.barPadding)
       .paddingOuter(config.barPadding)
+    this._innerBandScale = innerBandScale
 
     const barGroups = this.g
       .selectAll<SVGGElement, Datum>(`.${s.barGroup}`)
