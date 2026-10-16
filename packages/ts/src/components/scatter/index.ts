@@ -17,6 +17,7 @@ import { SymbolType } from '@/types/symbol'
 import { NumericAccessor } from '@/types/accessor'
 import { Position } from '@/types/position'
 import { ContinuousScale, ScaleDimension } from '@/types/scale'
+import { CrosshairPointOffset } from '@/core/xy-component/types'
 
 // Local Types
 import { ScatterPointGroupNode, ScatterPoint } from './types'

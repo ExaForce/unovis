@@ -9,3 +9,10 @@ export enum FindNearestDirection {
   Right = 'right',
   Auto = 'auto',
 }
+
+export enum SnapDirection {
+  X = 'x',
+  Y = 'y',
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  XY = 'xy',
+}
