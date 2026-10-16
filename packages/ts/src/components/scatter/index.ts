@@ -48,6 +48,7 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
 
   private _pointData: ScatterPoint<Datum>[][] = []
   private _pointDataCacheKey: unknown[] | undefined
+  private _pointOffsets: Map<number, [number, number]>[] = []
   private _points: Selection<SVGGElement, ScatterPoint<Datum>, SVGGElement, ScatterPoint<Datum>[]>
   private _sizeScale: ContinuousScale
   private _collideLabelsAnimFrameId: ReturnType<typeof requestAnimationFrame>
@@ -81,6 +82,11 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
       this._pointData = this._getOnScreenData()
       this._pointDataCacheKey = cacheKey
     }
+  }
+
+  getCrosshairPointOffset (index: number, yAccessorIndex: number): CrosshairPointOffset | undefined {
+    const circle = this.config.spreadAxis ? this._pointOffsets[yAccessorIndex]?.get(index) : undefined
+    return circle && { circle, lines: [0, 0] }
   }
 
   get bleed (): Spacing {
@@ -219,6 +225,7 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
       if (isSpreadX) d._point.xOffsetPx = offsets[i]
       else d._point.yOffsetPx = offsets[i]
     })
+    this._pointOffsets = this._pointData.map(group => new Map(group.map(d => [d._point.pointIndex, [d._point.xOffsetPx, d._point.yOffsetPx]])))
   }
 
   private _updateSizeScale (): void {
