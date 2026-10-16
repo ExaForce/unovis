@@ -97,6 +97,36 @@ export class StackedBar<Datum> extends XYComponentCore<Datum, StackedBarConfigIn
     return this.config.orientation === Orientation.Vertical
   }
 
+  /** A segment answers for its part of the column, and the outermost segments of the column for the rest of it up to the
+   * edges of the plot, so that Crosshair picks a segment of the column wherever the pointer is in it */
+  getCrosshairPointOffset (index: number, yAccessorIndex: number): CrosshairPointOffset | undefined {
+    const datum = this.datamodel.data?.[index]
+    if (datum === undefined) return undefined
+
+    const baselineValue = getNumber(datum, this.config.baseline, index) || 0
+    let positiveStack = baselineValue
+    let negativeStack = baselineValue
+    const spans = this.getAccessors().map((a, j) => {
+      const value = getNumber(datum, a, index) || 0
+      const [start, end] = value >= 0 ? [positiveStack, positiveStack += value] : [negativeStack, negativeStack += value]
+      const [from, to] = [this.valueScale(start), this.valueScale(end)].sort((a, b) => a - b)
+      return { end: this.valueScale(end), from, to, isVisible: start !== end }
+    })
+
+    const visible = spans.filter(span => span.isVisible)
+    const span = spans[yAccessorIndex]
+    if (!span) return undefined
+    const columnLength = this.isVertical() ? this._height : this._width
+    const from = (span.isVisible && span.from === min(visible, v => v.from)) ? 0 : span.from
+    const to = (span.isVisible && span.to === max(visible, v => v.to)) ? columnLength : span.to
+    const snapSegment: [number, number][] = [[0, from - span.end], [0, to - span.end]]
+    return {
+      circle: [0, 0],
+      lines: [0, 0],
+      snapSegment: (this.isVertical() ? snapSegment : snapSegment.map(([across, along]) => [along, across])) as [[number, number], [number, number]],
+    }
+  }
+
   _render (customDuration?: number): void {
     const { config } = this
     const duration = isNumber(customDuration) ? customDuration : config.duration

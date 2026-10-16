@@ -1,4 +1,4 @@
-import { scaleBand } from 'd3-scale'
+import { scaleBand, ScaleBand } from 'd3-scale'
 import { min, max, range } from 'd3-array'
 
 // Core
@@ -41,6 +41,7 @@ export class GroupedBar<Datum> extends XYComponentCore<Datum, GroupedBarConfigIn
   }
 
   private _barData: Datum[] = []
+  private _innerBandScale: ScaleBand<number> | undefined
 
   constructor (config?: GroupedBarConfigInterface<Datum>) {
     super()
@@ -87,6 +88,26 @@ export class GroupedBar<Datum> extends XYComponentCore<Datum, GroupedBarConfigIn
     return this.config.orientation === Orientation.Vertical
   }
 
+  /** The _Crosshair_ lines go through a bar's place in the group, its circle sits on the bar's end, which is past the value
+   * when `barMinHeight` stretches it, and the bar answers for its whole column */
+  getCrosshairPointOffset (index: number, yAccessorIndex: number): CrosshairPointOffset | undefined {
+    const datum = this.datamodel.data?.[index]
+    if (!this._innerBandScale || datum === undefined) return undefined
+    const value = getNumber(datum, this.getAccessors()[yAccessorIndex], index)
+    if (!isNumber(value)) return undefined
+
+    const acrossOffset = this._innerBandScale(yAccessorIndex) + this._innerBandScale.bandwidth() / 2
+    const valuePx = this.valueScale(value)
+    const zeroPx = this.valueScale(0)
+    const { barMinHeight } = this.config
+    const direction = this._getValueAxisDirection() === Direction.North ? -1 : 1
+    const endPx = Math.abs(zeroPx - valuePx) < barMinHeight ? zeroPx + direction * barMinHeight : valuePx
+    const columnLength = this.isVertical() ? this._height : this._width
+    return this.isVertical()
+      ? { circle: [acrossOffset, endPx - valuePx], lines: [acrossOffset, 0], snapSegment: [[acrossOffset, -valuePx], [acrossOffset, columnLength - valuePx]] }
+      : { circle: [endPx - valuePx, acrossOffset], lines: [0, acrossOffset], snapSegment: [[-valuePx, acrossOffset], [columnLength - valuePx, acrossOffset]] }
+  }
+
   _render (customDuration?: number): void {
     const { config } = this
     const duration = isNumber(customDuration)
@@ -105,6 +126,7 @@ export class GroupedBar<Datum> extends XYComponentCore<Datum, GroupedBarConfigIn
       .range(innerBandScaleRange)
       .paddingInner(config.barPadding)
       .paddingOuter(config.barPadding)
+    this._innerBandScale = innerBandScale
 
     const barGroups = this.g
       .selectAll<SVGGElement, Datum>(`.${s.barGroup}`)
