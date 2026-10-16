@@ -369,9 +369,18 @@ export function getNearest<Datum> (
   return value - values[index - 1] > values[index] - value ? dataWithIndexSorted[index][0] : dataWithIndexSorted[index - 1][0]
 }
 
+function getDistanceSq (x: number, y: number, point: [number, number], snapSegment?: [[number, number], [number, number]]): number {
+  const [[fromX, fromY], [toX, toY]] = snapSegment ?? [[0, 0], [0, 0]]
+  const [dx, dy] = [toX - fromX, toY - fromY]
+  const lengthSq = dx * dx + dy * dy
+  const t = lengthSq ? clamp(((point[0] - x - fromX) * dx + (point[1] - y - fromY) * dy) / lengthSq, 0, 1) : 0
+  return (x + fromX + t * dx - point[0]) ** 2 + (y + fromY + t * dy - point[1]) ** 2
+}
+
 /** Finds the datum nearest to a point in the scaled (pixel) space, considering all the provided Y accessors
- * (regular and stacked) so that multi-series charts pick the nearest series point.
- * Returns the datum, its index and the squared distance to it, or `undefined` when there's nothing to snap to */
+ * (regular and stacked) so that multi-series charts pick the nearest series point. `getSnapSegment` gives the segment the
+ * distance to a point is measured to, relative to its values, by the datum index and the series index (stacked first, then regular).
+ * Returns the datum, its index, the series index and the squared distance, or `undefined` when there's nothing to snap to */
 export function getNearest2D<Datum> (
   data: Datum[],
   point: [number, number],
@@ -380,13 +389,14 @@ export function getNearest2D<Datum> (
   xAccessor: NumericAccessor<Datum>,
   yAccessors: NumericAccessor<Datum>[] = [],
   yStackedAccessors: NumericAccessor<Datum>[] = [],
-  baselineAccessor?: NumericAccessor<Datum>
-): { datum: Datum; index: number; distanceSq: number } | undefined {
+  baselineAccessor?: NumericAccessor<Datum>,
+  getSnapSegment?: (index: number, seriesIndex: number) => [[number, number], [number, number]] | undefined
+): { datum: Datum; index: number; seriesIndex: number; distanceSq: number } | undefined {
   if (!data?.length || !xAccessor) return undefined
 
-  const [pointX, pointY] = point
   let nearestDatum: Datum | undefined
   let nearestIndex = -1
+  let nearestSeriesIndex = -1
   let minDistanceSq = Infinity
 
   // Linear scan using squared distances (no `sqrt`, no sorting): O(n) per call, which is fast enough
@@ -396,7 +406,6 @@ export function getNearest2D<Datum> (
     const datum = data[i]
     const x = xScale(getNumber(datum, xAccessor, i))
     if (!isFinite(x)) continue
-    const distanceXSq = (x - pointX) ** 2
 
     // Stacked series (e.g. StackedBar, Area)
     if (yStackedAccessors.length) {
@@ -405,11 +414,12 @@ export function getNearest2D<Datum> (
       for (let j = 0; j < stackedValues.length; j++) {
         if (!isNumber(getNumber(datum, yStackedAccessors[j], i))) continue
         const y = yScale(stackedValues[j] + baselineValue)
-        const distanceSq = distanceXSq + (y - pointY) ** 2
+        const distanceSq = getDistanceSq(x, y, point, getSnapSegment?.(i, j))
         if (distanceSq < minDistanceSq) {
           minDistanceSq = distanceSq
           nearestDatum = datum
           nearestIndex = i
+          nearestSeriesIndex = j
         }
       }
     }
@@ -419,17 +429,18 @@ export function getNearest2D<Datum> (
       const value = getNumber(datum, yAccessors[j], i)
       if (!isNumber(value)) continue
       const y = yScale(value)
-      const distanceSq = distanceXSq + (y - pointY) ** 2
+      const distanceSq = getDistanceSq(x, y, point, getSnapSegment?.(i, yStackedAccessors.length + j))
       if (distanceSq < minDistanceSq) {
         minDistanceSq = distanceSq
         nearestDatum = datum
         nearestIndex = i
+        nearestSeriesIndex = yStackedAccessors.length + j
       }
     }
   }
 
   if (nearestIndex === -1) return undefined
-  return { datum: nearestDatum, index: nearestIndex, distanceSq: minDistanceSq }
+  return { datum: nearestDatum, index: nearestIndex, seriesIndex: nearestSeriesIndex, distanceSq: minDistanceSq }
 }
 
 export function filterDataByRange<Datum> (

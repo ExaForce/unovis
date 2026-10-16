@@ -283,11 +283,15 @@ export class XYContainer<Datum> extends ContainerCore {
         baseline: baselineAccessor,
       }
 
-      // One color key per `y` accessor, in the order of the Crosshair circles: stacked first, then regular
-      const colorKeys = [...stackedComponents, ...nonStackedComponents]
-        .flatMap(c => flatten([c.config.y]).map((_, i) => c.config.colorKeys?.[i]))
+      // One circle per `y` accessor, in the order of the Crosshair circles: stacked first, then regular
+      const circleSources = [...stackedComponents, ...nonStackedComponents]
+        .flatMap(c => flatten([c.config.y]).map((_, i) => ({ component: c, yAccessorIndex: i })))
 
-      crosshair.colorKeys = colorKeys
+      crosshair.colorKeys = circleSources.map(({ component, yAccessorIndex }) => component.config.colorKeys?.[yAccessorIndex])
+      crosshair.pointOffset = (index, circleIndex) => {
+        const source = circleSources[circleIndex]
+        return source?.component.getCrosshairPointOffset(index, source.yAccessorIndex)
+      }
       crosshair.g.attr('transform', `translate(${margin.left},${margin.top})`)
         .style('clip-path', `url(#${this._clipPathId})`)
         .style('-webkit-clip-path', `url(#${this._clipPathId})`)
