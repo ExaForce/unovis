@@ -1,4 +1,5 @@
 import { NumericAccessor } from '@/types/accessor'
+import { XYComponentPointOffset } from '@/core/xy-component/types'
 
 export type CrosshairCircle = {
   y: number;
@@ -7,6 +8,7 @@ export type CrosshairCircle = {
   id?: string;
   strokeColor?: string;
   strokeWidth?: number;
+  offset?: [number, number];
 }
 
 export type CrosshairAccessors<Datum> = {
@@ -15,3 +17,5 @@ export type CrosshairAccessors<Datum> = {
   yStacked: NumericAccessor<Datum>[] | undefined;
   baseline: NumericAccessor<Datum> | undefined;
 }
+
+export type CrosshairPointOffset = (index: number, circleIndex: number) => XYComponentPointOffset | undefined

@@ -16,6 +16,9 @@ import { ScaleDimension } from '@/types/scale-dimension'
 // Config
 import { XYComponentDefaultConfig, XYComponentConfigInterface } from './config'
 
+// Local Types
+import { XYComponentPointOffset } from './types'
+
 export class XYComponentCore<
   Datum,
   ConfigInterface extends Partial<XYComponentConfigInterface<Datum>> = Partial<XYComponentConfigInterface<Datum>>,
@@ -93,5 +96,12 @@ export class XYComponentCore<
     const data = scaleByVisibleData ? filterDataByRange(datamodel.data, xDomain, config.x, true) : datamodel.data
     const yAccessors = (isArray(config.y) ? config.y : [config.y]) as NumericAccessor<Datum>[]
     return getExtent(data, ...yAccessors)
+  }
+
+  /** Where the point of the datum at `index` for the `yAccessorIndex`-th `y` accessor is drawn, what it answers for and where
+   * its slot is (see `XYComponentPointOffset`). Components that draw their points away from the position of their values,
+   * like grouped bars or spread Scatter points, override it */
+  getPointOffset (index: number, yAccessorIndex: number): XYComponentPointOffset | undefined {
+    return undefined
   }
 }

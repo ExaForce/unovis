@@ -14,7 +14,7 @@ export type ScatterPoint<D> = D & {
     label: string | null;
     labelColor: string | null;
     labelPosition: Position | null;
-    labelPositions: Position[];
+    labelPositions?: Position[];
     cursor: string | null;
     groupIndex: number;
     pointIndex: number;

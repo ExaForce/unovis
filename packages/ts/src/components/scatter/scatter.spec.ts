@@ -61,6 +61,20 @@ const categoryData: Datum[] = [0, 1, 2].flatMap(category => Array.from({ length:
 })))
 
 describe('Scatter spread', () => {
+  it('reports how far each point is drawn from its values, and nothing without `spreadAxis`', () => {
+    const config: ScatterConfigInterface<Datum> = { x: d => d.x, y: d => d.y, size: 20, spreadAxis: 'x' }
+    const { scatter, points } = renderScatter(config, categoryData, [0, 2], [0, 100])
+    for (const p of points) {
+      const { drawn, slot } = scatter.getPointOffset(p.datum._point.pointIndex, 0)
+      expect(drawn[0]).toBeCloseTo(p.x - scatter.xScale(p.datum.x))
+      expect(drawn[1]).toBe(0)
+      expect(slot).toEqual([0, 0])
+    }
+
+    const { scatter: unspread } = renderScatter({ ...config, spreadAxis: undefined }, categoryData, [0, 2], [0, 100])
+    expect(unspread.getPointOffset(0, 0)).toBeUndefined()
+  })
+
   it('leaves the points at their values without `spreadAxis`', () => {
     const { scatter, points } = renderScatter({ x: d => d.x, y: d => d.y, size: 20 }, categoryData, [0, 2], [0, 100])
     for (const p of points) {
@@ -211,6 +225,15 @@ describe('Scatter label positions', () => {
     const labels = resolveLabels(scatter)
     expect(labels.Big.position).toBe('center')
     expect(labels.Small.position).toBe('right')
+  })
+
+  it('treats a list of one position as a list, so a central label that doesn\'t fit is hidden', () => {
+    const point: Datum[] = [{ x: 50, y: 50, label: 'Alpha' }]
+    const { scatter: listed } = renderScatter({ ...config, labelPosition: ['center'] }, point, [0, 100], [0, 100])
+    expect(resolveLabels(listed).Alpha.visible).toBe(false)
+
+    const { scatter: single } = renderScatter({ ...config, labelPosition: 'center' }, point, [0, 100], [0, 100])
+    expect(resolveLabels(single).Alpha).toMatchObject({ position: 'center', visible: true })
   })
 
   it('stops the color transition of a label that moves', () => {

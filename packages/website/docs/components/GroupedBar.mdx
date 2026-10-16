@@ -98,6 +98,18 @@ Consider the following example, with data mainly clumped in the domain `0 < x < 
 ## Using Ordinal Data
 Read our guide about using ordinal/categorical values with _XY Components_ [here](/docs/guides/tips-and-tricks/#displaying-ordinal-values)
 
+## Crosshair
+_Crosshair_ puts its circles on the ends of the bars, each over its own bar; a bar that `barMinHeight` stretches gets the
+circle on its drawn end too. By default it snaps to a whole group and keeps the vertical line in its middle. With
+`snapMode: 'xy'` it snaps to the bar whose column the pointer is in instead: the bar gets the only circle and the line goes through it,
+while `template` gets the index of its `y` accessor as the last argument, to show the value of that bar. This works with
+the accessors _Crosshair_ takes from _XYContainer_; with the ones set on _Crosshair_ itself, the circles stay in the middle
+of the group.
+<XYWrapper {...groupedBarProps()} showAxes components={[
+  { name: 'Crosshair', key: 'crosshair', props: { snapMode: 'xy', template: (d, x, data, i, series) => `${[d.y, d.y1, d.y2][series].toFixed(1)}` } },
+  { name: 'Tooltip', key: 'tooltip', props: {} },
+]}/>
+
 ## Events
 ```ts
 import { GroupedBar } from '@unovis/ts'

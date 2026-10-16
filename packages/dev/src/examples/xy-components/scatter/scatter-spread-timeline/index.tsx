@@ -1,6 +1,6 @@
-import React from 'react'
-import { VisXYContainer, VisScatter, VisAxis, VisTooltip } from '@unovis/react'
-import { Scale, Scatter } from '@unovis/ts'
+import React, { useState } from 'react'
+import { VisXYContainer, VisScatter, VisAxis, VisTooltip, VisCrosshair } from '@unovis/react'
+import { CrosshairSnapMode, Scale, Scatter } from '@unovis/ts'
 
 import { randomNumberGenerator } from '@src/utils/data'
 import { ExampleViewerDurationProps } from '@src/components/ExampleViewer/index'
@@ -25,19 +25,32 @@ const data: EventDatum[] = Array.from({ length: 400 }, (_, i) => {
   }
 })
 
-export const component = (props: ExampleViewerDurationProps): React.ReactNode => (
-  <VisXYContainer<EventDatum> data={data} xScale={Scale.scaleTime()} yDomain={[-1, 1]} height={300}>
-    <VisScatter<EventDatum>
-      x={d => d.timestamp}
-      y={0}
-      size={8}
-      color={d => colors[d.severity]}
-      spreadAxis='y'
-      duration={props.duration}
-    />
-    <VisAxis type='x' tickFormat={(tick: number | Date) => new Date(tick).toISOString().slice(11, 16)} duration={props.duration}/>
-    <VisTooltip triggers={{
-      [Scatter.selectors.point]: (d: EventDatum) => `${severities[d.severity]}, ${new Date(d.timestamp).toUTCString()}`,
-    }}/>
-  </VisXYContainer>
-)
+const color = (d: EventDatum): string => colors[d.severity]
+const tooltip = (d: EventDatum): string => `${severities[d.severity]}, ${new Date(d.timestamp).toUTCString()}`
+
+export const component = (props: ExampleViewerDurationProps): React.ReactNode => {
+  const [snapMode, setSnapMode] = useState<'' | `${CrosshairSnapMode}`>(CrosshairSnapMode.XY)
+
+  return (
+    <>
+      <label>Crosshair: <select value={snapMode} onChange={e => setSnapMode(e.target.value as typeof snapMode)}>
+        <option value={CrosshairSnapMode.XY}>Snapping to the point under the pointer</option>
+        <option value={CrosshairSnapMode.X}>Snapping along time</option>
+        <option value=''>None</option>
+      </select></label>
+      <VisXYContainer<EventDatum> data={data} xScale={Scale.scaleTime()} yDomain={[-1, 1]} height={300}>
+        <VisScatter<EventDatum>
+          x={d => d.timestamp}
+          y={0}
+          size={8}
+          color={color}
+          spreadAxis='y'
+          duration={props.duration}
+        />
+        <VisAxis type='x' tickFormat={(tick: number | Date) => new Date(tick).toISOString().slice(11, 16)} duration={props.duration}/>
+        {snapMode && <VisCrosshair<EventDatum> snapMode={snapMode} color={color} template={tooltip}/>}
+        <VisTooltip triggers={snapMode ? {} : { [Scatter.selectors.point]: tooltip }}/>
+      </VisXYContainer>
+    </>
+  )
+}

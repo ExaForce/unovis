@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { VisXYContainer, VisScatter, VisAxis, VisTooltip } from '@unovis/react'
-import { Scale, Scatter } from '@unovis/ts'
+import { VisXYContainer, VisScatter, VisAxis, VisTooltip, VisCrosshair } from '@unovis/react'
+import { CrosshairSnapMode, Scale, Scatter } from '@unovis/ts'
 
 import { randomNumberGenerator } from '@src/utils/data'
 import { ExampleViewerDurationProps } from '@src/components/ExampleViewer/index'
@@ -43,10 +43,14 @@ const labelModes: Record<string, { label: (d: TopicDatum) => string | undefined;
   center: { label: d => d.count >= 300 ? `${d.count}` : undefined, position: 'center' },
 }
 
+const color = (d: TopicDatum): string => `var(--vis-color${d.category})`
+const tooltip = (d: TopicDatum): string => `${categories[d.category]} · ${d.topic}: ${d.count}`
+
 export const component = (props: ExampleViewerDurationProps): React.ReactNode => {
   const [isSpread, setIsSpread] = useState(true)
   const [spreadMax, setSpreadMax] = useState(0.45)
   const [labelMode, setLabelMode] = useState('fallback')
+  const [snapMode, setSnapMode] = useState<'' | `${CrosshairSnapMode}`>(CrosshairSnapMode.XY)
 
   return (
     <>
@@ -61,13 +65,20 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
           <option value=''>None</option>
         </select></label>
       </div>
+      <div>
+        <label>Crosshair: <select value={snapMode} onChange={e => setSnapMode(e.target.value as typeof snapMode)}>
+          <option value={CrosshairSnapMode.XY}>Snapping to the point under the pointer</option>
+          <option value={CrosshairSnapMode.X}>Snapping along X</option>
+          <option value=''>None</option>
+        </select></label>
+      </div>
       <VisXYContainer<TopicDatum> data={data} xDomain={[-0.5, categories.length - 0.5]} yScale={Scale.scaleLog()} height={500}>
         <VisScatter<TopicDatum>
           x={d => d.category}
           y={d => d.count}
           size={d => d.count}
           sizeRange={[4, 90]}
-          color={d => `var(--vis-color${d.category})`}
+          color={color}
           label={labelModes[labelMode]?.label}
           labelPosition={labelModes[labelMode]?.position}
           spreadAxis={isSpread ? 'x' : undefined}
@@ -82,9 +93,8 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
           duration={props.duration}
         />
         <VisAxis type='y' label='Chats' tickValues={[1, 3, 10, 30, 100, 300, 1000]} duration={props.duration}/>
-        <VisTooltip triggers={{
-          [Scatter.selectors.point]: (d: TopicDatum) => `${categories[d.category]} · ${d.topic}: ${d.count}`,
-        }}/>
+        {snapMode && <VisCrosshair<TopicDatum> snapMode={snapMode} showHorizontalLine color={color} template={tooltip}/>}
+        <VisTooltip triggers={snapMode ? {} : { [Scatter.selectors.point]: tooltip }}/>
       </VisXYContainer>
     </>
   )

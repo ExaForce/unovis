@@ -46,7 +46,12 @@ const yStacked: ((d: DataRecord) => number)[] = [d => d.y, d => d.y1, d => d.y2]
 When `snapToData` is enabled (the default), the `snapMode` property controls how the nearest datum is selected:
 
 - `CrosshairSnapMode.X` (default): snap along the X axis only. Best for time series, line, and area charts where the crosshair tracks the X position.
-- `CrosshairSnapMode.XY`: snap to the datum closest to the pointer in both X and Y (measured in pixel space). Best for _Scatter_ charts where many points can share similar X values.
+- `CrosshairSnapMode.XY`: snap to the point closest to the pointer in both X and Y (measured in pixel space). Best for _Scatter_ charts where many points can share similar X values.
+  The distance is measured to what each point answers for: to a _Scatter_ point where it's drawn, spread or not, to
+  the whole column of a _GroupedBar_ bar, and to the part of its column of a _StackedBar_ segment, the outermost segments
+  taking the rest of it, so that the pointer anywhere in a column picks one of its bars.
+  Only that point gets a circle, the lines go through its slot (a grouped bar, or a spread point's value), and `template`
+  and `onCrosshairMove` get the index of its series as the last argument: of its accessor among `yStacked`, followed by `y`.
 
 When `snapMode` is `CrosshairSnapMode.XY`, `hideWhenFarFromPointerDistance` uses the full 2D distance to the snapped point (so a point that is close in X but far in Y still counts as far away).
 If `forceShowAt` is set, snapping falls back to `CrosshairSnapMode.X` because no pointer Y position is available.
@@ -67,6 +72,8 @@ If `forceShowAt` is set, snapping falls back to `CrosshairSnapMode.X` because no
 />
 
 ## Show/Hide Behavior
+The _Crosshair_ follows the pointer anywhere over the plot area, including the room the components take at its edges
+to fit in, past the ends of the scales: the outer halves of the first and the last bars, the top of a large point.
 By default, the _Crosshair_ component will render if the cursor is within a certain distance in pixels from a valid `x` value.
 You can disable this feature using the `hideWhenFarFromPointer` attribute.
 <XYWrapperWithInput {...crosshairProps("StackedBar", { barWidth: 10})} property="hideWhenFarFromPointer" defaultValue={true} inputType="checkbox"/>
@@ -94,7 +101,7 @@ dispatch them instead of `mousemove` and `mouseout`, the same way as for the [To
 
 ## Horizontal Line
 Set `showHorizontalLine` to `true` to render a horizontal line in addition to the vertical crosshair.
-The line is placed at the Y position of the crosshair circle closest to the pointer (i.e. the snapped data point), or follows the pointer when there are no circles to snap to (for example, when `snapToData` is `false`).
+The line is placed at the Y value of the crosshair circle closest to the pointer (i.e. the snapped data point), or follows the pointer when there are no circles to snap to (for example, when `snapToData` is `false`).
 <XYWrapperWithInput {...crosshairProps('Line', {}, 10)} property="showHorizontalLine" defaultValue={false} inputType="checkbox"/>
 
 ## Custom Color

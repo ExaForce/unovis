@@ -2,6 +2,7 @@ import { min, max } from 'd3-array'
 
 // Core
 import { XYComponentCore } from '@/core/xy-component'
+import { XYComponentPointOffset } from '@/core/xy-component/types'
 
 // Utils
 import {
@@ -94,6 +95,36 @@ export class StackedBar<Datum> extends XYComponentCore<Datum, StackedBarConfigIn
 
   private isVertical (): boolean {
     return this.config.orientation === Orientation.Vertical
+  }
+
+  /** A segment answers for its part of the column, and the outermost segments of the column for the rest of it up to the
+   * edges of the plot, so that Crosshair picks a segment of the column wherever the pointer is in it */
+  getPointOffset (index: number, yAccessorIndex: number): XYComponentPointOffset | undefined {
+    const datum = this.datamodel.data?.[index]
+    if (datum === undefined) return undefined
+
+    const baselineValue = getNumber(datum, this.config.baseline, index) || 0
+    let positiveStack = baselineValue
+    let negativeStack = baselineValue
+    const spans = this.getAccessors().map((a, j) => {
+      const value = getNumber(datum, a, index) || 0
+      const [start, end] = value >= 0 ? [positiveStack, positiveStack += value] : [negativeStack, negativeStack += value]
+      const [from, to] = [this.valueScale(start), this.valueScale(end)].sort((a, b) => a - b)
+      return { end: this.valueScale(end), from, to, isVisible: start !== end }
+    })
+
+    const visible = spans.filter(span => span.isVisible)
+    const span = spans[yAccessorIndex]
+    if (!span) return undefined
+    const columnLength = this.isVertical() ? this._height : this._width
+    const from = (span.isVisible && span.from === min(visible, v => v.from)) ? 0 : span.from
+    const to = (span.isVisible && span.to === max(visible, v => v.to)) ? columnLength : span.to
+    const hit: [number, number][] = [[0, from - span.end], [0, to - span.end]]
+    return {
+      drawn: [0, 0],
+      hit: (this.isVertical() ? hit : hit.map(([across, along]) => [along, across])) as [[number, number], [number, number]],
+      slot: [0, 0],
+    }
   }
 
   _render (customDuration?: number): void {
