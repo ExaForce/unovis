@@ -18,6 +18,7 @@ import { Direction } from '@/types/direction'
 import { Orientation } from '@/types/position'
 import { ContinuousScale } from '@/types/scale'
 import { StyleDeclaration } from '@/types/style'
+import { CrosshairPointOffset } from '@/core/xy-component/types'
 
 // Config
 import { GroupedBarDefaultConfig, GroupedBarConfigInterface } from './config'
