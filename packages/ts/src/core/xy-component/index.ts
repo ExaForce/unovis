@@ -12,6 +12,7 @@ import { filterDataByRange, getExtent, isArray } from '@/utils/data'
 import { NumericAccessor } from '@/types/accessor'
 import { ContinuousScale } from '@/types/scale'
 import { ScaleDimension } from '@/types/scale-dimension'
+import { CrosshairPointOffset } from '@/components/crosshair/types'
 
 // Config
 import { XYComponentDefaultConfig, XYComponentConfigInterface } from './config'
@@ -93,5 +94,11 @@ export class XYComponentCore<
     const data = scaleByVisibleData ? filterDataByRange(datamodel.data, xDomain, config.x, true) : datamodel.data
     const yAccessors = (isArray(config.y) ? config.y : [config.y]) as NumericAccessor<Datum>[]
     return getExtent(data, ...yAccessors)
+  }
+
+  /** Where _Crosshair_ draws the point of the datum at `index` for the `yAccessorIndex`-th `y` accessor (see `CrosshairPointOffset`).
+   * Components that draw their points away from the position of their values, like grouped bars or spread Scatter points, override it */
+  getCrosshairPointOffset (index: number, yAccessorIndex: number): CrosshairPointOffset | undefined {
+    return undefined
   }
 }

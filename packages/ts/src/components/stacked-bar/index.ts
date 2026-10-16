@@ -27,6 +27,7 @@ import { NumericAccessor } from '@/types/accessor'
 import { Spacing } from '@/types/spacing'
 import { Orientation } from '@/types/position'
 import { StyleDeclaration } from '@/types/style'
+import { CrosshairPointOffset } from '@/components/crosshair/types'
 
 // Local Types
 import { StackedBarDataRecord } from './types'

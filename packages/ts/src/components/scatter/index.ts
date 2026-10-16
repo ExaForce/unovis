@@ -18,6 +18,7 @@ import { NumericAccessor } from '@/types/accessor'
 import { Position } from '@/types/position'
 import { ContinuousScale } from '@/types/scale'
 import { ScaleDimension } from '@/types/scale-dimension'
+import { CrosshairPointOffset } from '@/components/crosshair/types'
 
 // Local Types
 import { ScatterPointGroupNode, ScatterPoint } from './types'
