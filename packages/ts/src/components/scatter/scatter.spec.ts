@@ -227,6 +227,15 @@ describe('Scatter label positions', () => {
     expect(labels.Small.position).toBe('right')
   })
 
+  it('treats a list of one position as a list, so a central label that doesn\'t fit is hidden', () => {
+    const point: Datum[] = [{ x: 50, y: 50, label: 'Alpha' }]
+    const { scatter: listed } = renderScatter({ ...config, labelPosition: ['center'] }, point, [0, 100], [0, 100])
+    expect(resolveLabels(listed).Alpha.visible).toBe(false)
+
+    const { scatter: single } = renderScatter({ ...config, labelPosition: 'center' }, point, [0, 100], [0, 100])
+    expect(resolveLabels(single).Alpha).toMatchObject({ position: 'center', visible: true })
+  })
+
   it('stops the color transition of a label that moves', () => {
     const { scatter } = renderScatter({ ...config, labelPosition: ['center', 'right'] }, [{ x: 50, y: 50, label: 'Alpha' }], [0, 100], [0, 100])
     scatter.render(600)
