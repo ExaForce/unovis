@@ -115,7 +115,7 @@ export class VisCrosshairComponent<Datum> implements CrosshairConfigInterface<Da
   /** Radius of crosshair circles in pixels. Default: `3` */
   @Input() circleRadius?: number
 
-  /** When `true`, the Crosshair also renders a horizontal line. The line is placed at the Y position of the
+  /** When `true`, the Crosshair also renders a horizontal line. The line is placed at the Y value of the
    * crosshair circle closest to the mouse pointer (i.e. the snapped data point), or follows the pointer
    * when there are no circles to snap to (e.g. when `snapToData` is `false`). Default: `false` */
   @Input() showHorizontalLine?: boolean
@@ -131,8 +131,10 @@ export class VisCrosshairComponent<Datum> implements CrosshairConfigInterface<Da
 
   /** Tooltip template accessor. The function is supposed to return either a valid HTML string or an HTMLElement.
    * When `snapToData` is `false`, `datum` will be `undefined` but `data` and `leftNearestDatumIndex` will be provided.
+   * In the `CrosshairSnapMode.XY` mode, `seriesIndex` is the series of the point under the pointer: the index of its
+   * accessor among `yStacked`, followed by `y`.
    * Default: `d => ''` */
-  @Input() template?: (datum: Datum, x: number | Date, data: Datum[], leftNearestDatumIndex?: number) => string | HTMLElement
+  @Input() template?: (datum: Datum, x: number | Date, data: Datum[], leftNearestDatumIndex?: number, seriesIndex?: number) => string | HTMLElement
 
   /** Hide Crosshair when the corresponding datum element is far from mouse pointer. Default: `true` */
   @Input() hideWhenFarFromPointer?: boolean
@@ -147,8 +149,11 @@ export class VisCrosshairComponent<Datum> implements CrosshairConfigInterface<Da
   @Input() snapToData?: boolean
 
   /** When `snapToData` is enabled, controls how the nearest datum is found:
-   * - `CrosshairSnapMode.XY`: snap to the datum closest to the mouse pointer in both X and Y (measured in pixel space).
-   *  This is the right choice for Scatter charts where many points can share similar X values.
+   * - `CrosshairSnapMode.XY`: snap to the point closest to the mouse pointer in both X and Y (measured in pixel space).
+   *  This is the right choice for Scatter charts where many points can share similar X values. The distance is measured
+   *  to what each point answers for: a Scatter point where it's drawn, spread or not, a grouped bar's whole column, or
+   *  a stacked segment's part of its column. Only that point gets a circle, and the lines go through its place: a grouped
+   *  bar, or a spread point's value.
    * - `CrosshairSnapMode.X`: snap to the datum closest along the X axis only. Best for time series / line / area
    *  charts where the crosshair is a vertical line tracking the X position.
    *
@@ -159,7 +164,8 @@ export class VisCrosshairComponent<Datum> implements CrosshairConfigInterface<Da
   /** Custom function for setting up the crosshair circles, usually needed when `snapToData` is set to `false`.
    * The function receives the horizontal position of the crosshair (in the data space, not in pixels), the data array,
    * the `yScale` instance to help you calculate the correct vertical position of the circles, and the nearest datum index.
-   * It has to return an array of the `CrosshairCircle` objects: `{ y: number; color: string; opacity?: number }[]`.
+   * It has to return an array of the `CrosshairCircle` objects: `{ y: number; color: string; opacity?: number; offset?: [number, number] }[]`,
+   * where `offset` moves the circle away from the position of its values by that many pixels.
    * Default: `undefined` */
   @Input() getCircles?: (x: number | Date, data: Datum[], yScale: ContinuousScale, leftNearestDatumIndex?: number) => CrosshairCircle[]
 
@@ -167,11 +173,12 @@ export class VisCrosshairComponent<Datum> implements CrosshairConfigInterface<Da
    * - `x` is the horizontal position of the crosshair in the data space;
    * - `datum` is the nearest datum to the crosshair;
    * - `datumIndex` is the index of the nearest datum.
-   * - `event` is the event that triggered the crosshair move (pointer or wheel).
+   * - `event` is the event that triggered the crosshair move (pointer or wheel);
+   * - `seriesIndex` is the series of the point under the pointer in the `CrosshairSnapMode.XY` mode (see `template`).
    *
    * When the pointer goes out of the container, a touch ends and on wheel events, all the arguments are `undefined` except for `event`.
    * Default: `undefined` */
-  @Input() onCrosshairMove?: (x?: number | Date, datum?: Datum, datumIndex?: number, event?: MouseEvent | WheelEvent) => void
+  @Input() onCrosshairMove?: (x?: number | Date, datum?: Datum, datumIndex?: number, event?: MouseEvent | WheelEvent, seriesIndex?: number) => void
 
   /** Force the crosshair to show at a specific position. Default: `undefined` */
   @Input() forceShowAt?: number | Date
