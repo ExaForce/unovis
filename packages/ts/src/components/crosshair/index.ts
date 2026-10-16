@@ -239,16 +239,17 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
     }
 
     const xRange = this.xScale.range()
-    const yRange = this.yScale.range()
     const xClamped = config.snapToData && nearestDatum
       ? clamp(Math.round(this.xScale(getNumber(nearestDatum, this.accessors.x, nearestDatumIndex))), 0, this._width)
-      : clamp(xPx, xRange[0], xRange[1])
+      : clamp(xPx, 0, this._width)
     const lines = nearestSeriesIndex !== undefined ? this.pointOffset?.(nearestDatumIndex, nearestSeriesIndex)?.lines : undefined
     const lineX = lines ? clamp(Math.round(xClamped + lines[0]), 0, this._width) : xClamped
 
-    const isCrosshairWithinXRange = (xPx >= xRange[0]) && (xPx <= xRange[1])
-    const isCrosshairWithinYRange = (this._yPx >= Math.min(yRange[0], yRange[1])) && (this._yPx <= Math.max(yRange[0], yRange[1]))
-    let shouldShow = config.skipRangeCheck ? !!this._xPx : (this._xPx ? isCrosshairWithinXRange && isCrosshairWithinYRange : isCrosshairWithinXRange)
+    const isWithinX = isForceShowAtDefined
+      ? (xPx >= Math.min(xRange[0], xRange[1])) && (xPx <= Math.max(xRange[0], xRange[1]))
+      : (xPx >= 0) && (xPx <= this._width)
+    const isWithinY = (this._yPx >= 0) && (this._yPx <= this._height)
+    let shouldShow = config.skipRangeCheck ? !!this._xPx : (this._xPx ? isWithinX && isWithinY : isWithinX)
 
     // Distance in pixels between the pointer and the snapped datum: the full 2D distance in
     // `CrosshairSnapMode.XY` mode (so a point that's close in X but far in Y still counts as far),
