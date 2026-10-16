@@ -241,7 +241,7 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
         if (xValue == null || yValue == null) return acc
 
         const labelPosition = getValue(d, config.labelPosition, i)
-        const labelPositions = (isArray(labelPosition) ? labelPosition : [labelPosition]) as Position[]
+        const labelPositions = isArray(labelPosition) ? labelPosition as Position[] : undefined
 
         const pointSize = getNumber(d, config.size, i)
         const pointSizeScaled = config.sizeRange ? this._sizeScale(pointSize) : pointSize
@@ -267,7 +267,7 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
               shape: getString(d, config.shape, j) as SymbolType,
               label: getString(d, config.label, j),
               labelColor: getColor(d, config.labelColor, j, config.colorKeys?.[j], colorOptionsNoFallback),
-              labelPosition: labelPositions[0],
+              labelPosition: (labelPositions ? labelPositions[0] : labelPosition) as Position,
               labelPositions,
               cursor: getString(d, config.cursor, j),
               groupIndex: j,
