@@ -203,6 +203,11 @@ Consider the following example, with data mainly clumped in the domain `0 < x < 
 ## Ordinal Data
 Read our guide about using ordinal/categorical values with _XY Components_ [here](/docs/guides/tips-and-tricks/#displaying-ordinal-values)
 
+## Crosshair
+_Crosshair_ snaps to the column nearest to the pointer along X and puts a circle on the end of every segment, with `snapMode: 'xy'` too.
+To show the value of a single segment, use _Tooltip_ with `triggers` on `StackedBar.selectors.bar` instead: it gets the segment's
+`StackedBarDataRecord`, with the `datum` and the segment's `stackIndex`.
+
 ## Events
 ```ts
 import { StackedBar } from '@unovis/ts'
