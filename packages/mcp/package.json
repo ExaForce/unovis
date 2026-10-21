@@ -83,7 +83,7 @@
     "@types/node": "^20.17.0",
     "@types/pngjs": "^6.0.5",
     "ajv": "^8.20.0",
-    "esbuild": "^0.25.12",
+    "esbuild": "^0.28.1",
     "fflate": "^0.8.3",
     "jsdom": "^26.1.0",
     "pixelmatch": "^7.2.0",
@@ -92,7 +92,7 @@
     "rimraf": "^3.0.2",
     "tsx": "^4.19.0",
     "typescript": "catalog:",
-    "vitest": "^3.0.0",
+    "vitest": "^5.0.5",
     "zod-to-json-schema": "^3.25.2"
   }
 }
