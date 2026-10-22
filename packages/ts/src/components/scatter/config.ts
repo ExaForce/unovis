@@ -2,7 +2,7 @@
 import { XYComponentConfigInterface, XYComponentDefaultConfig } from '@/core/xy-component/config'
 
 // Types
-import { Scale, ContinuousScale } from '@/types/scale'
+import { Scale, ContinuousScale, ScaleDimension } from '@/types/scale'
 import { SymbolType } from '@/types/symbol'
 import { ColorAccessor, GenericAccessor, NumericAccessor, StringAccessor } from '@/types/accessor'
 import { FillPatternType } from '@/styles/patterns'
@@ -38,8 +38,11 @@ export interface ScatterConfigInterface<Datum> extends XYComponentConfigInterfac
   cursor?: StringAccessor<Datum>;
   /** Point color brightness ratio for switching between dark and light text label color. Default: `0.65` */
   labelTextBrightnessRatio?: number;
-  /** Label position. Default: `Position.Bottom` */
-  labelPosition?: GenericAccessor<Position | string, Datum>;
+  /** Label position, or a list of positions to try in order. With a list and `labelHideOverlapping`, a label takes the
+   * first position where it doesn't overlap other points and labels and stays within the chart; `Position.Center` fits
+   * when the label can be at least as large inside the point as outside of it. A label that fits nowhere is hidden until
+   * the point is hovered. Default: `Position.Bottom` */
+  labelPosition?: GenericAccessor<Position | string | (Position | string)[], Datum>;
   /** Point stroke color. Default: `undefined` */
   strokeColor?: ColorAccessor<Datum>;
   /** Point stroke width. Default: `undefined` */
@@ -47,8 +50,16 @@ export interface ScatterConfigInterface<Datum> extends XYComponentConfigInterfac
   /** Skip points whose centers share a pixel with another point of the same size, keeping the one
    * drawn on top. Renders several times fewer elements on dense charts, but the skipped points sit
    * at sub-pixel offsets, so a dense cloud comes out slightly thinner, and they stop firing pointer
-   * events. Default: `false` */
+   * events. Has no effect with `spreadAxis`, since spread points don't overlap. Default: `false` */
   cullOverlappingPoints?: boolean;
+  /** Move the points along this axis so they don't overlap, keeping their position on the other axis exact
+   * (a beeswarm layout). Default: `undefined` */
+  spreadAxis?: ScaleDimension | `${ScaleDimension}`;
+  /** How far a point's edge can be moved from its position along `spreadAxis`, in that axis' domain units.
+   * When the points don't fit, all of them shrink by one common factor. Default: `undefined` (the plot area) */
+  spreadMax?: number;
+  /** Gap between the spread points in pixels. Default: `1` */
+  spreadPadding?: number;
 }
 
 export const ScatterDefaultConfig: ScatterConfigInterface<unknown> = {
@@ -68,5 +79,8 @@ export const ScatterDefaultConfig: ScatterConfigInterface<unknown> = {
   labelTextBrightnessRatio: 0.65,
   strokeColor: undefined,
   strokeWidth: undefined,
+  spreadAxis: undefined,
+  spreadMax: undefined,
+  spreadPadding: 1,
 }
 

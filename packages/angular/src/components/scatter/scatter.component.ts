@@ -14,6 +14,7 @@ import {
   SymbolType,
   StringAccessor,
   Position,
+  ScaleDimension,
 } from '@unovis/ts'
 import { VisXYComponent } from '../../core'
 
@@ -143,8 +144,11 @@ export class VisScatterComponent<Datum> implements ScatterConfigInterface<Datum>
   /** Point color brightness ratio for switching between dark and light text label color. Default: `0.65` */
   @Input() labelTextBrightnessRatio?: number
 
-  /** Label position. Default: `Position.Bottom` */
-  @Input() labelPosition?: GenericAccessor<Position | string, Datum>
+  /** Label position, or a list of positions to try in order. With a list and `labelHideOverlapping`, a label takes the
+   * first position where it doesn't overlap other points and labels and stays within the chart; `Position.Center` fits
+   * when the label can be at least as large inside the point as outside of it. A label that fits nowhere is hidden until
+   * the point is hovered. Default: `Position.Bottom` */
+  @Input() labelPosition?: GenericAccessor<Position | string | (Position | string)[], Datum>
 
   /** Point stroke color. Default: `undefined` */
   @Input() strokeColor?: ColorAccessor<Datum>
@@ -155,8 +159,19 @@ export class VisScatterComponent<Datum> implements ScatterConfigInterface<Datum>
   /** Skip points whose centers share a pixel with another point of the same size, keeping the one
    * drawn on top. Renders several times fewer elements on dense charts, but the skipped points sit
    * at sub-pixel offsets, so a dense cloud comes out slightly thinner, and they stop firing pointer
-   * events. Default: `false` */
+   * events. Has no effect with `spreadAxis`, since spread points don't overlap. Default: `false` */
   @Input() cullOverlappingPoints?: boolean
+
+  /** Move the points along this axis so they don't overlap, keeping their position on the other axis exact
+   * (a beeswarm layout). Default: `undefined` */
+  @Input() spreadAxis?: ScaleDimension | `${ScaleDimension}`
+
+  /** How far a point's edge can be moved from its position along `spreadAxis`, in that axis' domain units.
+   * When the points don't fit, all of them shrink by one common factor. Default: `undefined` (the plot area) */
+  @Input() spreadMax?: number
+
+  /** Gap between the spread points in pixels. Default: `1` */
+  @Input() spreadPadding?: number
   @Input() data: Datum[]
 
   component: Scatter<Datum> | undefined
@@ -178,8 +193,8 @@ export class VisScatterComponent<Datum> implements ScatterConfigInterface<Datum>
   }
 
   private getConfig (): ScatterConfigInterface<Datum> {
-    const { duration, events, attributes, x, y, id, color, colorKeys, xScale, yScale, excludeFromDomainCalculation, pattern, size, sizeScale, sizeRange, shape, label, labelColor, labelHideOverlapping, cursor, labelTextBrightnessRatio, labelPosition, strokeColor, strokeWidth, cullOverlappingPoints } = this
-    const config = { duration, events, attributes, x, y, id, color, colorKeys, xScale, yScale, excludeFromDomainCalculation, pattern, size, sizeScale, sizeRange, shape, label, labelColor, labelHideOverlapping, cursor, labelTextBrightnessRatio, labelPosition, strokeColor, strokeWidth, cullOverlappingPoints }
+    const { duration, events, attributes, x, y, id, color, colorKeys, xScale, yScale, excludeFromDomainCalculation, pattern, size, sizeScale, sizeRange, shape, label, labelColor, labelHideOverlapping, cursor, labelTextBrightnessRatio, labelPosition, strokeColor, strokeWidth, cullOverlappingPoints, spreadAxis, spreadMax, spreadPadding } = this
+    const config = { duration, events, attributes, x, y, id, color, colorKeys, xScale, yScale, excludeFromDomainCalculation, pattern, size, sizeScale, sizeRange, shape, label, labelColor, labelHideOverlapping, cursor, labelTextBrightnessRatio, labelPosition, strokeColor, strokeWidth, cullOverlappingPoints, spreadAxis, spreadMax, spreadPadding }
     const keys = Object.keys(config) as (keyof ScatterConfigInterface<Datum>)[]
     keys.forEach(key => { if (config[key] === undefined) delete config[key] })
 

@@ -1,0 +1,15 @@
+<h3>Median Salary of College Majors</h3>
+<vis-xy-container [data]="data" [height]="600" [yDomain]="yDomain">
+  <vis-scatter
+    [x]="x"
+    [y]="y"
+    [size]="size"
+    [sizeRange]="[6, 40]"
+    [color]="color"
+    spreadAxis="y"
+    [spreadMax]="0.45"
+  ></vis-scatter>
+  <vis-tooltip [triggers]="triggers"></vis-tooltip>
+  <vis-axis type="x" label="Median salary" [tickFormat]="xTickFormat"></vis-axis>
+  <vis-axis type="y" [tickValues]="yTickValues" [tickFormat]="yTickFormat"></vis-axis>
+</vis-xy-container>

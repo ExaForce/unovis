@@ -17,10 +17,67 @@ import { ContinuousScale } from '@/types/scale'
 import { ScatterConfigInterface } from '../config'
 
 // Local Types
-import { ScatterPoint } from '../types'
+import { ScatterPoint, ScatterPointGroupNode } from '../types'
 
 // Local Utils
-import { getCentralLabelFontSize, getLabelShift } from './utils'
+import { getCentralLabelFontSize, getCentralLabelReferenceFont, getLabelShift, getPointPosition, isLabelPositionCenter } from './utils'
+
+/** Returns a getter that resolves the central label reference font from the first text element it's given */
+function createReferenceFontGetter (): (textElement: SVGTextElement) => string {
+  let font: string | undefined
+  return textElement => {
+    if (!font) font = getCentralLabelReferenceFont(textElement)
+    return font
+  }
+}
+
+/** Places the label at `position`: a central label is sized to fit the point and colored to contrast with its fill */
+function renderLabel<Datum> (
+  textElement: SVGTextElement,
+  d: ScatterPoint<Datum>,
+  position: Position,
+  config: ScatterConfigInterface<Datum>,
+  getReferenceFont: (textElement: SVGTextElement) => string,
+  duration: number
+): void {
+  const label = select(textElement)
+  const pointDiameter = d._point.sizePx
+  const isCenter = isLabelPositionCenter(position)
+  const centralLabelFontSize = isCenter ? getCentralLabelFontSize(d._point.label, pointDiameter, getReferenceFont(textElement)) : 0
+
+  let labelColor = d._point.labelColor
+  if (!labelColor && isCenter) {
+    const c = d._point.color || 'var(--vis-scatter-fill-color)'
+    const hex = color(isStringCSSVariable(c) ? getCSSVariableValue(c, textElement) : c)?.hex()
+    const brightness = hexToBrightness(hex)
+    labelColor = brightness > config.labelTextBrightnessRatio ? 'var(--vis-scatter-point-label-text-color-dark)' : 'var(--vis-scatter-point-label-text-color-light)'
+  }
+
+  const labelShift = getLabelShift(position, pointDiameter)
+  label
+    .attr('x', labelShift[0])
+    .attr('y', labelShift[1])
+    .style('font-size', isCenter ? `${centralLabelFontSize}px` : null)
+    .style('text-anchor', () => {
+      switch (position) {
+        case Position.Right: return null
+        case Position.Left: return 'end'
+        default: return 'middle'
+      }
+    })
+    .style('dominant-baseline', () => {
+      switch (position) {
+        case Position.Top: return null
+        case Position.Bottom: return 'hanging'
+        default: return 'central'
+      }
+    })
+
+  const labelTransition = duration ? smartTransition(label, duration) : label
+  labelTransition.style('fill', labelColor)
+  const node = textElement.parentNode as ScatterPointGroupNode
+  node._renderedLabelPosition = position
+}
 
 export function createPoints<Datum> (
   selection: Selection<SVGGElement, ScatterPoint<Datum>, SVGGElement, ScatterPoint<Datum>[]>,
@@ -33,7 +90,7 @@ export function createPoints<Datum> (
     .style('fill', d => d._point.color)
     .style('mask', d => d._point.mask)
 
-  selection.attr('transform', d => `translate(${xScale(d._point.xValue)},${yScale(d._point.yValue)}) scale(0)`)
+  selection.attr('transform', d => `translate(${getPointPosition(d, xScale, yScale)}) scale(0)`)
 }
 
 export function updatePoints<Datum> (
@@ -46,6 +103,7 @@ export function updatePoints<Datum> (
   const symbolGenerator = symbol()
   // Without a duration `smartTransition` only interrupts, so do it once instead of twice per point
   if (!duration) selection.selectAll<SVGElement, unknown>('path, text').interrupt()
+  const getReferenceFont = createReferenceFontGetter()
 
   selection.each((d, index, elements) => {
     const group: Selection<SVGGElement, ScatterPoint<Datum>, SVGGElement, ScatterPoint<Datum>[]> = select(elements[index])
@@ -79,49 +137,32 @@ export function updatePoints<Datum> (
     }
 
     if (!label.empty()) {
-      const labelPosition = d._point.labelPosition
-      const isLabelPositionCenter = (labelPosition !== Position.Top) && (labelPosition !== Position.Bottom) &&
-        (labelPosition !== Position.Left) && (labelPosition !== Position.Right)
-      const textLength = pointLabelText.length
-      const centralLabelFontSize = getCentralLabelFontSize(pointDiameter, textLength)
-
-      let labelColor = d._point.labelColor
-      if (!labelColor && isLabelPositionCenter) {
-        const c = pointColor || 'var(--vis-scatter-fill-color)'
-        const hex = color(isStringCSSVariable(c) ? getCSSVariableValue(c, group.node()) : c)?.hex()
-        const brightness = hexToBrightness(hex)
-        labelColor = brightness > config.labelTextBrightnessRatio ? 'var(--vis-scatter-point-label-text-color-dark)' : 'var(--vis-scatter-point-label-text-color-light)'
-      }
-
-      const labelShift = getLabelShift(labelPosition, pointDiameter)
       label.html(pointLabelText)
-        .attr('x', labelShift[0])
-        .attr('y', labelShift[1])
-        .style('font-size', isLabelPositionCenter ? centralLabelFontSize : null)
-        .style('text-anchor', () => {
-          switch (labelPosition) {
-            case Position.Right: return null
-            case Position.Left: return 'end'
-            default: return 'middle'
-          }
-        })
-        .style('dominant-baseline', () => {
-          switch (labelPosition) {
-            case Position.Top: return null
-            case Position.Bottom: return 'hanging'
-            default: return 'central'
-          }
-        })
-
-      const labelTransition = duration ? smartTransition(label, duration) : label
-      labelTransition.style('fill', labelColor)
+      renderLabel(label.node(), d, d._point.labelPosition, config, getReferenceFont, duration)
     }
 
     path.style('cursor', d._point.cursor)
   })
 
   smartTransition(selection, duration)
-    .attr('transform', d => `translate(${xScale(d._point.xValue)},${yScale(d._point.yValue)}) scale(1)`)
+    .attr('transform', d => `translate(${getPointPosition(d, xScale, yScale)}) scale(1)`)
+}
+
+/** Renders the label positions `collideLabels` picked and hides the labels that fit nowhere */
+export function updateLabels<Datum> (
+  selection: Selection<SVGGElement, ScatterPoint<Datum>, SVGGElement, ScatterPoint<Datum>[]>,
+  config: ScatterConfigInterface<Datum>
+): void {
+  const getReferenceFont = createReferenceFontGetter()
+  selection.each((d, i, elements) => {
+    const node = elements[i] as ScatterPointGroupNode
+    const label = select(node).select<SVGTextElement>('text')
+    if (node._labelPosition !== node._renderedLabelPosition) {
+      label.interrupt()
+      renderLabel(label.node(), d, node._labelPosition, config, getReferenceFont, 0)
+    }
+    label.attr('opacity', node._labelVisible ? 1 : 0)
+  })
 }
 
 export function removePoints<Datum> (
@@ -131,7 +172,7 @@ export function removePoints<Datum> (
   duration: number
 ): void {
   smartTransition(selection, duration)
-    .attr('transform', d => `translate(${xScale(d._point.xValue)},${yScale(d._point.yValue)}) scale(0)`)
+    .attr('transform', d => `translate(${getPointPosition(d, xScale, yScale)}) scale(0)`)
     .remove()
 }
 

@@ -1,10 +1,13 @@
 import { select, Selection } from 'd3-selection'
 import { Position } from '@/types/position'
 
+// Styles
+import { UNOVIS_TEXT_DEFAULT } from '@/styles'
+
 // Utils
-import { rectIntersect } from '@/utils/misc'
-import { estimateStringPixelLength, getCachedFontSizePx } from '@/utils/text-measure'
-import { getValue } from '@/utils/data'
+import { clamp } from '@/utils/data'
+import { getRectFitTranslation, rectIntersect } from '@/utils/misc'
+import { estimateStringPixelLength, measureTextWidth } from '@/utils/text-measure'
 
 // Types
 import { ContinuousScale } from '@/types/scale'
@@ -13,16 +16,37 @@ import { Rect } from '@/types/misc'
 // Local Types
 import { ScatterPoint, ScatterPointGroupNode } from '../types'
 
-// Config
-import { ScatterConfigInterface } from '../config'
+const CENTRAL_LABEL_REFERENCE_FONT_SIZE = 100
+const CENTRAL_LABEL_FIT = 0.9
 
 export function isLabelPositionCenter (labelPosition: Position | `${Position}`): boolean {
   return (labelPosition !== Position.Top) && (labelPosition !== Position.Bottom) &&
   (labelPosition !== Position.Left) && (labelPosition !== Position.Right)
 }
 
-export function getCentralLabelFontSize (pointDiameter: number, textLength: number): number {
-  return textLength ? 0.7 * pointDiameter / Math.pow(textLength, 0.5) : 0
+export function getPointPosition<Datum> (
+  d: ScatterPoint<Datum>,
+  xScale: ContinuousScale,
+  yScale: ContinuousScale
+): [number, number] {
+  return [xScale(d._point.xValue) + d._point.xOffsetPx, yScale(d._point.yValue) + d._point.yOffsetPx]
+}
+
+/** The font of a point label at the size `getCentralLabelFontSize` measures the text at */
+export function getCentralLabelReferenceFont (textElement: SVGTextElement): string {
+  const style = window.getComputedStyle(textElement)
+  return `${style.fontStyle || 'normal'} ${style.fontWeight || 'normal'} ${CENTRAL_LABEL_REFERENCE_FONT_SIZE}px ${style.fontFamily || 'sans-serif'}`
+}
+
+/** The font size at which the label's box, one line tall, fits into `CENTRAL_LABEL_FIT` of the point's diameter.
+ * The text width grows linearly with the font size, so it's measured once with `referenceFont`, or estimated without it */
+export function getCentralLabelFontSize (text: string, pointDiameter: number, referenceFont?: string): number {
+  if (!text) return 0
+
+  const widthPerFontPx = referenceFont
+    ? measureTextWidth(text, referenceFont) / CENTRAL_LABEL_REFERENCE_FONT_SIZE
+    : estimateStringPixelLength(text, 1)
+  return CENTRAL_LABEL_FIT * pointDiameter / Math.hypot(widthPerFontPx, UNOVIS_TEXT_DEFAULT.lineHeight)
 }
 
 export function getLabelShift (
@@ -51,16 +75,14 @@ export function getEstimatedLabelBBox<Datum> (
   yScale: ContinuousScale,
   fontSizePx: number
 ): Rect {
-  const x = xScale(d._point.xValue)
-  const y = yScale(d._point.yValue)
+  const [x, y] = getPointPosition(d, xScale, yScale)
   const pointDiameter = d._point.sizePx
 
   const pointLabelText = d._point.label ?? ''
-  const textLength = pointLabelText.length
-  const centralLabelFontSize = getCentralLabelFontSize(pointDiameter, textLength)
+  const labelFontSize = isLabelPositionCenter(labelPosition) ? getCentralLabelFontSize(pointLabelText, pointDiameter) : fontSizePx
 
-  const width = estimateStringPixelLength(pointLabelText, isLabelPositionCenter(labelPosition) ? centralLabelFontSize : fontSizePx, 0.6)
-  const height = fontSizePx
+  const width = estimateStringPixelLength(pointLabelText, labelFontSize, 0.6)
+  const height = labelFontSize
 
   const labelShift = getLabelShift(labelPosition, pointDiameter)
   const dx = labelPosition === Position.Left ? -width
@@ -78,73 +100,77 @@ export function getEstimatedLabelBBox<Datum> (
   return bbox
 }
 
+function isRectOverlappingCircle (rect: Rect, [x, y]: [number, number], radius: number): boolean {
+  const dx = x - clamp(x, rect.x, rect.x + rect.width)
+  const dy = y - clamp(y, rect.y, rect.y + rect.height)
+  return dx * dx + dy * dy < radius * radius
+}
+
+/** Puts every label at the first of its `labelPositions` that overlaps no point, labeled or not, and no visible label
+ * (inside its point, none drawn above it), and stays within `bounds` unless it's the first one, which `bleed` makes room
+ * for. A label that fits nowhere is hidden, or, when hovered, takes its first position and hides the labels in its way */
 export function collideLabels<Datum> (
   selection: Selection<SVGGElement, ScatterPoint<Datum>, SVGGElement, ScatterPoint<Datum>[]>,
-  config: ScatterConfigInterface<Datum>,
   xScale: ContinuousScale,
-  yScale: ContinuousScale
+  yScale: ContinuousScale,
+  fontSizePx: number,
+  bounds: Rect
 ): void {
-  // Reset visibility of all labels
-  selection.each((datum1: ScatterPoint<Datum>, i, elements) => {
-    const node = elements[i] as ScatterPointGroupNode
-    node._labelVisible = true
+  const nodes = selection.nodes() as ScatterPointGroupNode[]
+  const data = nodes.map(node => select<SVGGElement, ScatterPoint<Datum>>(node).datum())
+  const positions = data.map(d => getPointPosition(d, xScale, yScale))
+  const radii = data.map(d => (d._point.sizePx + (d._point.strokeWidthPx ?? 0)) / 2)
+  const labelBoxes = data.map((d, i) => {
+    nodes[i]._labelVisible = !!d._point.label
+    nodes[i]._labelPosition = d._point.labelPosition
+    return d._point.label ? getEstimatedLabelBBox(d, d._point.labelPosition, xScale, yScale, fontSizePx) : undefined
   })
 
-  // Run collision detection and set labels visibility
-  selection.each((datum1: ScatterPoint<Datum>, i, elements) => {
-    const group1Node = elements[i] as ScatterPointGroupNode
-    const label1Position = getValue(datum1, config.labelPosition, datum1._point.pointIndex)
-    if (!group1Node._labelVisible || isLabelPositionCenter(label1Position as Position)) return
+  let referenceFont: string | undefined
+  const fitsInside = (i: number): boolean => {
+    if (!referenceFont) referenceFont = getCentralLabelReferenceFont(nodes[i].querySelector('text'))
+    return getCentralLabelFontSize(data[i]._point.label, data[i]._point.sizePx, referenceFont) >= fontSizePx
+  }
 
-    const label1 = select<SVGGElement, ScatterPoint<Datum>>(group1Node).select<SVGTextElement>('text')
-    const label1FontSize = getCachedFontSizePx(label1.node())
+  const isDrawnBelow = (j: number, i: number): boolean =>
+    !!(nodes[i].compareDocumentPosition(nodes[j]) & Node.DOCUMENT_POSITION_PRECEDING)
 
-    // Calculate bounding rect of point's label
-    const label1BoundingRect = getEstimatedLabelBBox(datum1, label1Position as Position, xScale, yScale, label1FontSize)
-
-    for (let j = 0; j < elements.length; j += 1) {
+  const getBlockers = (i: number, rect: Rect, isCenter: boolean, findAll: boolean): number[] => {
+    const blockers: number[] = []
+    for (let j = 0; j < nodes.length; j += 1) {
       if (i === j) continue
-      const group2Node = elements[j] as ScatterPointGroupNode
-      const group2 = select<SVGGElement, ScatterPoint<Datum>>(group2Node)
-      const label2 = group2.select<SVGTextElement>('text')
-      const datum2 = group2.datum()
-
-      // Calculate bounding rect of the second point's circle
-      const p2Pos = [xScale(datum2._point.xValue), yScale(datum2._point.yValue)]
-      const p2Radius = datum2._point.sizePx / 2
-      const point2BoundingRect = {
-        x: p2Pos[0] - p2Radius,
-        y: p2Pos[1] - p2Radius,
-        width: 2 * p2Radius,
-        height: 2 * p2Radius,
-      }
-
-      let intersect = rectIntersect(label1BoundingRect, point2BoundingRect, 2)
-
-      // If there's no intersection, check for collision with the second point's label
-      const label2Visible = group2Node._labelVisible
-      if (!intersect && label2Visible) {
-        const label2FontSize = getCachedFontSizePx(label2.node())
-        const label2Position = getValue(datum2, config.labelPosition, datum2._point.pointIndex)
-        const label2BoundingRect = getEstimatedLabelBBox(datum2, label2Position as Position, xScale, yScale, label2FontSize)
-
-        intersect = rectIntersect(label1BoundingRect, label2BoundingRect, 0.25)
-      }
-
-      if (intersect) {
-        if (group1Node._forceShowLabel) group2Node._labelVisible = false
-        else {
-          group1Node._labelVisible = false
-          break
-        }
-      }
+      const isBlocked = isRectOverlappingCircle(rect, positions[j], radii[j]) ||
+        (nodes[j]._labelVisible && rectIntersect(rect, labelBoxes[j], 0.25))
+      if (!isBlocked || (isCenter && isDrawnBelow(j, i))) continue
+      blockers.push(j)
+      if (!findAll) break
     }
-  })
+    return blockers
+  }
 
-  // Hide the overlapping labels
-  selection.each((datum1: ScatterPoint<Datum>, i, elements) => {
-    const node = elements[i] as ScatterPointGroupNode
-    const label = select<SVGGElement, ScatterPoint<Datum>>(node).select<SVGTextElement>('text')
-    label.attr('opacity', node._labelVisible ? 1 : 0)
+  nodes.forEach((node, i) => {
+    if (!node._labelVisible) return
+
+    const candidates = data[i]._point.labelPositions
+    let rect: Rect | undefined
+    const position = candidates.find((candidate, k) => {
+      const isCenter = isLabelPositionCenter(candidate)
+      if (isCenter && candidates.length === 1) return true
+      if (isCenter && !fitsInside(i)) return false
+
+      rect = getEstimatedLabelBBox(data[i], candidate, xScale, yScale, fontSizePx)
+      if (k > 0) {
+        const fit = getRectFitTranslation(rect, bounds)
+        if (fit.dx || fit.dy) return false
+      }
+      return !getBlockers(i, rect, isCenter, false).length
+    })
+
+    if (position !== undefined) {
+      node._labelPosition = position
+      labelBoxes[i] = rect ?? labelBoxes[i]
+    } else if (node._forceShowLabel) {
+      for (const j of getBlockers(i, labelBoxes[i], isLabelPositionCenter(node._labelPosition), true)) nodes[j]._labelVisible = false
+    } else node._labelVisible = false
   })
 }
