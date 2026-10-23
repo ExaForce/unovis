@@ -12,6 +12,7 @@
   let owned: VisLine<Datum>
   let donut: VisDonut<Datum>
   let axis: VisAxis<unknown>
+  let secondAxis: VisAxis<unknown>
   let legend: VisBulletLegend
   const x = (d: Datum): number => d.x
   const y = (d: Datum): number => d.y
@@ -22,6 +23,7 @@
       owned: owned?.getComponent(),
       donut: donut?.getComponent(),
       axis: axis?.getComponent(),
+      secondAxis: secondAxis?.getComponent(),
       legend: legend?.getComponent(),
     }
   }
@@ -35,6 +37,9 @@
       {/if}
       {#if state.showAxis}
         <VisAxis bind:this={axis} type={state.axisType} duration={0}/>
+      {/if}
+      {#if state.showSecondAxis}
+        <VisAxis bind:this={secondAxis} type="y" duration={0}/>
       {/if}
     </VisXYContainer>
   </div>

@@ -24,7 +24,7 @@ export const crosshairAccessorKey = Symbol('crosshairAccessorKey') as InjectionK
 
 export const axisAccessorKey = Symbol('axisAccessorKey') as InjectionKey< {
   data: Ref<any>;
-  update: (c: Axis<any>) => void;
+  update: (c: Axis<any>, element?: HTMLElement) => void;
   destroy: (c: string) => void;
   dirty: () => void;
 }>

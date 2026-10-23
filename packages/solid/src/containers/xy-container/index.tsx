@@ -1,4 +1,4 @@
-import { XYContainer } from '@unovis/ts'
+import { XYContainer, areArraysShallowEqual } from '@unovis/ts'
 import type {
   Annotations,
   Axis,
@@ -44,14 +44,39 @@ export function VisXYContainer<Datum>(props: VisXYContainerProps<Datum>) {
     annotations: undefined,
     crosshair: undefined,
     tooltip: undefined,
-    xAxis: undefined,
-    yAxis: undefined,
   })
+  // The container accepts several axes per type and stacks them in the order of their elements in the template
+  const axes = new Map<Axis<Datum>, HTMLElement | undefined>()
+  const sortAxes = (): Axis<Datum>[] => Array.from(axes)
+    .sort(([, a], [, b]) => a && b ? ((a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1) : 0)
+    .map(([axis]) => axis)
+  let sortedAxes: Axis<Datum>[] = []
+  const getAxes = (): Pick<XYContainerConfigInterface<Datum>, 'xAxis' | 'yAxis'> => {
+    sortedAxes = sortAxes()
+    const xAxis = sortedAxes.filter((a) => a.config.type === 'x')
+    const yAxis = sortedAxes.filter((a) => a.config.type === 'y')
+    // A single axis of a type is passed as is, several as an array
+    return {
+      xAxis: xAxis.length > 1 ? xAxis : xAxis[0],
+      yAxis: yAxis.length > 1 ? yAxis : yAxis[0],
+    }
+  }
   const [track, dirty] = createTrigger()
 
   onMount(() => {
     const r = ref()
     if (r) setChart(new XYContainer(r, config, data.data))
+  })
+
+  // A keyed `<For>` moves the axis elements without registering them again, so their order gets re-read
+  onMount(() => {
+    const r = ref()
+    if (!r) return
+    const observer = new MutationObserver(() => {
+      if (!areArraysShallowEqual(sortAxes(), sortedAxes)) dirty()
+    })
+    observer.observe(r, { childList: true })
+    onCleanup(() => observer.disconnect())
   })
 
   onCleanup(() => chart()?.destroy())
@@ -68,10 +93,10 @@ export function VisXYContainer<Datum>(props: VisXYContainerProps<Datum>) {
   createEffect(() => {
     // track the changes
     track()
-    chart()?.updateContainer({ ...config, ...rest })
+    chart()?.updateContainer({ ...config, ...getAxes(), ...rest })
   })
 
-  const update: VisContainerContextProps['update'] = (key, value) => {
+  const update: VisContainerContextProps['update'] = (key, value, element) => {
     setConfig(
       produce((c) => {
         switch (key) {
@@ -82,10 +107,8 @@ export function VisXYContainer<Datum>(props: VisXYContainerProps<Datum>) {
             ]
             break
           case 'axis':
-            // @ts-expect-error -- ts does not happy with the type
-            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-            c[`${(value() as Axis<Datum>).config.type}Axis`] =
-              value() as Axis<Datum>
+            axes.set(value() as Axis<Datum>, element)
+            dirty()
             break
           case 'crosshair':
             c.crosshair = value() as Crosshair<Datum>
@@ -100,7 +123,7 @@ export function VisXYContainer<Datum>(props: VisXYContainerProps<Datum>) {
     )
   }
 
-  const destroy: VisContainerContextProps['destroy'] = (key, value) => {
+  const destroy: VisContainerContextProps['destroy'] = (key) => {
     setConfig(
       produce((c) => {
         switch (key) {
@@ -108,9 +131,8 @@ export function VisXYContainer<Datum>(props: VisXYContainerProps<Datum>) {
             c.components = c.components?.filter((i) => !i.isDestroyed())
             break
           case 'axis':
-            // @ts-expect-error -- ts does not happy with the type
-            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-            c[`${value}Axis`] = undefined
+            for (const axis of axes.keys()) if (axis.isDestroyed()) axes.delete(axis)
+            dirty()
             break
           case 'crosshair':
             c.crosshair = undefined

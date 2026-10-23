@@ -34,6 +34,7 @@ import {
   mergeTickValues,
   tickKey,
 } from './tick-fit'
+import { getAxisSide } from './utils'
 
 // Config
 import { AxisDefaultConfig, AxisConfigInterface } from './config'
@@ -62,6 +63,8 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
   private _axisRawBBox: DOMRect
   private _axisSizeBBox: SVGRect
   private _requiredMargin: Spacing
+  private _offset = 0
+  private _rangeSegment: [number, number] = [0, 1]
   private _preRenderCacheKey: unknown[] | undefined
   private _defaultNumTicks = 3
   private _collideTickLabelsAnimFrameId: ReturnType<typeof requestAnimationFrame>
@@ -94,7 +97,7 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
     // Building and measuring the invisible axis is expensive (a full axis render plus
     // several getBBox calls), so we skip it when nothing affecting the axis size has changed
     const cacheKey = [
-      config, this.datamodel.data, this._width, this._height,
+      config, this.datamodel.data, this._width, this._height, ...this._rangeSegment,
       ...this.xScale.domain(), ...this.xScale.range(),
       ...this.yScale.domain(), ...this.yScale.range(),
     ]
@@ -127,6 +130,45 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
     return (position ?? ((type === AxisType.X) ? Position.Bottom : Position.Left)) as Position
   }
 
+  /** Sets the distance between the chart edge and the axis line in pixels. Containers use it to stack
+   * several axes on one side of the chart. The grid lines stay attached to the chart edge */
+  public setOffset (offset: number): void {
+    this._offset = offset
+  }
+
+  /** Sets the part of the chart the axis spans, as fractions `[start, end]` along its scale's range (bottom to top
+   * for a Y axis, left to right for an X axis). Containers set it for the axes of the scales mapped onto a segment
+   * of the chart, see `rangeSegment` of the XY Container config */
+  public setRangeSegment (segment: [number, number] | undefined): void {
+    this._rangeSegment = segment ?? [0, 1]
+  }
+
+  /** Whether the axis spans only a segment of the chart, see `setRangeSegment` */
+  private _isSegmented (): boolean {
+    const [start, end] = this._rangeSegment
+    return start !== 0 || end !== 1
+  }
+
+  /** The extent of the axis along its dimension in pixels, as `[start, end]` from the left or the top edge of the chart:
+   * the whole chart, or the range of its scale when the axis spans a segment of the chart */
+  private _getExtent (): [number, number] {
+    const isX = this.config.type === AxisType.X
+    if (!this._isSegmented()) return [0, isX ? this._width : this._height]
+
+    const [rangeStart, rangeEnd] = (isX ? this.xScale : this.yScale).range()
+    return [Math.min(rangeStart, rangeEnd), Math.max(rangeStart, rangeEnd)]
+  }
+
+  /** Unit vector pointing from the chart edge away from the chart, i.e. the direction the axis gets offset in */
+  private _getOutwardDirection (): [number, number] {
+    switch (getAxisSide(this.config)) {
+      case Position.Top: return [0, -1]
+      case Position.Right: return [1, 0]
+      case Position.Bottom: return [0, 1]
+      case Position.Left: default: return [-1, 0]
+    }
+  }
+
   private _getAxisSize (selection: Selection<SVGGElement, unknown, SVGGElement, undefined>): SVGRect {
     const bBox = selection.node().getBBox()
     return bBox
@@ -134,10 +176,10 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
 
   private _getRequiredMargin (axisSize = this._axisSizeBBox): Spacing {
     const { config: { type, position } } = this
+    const tolerancePx = 1
 
     switch (type) {
       case AxisType.X: {
-        const tolerancePx = 1
         const xEnd = this._axisSizeBBox.x + this._axisSizeBBox.width
 
         const left = this._axisSizeBBox.x < 0 ? Math.abs(this._axisSizeBBox.x) : 0
@@ -150,8 +192,10 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
       }
       case AxisType.Y: {
         const bleedY = axisSize.height > this._height ? (axisSize.height - this._height) / 2 : 0
-        const top = bleedY
-        const bottom = bleedY
+        // The tick labels of an axis spanning a segment of the chart can overflow just one of the chart edges
+        const yEnd = axisSize.y + axisSize.height
+        const top = this._isSegmented() ? Math.max(0, -axisSize.y) : bleedY
+        const bottom = this._isSegmented() ? ((yEnd - this._height) > tolerancePx ? yEnd - this._height : 0) : bleedY
 
         switch (position) {
           case Position.Right: return { right: axisSize.width, top, bottom }
@@ -165,20 +209,35 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
     return this._requiredMargin
   }
 
+  /** How far the measured axis reaches from its line across it, in pixels, as `[inward, outward]`: towards the chart
+   * (e.g. rotated tick labels) and away from it. Containers use it to stack several axes on one side of the chart */
+  public getCrossExtent (): [number, number] {
+    const { x, y, width, height } = this._axisSizeBBox
+    const side = getAxisSide(this.config)
+    const [min, max] = this.config.type === AxisType.X ? [y, y + height] : [x, x + width]
+    // The top and the left axes extend outwards in the negative direction
+    const [inward, outward] = (side === Position.Top || side === Position.Left) ? [max, -min] : [-min, max]
+    return [Math.max(0, inward), Math.max(0, outward)]
+  }
+
   /** Calculates axis transform:translate offset based on passed container margins */
   getOffset (containerMargin: Spacing): {left: number; top: number} {
     const { config: { type, position } } = this
+    // The axis gets shifted away from the chart edge by its offset (see `setOffset`)
+    const [dx, dy] = this._getOutwardDirection()
+    const left = (containerMargin.left ?? 0) + dx * this._offset
+    const top = (containerMargin.top ?? 0) + dy * this._offset
 
     switch (type) {
       case AxisType.X:
         switch (position) {
-          case Position.Top: return { top: containerMargin.top, left: containerMargin.left }
-          case Position.Bottom: default: return { top: containerMargin.top + this._height, left: containerMargin.left }
+          case Position.Top: return { top, left }
+          case Position.Bottom: default: return { top: top + this._height, left }
         }
       case AxisType.Y:
         switch (position) {
-          case Position.Right: return { top: containerMargin.top, left: containerMargin.left + this._width }
-          case Position.Left: default: return { top: containerMargin.top, left: containerMargin.left }
+          case Position.Right: return { top, left: left + this._width }
+          case Position.Left: default: return { top, left }
         }
     }
   }
@@ -198,6 +257,10 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
     this._renderAxisLabel(selection)
 
     if (config.gridLine) {
+      // The grid lines stay attached to the chart edge when the axis is offset from it
+      const [dx, dy] = this._getOutwardDirection()
+      this.gridGroup.attr('transform', this._offset ? `translate(${-dx * this._offset},${-dy * this._offset})` : null)
+
       // The grid renders a line per tick mark, but only the lines of the labeled ticks are
       // visible — hiding the rest with a class keeps the elements stable across renders,
       // so grid changes animate in CSS the same way the labels do
@@ -565,9 +628,10 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
 
   private _getFullDomainPath (tickSize = 0): string {
     const { config: { type } } = this
+    const [start, end] = this._getExtent()
     switch (type) {
-      case AxisType.X: return `M0.5, ${tickSize} V0.5 H${this._width + 0.5} V${tickSize}`
-      case AxisType.Y: return `M${-tickSize}, ${this._height + 0.5} H0.5 V0.5 H${-tickSize}`
+      case AxisType.X: return `M${start + 0.5}, ${tickSize} V0.5 H${end + 0.5} V${tickSize}`
+      case AxisType.Y: return `M${-tickSize}, ${end + 0.5} H0.5 V${start + 0.5} H${-tickSize}`
     }
   }
 
@@ -581,6 +645,8 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
 
     // Calculate label position and rotation
     const axisPosition = this.getPosition()
+    // The label is centered on the part of the chart the axis spans
+    const [extentStart, extentEnd] = this._getExtent()
     // We always use this.axisRenderHelperGroup to calculate the size of the axis because
     //    this.axisGroup will give us incorrect values due to animation
     const { width: axisWidth, height: axisHeight } = this._axisRawBBox ?? selection.node().getBBox()
@@ -601,7 +667,7 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
     let isWrapped = false
     if (labelTextFitMode === FitMode.Wrap) {
       // For Y-axis, use the chart height as the maximum width before rotation
-      const maxWidth = type === AxisType.Y ? this._height : this._width
+      const maxWidth = extentEnd - extentStart
       const currentTextWidth = getCachedComputedTextLength(textElement.node())
 
       if (currentTextWidth > maxWidth) {
@@ -632,14 +698,14 @@ export class Axis<Datum> extends XYComponentCore<Datum, AxisConfigInterface<Datu
       Same for offsetY, need to consider x label.
     */
     const offsetX = type === AxisType.X
-      ? this._width / 2
+      ? (extentStart + extentEnd) / 2
       : type === AxisType.Y && labelTextFitMode === FitMode.Wrap && isWrapped
         ? (axisPosition === Position.Left)
           ? -axisWidth - labelHeight / 2 - 10 // there's a 10px gap between tick label and Position.Right Y label, so offset as well in the Position.Left case
           : axisWidth
         : (-1) ** (+(axisPosition === Position.Left)) * axisWidth
     const offsetY = type === AxisType.Y
-      ? this._height / 2
+      ? (extentStart + extentEnd) / 2
       : type === AxisType.X && labelTextFitMode === FitMode.Wrap
         ? (axisPosition === Position.Top) ? -axisHeight - labelHeight / 2 : axisHeight
         : (-1) ** (+(axisPosition === Position.Top)) * axisHeight

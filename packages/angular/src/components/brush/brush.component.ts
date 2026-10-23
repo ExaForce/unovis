@@ -1,6 +1,16 @@
 // !!! This code was automatically generated. You should not change it !!!
 import { Component, AfterViewInit, Input, SimpleChanges } from '@angular/core'
-import { Brush, BrushConfigInterface, ContainerCore, VisEventType, VisEventCallback, Arrangement } from '@unovis/ts'
+import {
+  Brush,
+  BrushConfigInterface,
+  ContainerCore,
+  VisEventType,
+  VisEventCallback,
+  NumericAccessor,
+  ColorAccessor,
+  ContinuousScale,
+  Arrangement,
+} from '@unovis/ts'
 import { D3BrushEvent } from 'd3-brush'
 import { VisXYComponent } from '../../core'
 
@@ -62,6 +72,54 @@ export class VisBrushComponent<Datum> implements BrushConfigInterface<Datum>, Af
     };
   }
 
+  /** Accessor function for getting the values along the X axis. Default: `undefined` */
+  @Input() x?: NumericAccessor<Datum>
+
+  /** A single of multiple accessor functions for getting the values along the Y axis. Default: `undefined` */
+  @Input() y?: NumericAccessor<Datum> | NumericAccessor<Datum>[]
+
+  /** Accessor function for getting the unique data record id. Used for more persistent data updates. Default: `(d, i) => d.id ?? i` */
+  @Input() id?: ((d: Datum, i: number, ...rest) => string)
+
+  /** Component color accessor function. Default: `d => d.color` */
+  @Input() color?: ColorAccessor<Datum> | ColorAccessor<Datum[]>
+
+  /** Array of data color keys. Use to map data keys to colors.
+   * Expected to the same length as the `y` accessors array.
+   * Default: `undefined` */
+  @Input() colorKeys?: string[]
+
+  /** Scale for X dimension, e.g. Scale.scaleLinear(). If you set xScale you'll be responsible for setting it's `domain` and `range` as well.
+   * Only continuous scales are supported.
+   * Default: `undefined` */
+  @Input() xScale?: ContinuousScale
+
+  /** Scale for Y dimension, e.g. Scale.scaleLinear(). If you set yScale you'll be responsible for setting it's `domain` and `range` as well.
+   * Only continuous scales are supported.
+   * Default: `undefined` */
+  @Input() yScale?: ContinuousScale
+
+  /** Identifies whether the component should be excluded from overall X and Y domain calculations or not.
+   * This property can be useful when you want pass individual data to a component and you don't want it to affect
+   * the scales of the chart.
+   * Default: `false` */
+  @Input() excludeFromDomainCalculation?: boolean
+
+  /** Excludes the component from the Crosshair: no circles get rendered for its `y` accessors. The Crosshair can still
+   * take its `x` accessor from the component (see `xScaleKey`), so excluding all the components leaves the Crosshair
+   * line and tooltip working. Default: `false` */
+  @Input() excludeFromCrosshair?: boolean
+
+  /** Key of the container's named X scale the component is bound to (see `xScales` in the XY Container config).
+   * Components bound to the same key share the scale domain. The Crosshair follows a single X scale: the primary one,
+   * or the one named by its own `xScaleKey`. It takes its `x` accessor from the first component bound to that scale
+   * and renders circles only for the components bound to it. Default: `undefined` (the container's primary X scale) */
+  @Input() xScaleKey?: string
+
+  /** Key of the container's named Y scale the component is bound to (see `yScales` in the XY Container config).
+   * Components bound to the same key share the scale domain. Default: `undefined` (the container's primary Y scale) */
+  @Input() yScaleKey?: string
+
   /** Callback function to be called on any Brush event.
    * Default: `(selection: [number, number], event: D3BrushEvent<Datum>, userDriven: boolean): void => {}` */
   @Input() onBrush?: ((selection: [number, number] | undefined, event: D3BrushEvent<Datum>, userDriven: boolean) => void)
@@ -117,8 +175,8 @@ export class VisBrushComponent<Datum> implements BrushConfigInterface<Datum>, Af
   }
 
   private getConfig (): BrushConfigInterface<Datum> {
-    const { duration, events, attributes, onBrush, onBrushStart, onBrushMove, onBrushEnd, handleWidth, selection, draggable, handlePosition, selectionMinLength, brushHeightExtend } = this
-    const config = { duration, events, attributes, onBrush, onBrushStart, onBrushMove, onBrushEnd, handleWidth, selection, draggable, handlePosition, selectionMinLength, brushHeightExtend }
+    const { duration, events, attributes, x, y, id, color, colorKeys, xScale, yScale, excludeFromDomainCalculation, excludeFromCrosshair, xScaleKey, yScaleKey, onBrush, onBrushStart, onBrushMove, onBrushEnd, handleWidth, selection, draggable, handlePosition, selectionMinLength, brushHeightExtend } = this
+    const config = { duration, events, attributes, x, y, id, color, colorKeys, xScale, yScale, excludeFromDomainCalculation, excludeFromCrosshair, xScaleKey, yScaleKey, onBrush, onBrushStart, onBrushMove, onBrushEnd, handleWidth, selection, draggable, handlePosition, selectionMinLength, brushHeightExtend }
     const keys = Object.keys(config) as (keyof BrushConfigInterface<Datum>)[]
     keys.forEach(key => { if (config[key] === undefined) delete config[key] })
 

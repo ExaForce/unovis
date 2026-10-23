@@ -9,7 +9,7 @@ type VisContainerContextType =
   | 'crosshair'
 
 export type VisContainerContextProps = {
-  update: (key: VisContainerContextType, value: Accessor<unknown>) => void
+  update: (key: VisContainerContextType, value: Accessor<unknown>, element?: HTMLElement) => void
   destroy: (key: VisContainerContextType, value?: unknown) => void
   dirty: VoidFunction
 }

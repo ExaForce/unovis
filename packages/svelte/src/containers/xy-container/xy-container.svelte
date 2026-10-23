@@ -6,6 +6,7 @@
   import type { Crosshair } from '@unovis/ts/components/crosshair'
   import type { Axis } from '@unovis/ts/components/axis'
   import type { Annotations } from '@unovis/ts/components/annotations'
+  import { areArraysShallowEqual, flatten } from '@unovis/ts/utils/data'
   import { onMount, setContext } from 'svelte'
 
   type Datum = $$Generic
@@ -106,16 +107,33 @@
     },
     destroy: () => { config.components = config.components.filter(c => !c.isDestroyed()) },
   }))
-  setContext('axis', (e: HTMLElement & { __type__?: 'x' | 'y'}) => ({
+  // The container accepts several axes per type and stacks them in the order of their elements in the template
+  const axes = new Map<HTMLElement, Axis<Datum>>()
+  const updateAxes = (): void => {
+    const sorted = Array.from(axes)
+      .sort(([a], [b]) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1)
+      .map(([, c]) => c)
+    const xAxis = sorted.filter(c => c.config.type === 'x')
+    const yAxis = sorted.filter(c => c.config.type === 'y')
+    // A single axis of a type is passed as is, several as an array
+    if (!areArraysShallowEqual(xAxis, flatten([config.xAxis ?? []]))) config.xAxis = xAxis.length > 1 ? xAxis : xAxis[0]
+    if (!areArraysShallowEqual(yAxis, flatten([config.yAxis ?? []]))) config.yAxis = yAxis.length > 1 ? yAxis : yAxis[0]
+  }
+  // A keyed `{#each}` moves the axis elements without registering them again, so their order gets re-read
+  onMount(() => {
+    const observer = new MutationObserver(updateAxes)
+    observer.observe(ref, { childList: true })
+    return () => observer.disconnect()
+  })
+  setContext('axis', (e: HTMLElement) => ({
     update: (c: Axis<Datum>) => {
-      if (e.__type__ && e.__type__ !== c.config.type && config[`${e.__type__}Axis`] === c) {
-        config[`${e.__type__}Axis`] = undefined
-      }
-      if (config[`${e.__type__}Axis`] === c) return
-      e.__type__ = c.config.type as 'x' | 'y'
-      config[`${e.__type__}Axis`] = c
+      axes.set(e, c)
+      updateAxes()
     },
-    destroy: () => { config[`${e.__type__}Axis`] = undefined },
+    destroy: () => {
+      axes.delete(e)
+      updateAxes()
+    },
   }))
   setContext('crosshair', () => ({
     update: (c: Crosshair<Datum>) => {

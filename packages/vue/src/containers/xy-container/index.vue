@@ -1,6 +1,6 @@
 <script setup lang="ts" generic="T">
-import { XYContainer, XYComponentCore, XYContainerConfigInterface, Tooltip, Crosshair, Axis, Annotations } from '@unovis/ts'
-import { onUnmounted, ref, shallowRef, provide, watch, toRefs, shallowReactive, watchEffect, toRaw } from 'vue'
+import { XYContainer, XYComponentCore, XYContainerConfigInterface, Tooltip, Crosshair, Axis, Annotations, areArraysShallowEqual, flatten } from '@unovis/ts'
+import { onMounted, onUnmounted, ref, shallowRef, provide, watch, toRefs, shallowReactive, watchEffect, toRaw } from 'vue'
 import { componentAccessorKey, tooltipAccessorKey, axisAccessorKey, crosshairAccessorKey, annotationsAccessorKey } from "../../utils/context"
 import { useForwardProps } from "../../utils/props"
 
@@ -55,11 +55,43 @@ provide(componentAccessorKey, {
   dirty,
 })
 
+// The container accepts several axes per type and stacks them in the order of their elements in the template
+const axes = new Map<Axis<T>, HTMLElement | undefined>()
+const updateAxes = () => {
+  const sorted = Array.from(axes)
+    .sort(([, a], [, b]) => a && b ? ((a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1) : 0)
+    .map(([c]) => c)
+  const xAxis = sorted.filter(c => c.config.type === 'x')
+  const yAxis = sorted.filter(c => c.config.type === 'y')
+  // A single axis of a type is passed as is, several as an array
+  if (!areArraysShallowEqual(xAxis, flatten([config.xAxis ?? []]))) config.xAxis = xAxis.length > 1 ? xAxis : xAxis[0]
+  if (!areArraysShallowEqual(yAxis, flatten([config.yAxis ?? []]))) config.yAxis = yAxis.length > 1 ? yAxis : yAxis[0]
+}
+
+// A keyed `v-for` moves the axis elements without registering them again, so their order gets re-read
+let axesObserver: MutationObserver | undefined
+onMounted(() => {
+  if (!elRef.value) return
+  axesObserver = new MutationObserver(updateAxes)
+  axesObserver.observe(elRef.value, { childList: true })
+})
+onUnmounted(() => axesObserver?.disconnect())
+
 provide(axisAccessorKey, {
   data,
-  update: (c: Axis<T>) => config[`${c.config.type}Axis`] = c,
-  destroy: (c) => { config[`${c}Axis`] = undefined },
-  dirty,
+  update: (c: Axis<T>, element?: HTMLElement) => {
+    axes.set(c, element)
+    updateAxes()
+  },
+  destroy: () => {
+    axes.forEach((_, c) => { if (c.isDestroyed()) axes.delete(c) })
+    updateAxes()
+  },
+  // An axis that changed its type moves to the axes of that type
+  dirty: () => {
+    updateAxes()
+    dirty()
+  },
 })
 
 provide(crosshairAccessorKey, {

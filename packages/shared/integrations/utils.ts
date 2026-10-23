@@ -312,6 +312,15 @@ export function getConfigSummary (
         if (expression === 'Partial') {
         // If partial, required members from the inherited interface are now optional
           const partialInterfaceName = getTypeName((types[0] as ts.TypeReferenceNode).typeName)
+          // When all the properties are kept, the inherited ones stay in the config but become optional.
+          // The ones the interface redefines keep only its own definition
+          if (!keepOnlyRequiredProperties) {
+            for (const p of requiredProps.get(partialInterfaceName)) {
+              if (!requiredProps.get(interfaceName).includes(p)) configPropertiesMap.set(p, { ...configPropertiesMap.get(p), required: false })
+              else configInterfaceMembers = configInterfaceMembers.filter(m => (m.name as ts.Identifier)?.escapedText !== p || configInterface.members.includes(m))
+            }
+            return
+          }
           optionalProps.push(...requiredProps.get(partialInterfaceName))
         } else if (expression === 'WithOptional') {
           // If WithOptional, only delete the provided property from required props

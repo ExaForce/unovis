@@ -11,6 +11,14 @@ export type CrosshairCircle = {
   magnitude?: number;
 }
 
+/** A group of the `yStacked` accessors whose values accumulate together, see `Crosshair.stacks` */
+export type CrosshairStack<Datum> = {
+  /** Indices of the accessors in the `yStacked` array, in the stacking order */
+  indices: number[];
+  /** Accessor of the value the stack starts from */
+  baseline?: NumericAccessor<Datum>;
+}
+
 export type CrosshairAccessors<Datum> = {
   x: NumericAccessor<Datum> | undefined;
   y: NumericAccessor<Datum>[] | undefined;

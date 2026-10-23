@@ -2,7 +2,7 @@
 // !!! This code was automatically generated. You should not change it !!!
 import type { AxisConfigInterface } from '@unovis/ts'
 import { Axis } from '@unovis/ts'
-import { computed, inject, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
+import { computed, inject, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { axisAccessorKey } from '../../utils/context'
 import { arePropsEqual, useForwardProps } from '../../utils/props'
 
@@ -19,13 +19,14 @@ const config = useForwardProps(props)
 // component declaration
 // (a shallow ref keeps the unovis instance raw — deep-proxying it adds overhead and is not needed)
 const component = shallowRef<Axis<Datum>>()
+const elRef = ref<HTMLDivElement>()
 
 onMounted(() => {
   nextTick(() => {
     component.value = new Axis<Datum>(config.value)
     if (data.value !== undefined)
       component.value?.setData(data.value)
-    accessor?.update(component.value)
+    accessor?.update(component.value, elRef.value)
   })
 })
 
@@ -60,5 +61,5 @@ export const VisAxisSelectors = Axis.selectors
 </script>
 
 <template>
-  <div data-vis-axis />
+  <div ref="elRef" data-vis-axis />
 </template>

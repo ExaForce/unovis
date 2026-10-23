@@ -28,6 +28,8 @@ export function getComponentCode(
   const constructorArgs = isStandAlone
     ? `r, ${configArg}${dataType ? ', dataProps.data!' : ''}`
     : configArg
+  // Axes pass their element to the container, which stacks them in the order of their elements in the template
+  const isAxis = elementSuffix === 'axis'
 
   return `// !!! This code was automatically generated. You should not change it !!!
 ${importStatements
@@ -54,14 +56,14 @@ export function Vis${componentName}${genericsDefStr}(props: Vis${componentName}P
   }
    ${isStandAlone ? '' : `const ctx = useVisContainer();`}
   ${
-    isStandAlone ? 'const [ref, setRef] = createSignal<HTMLDivElement>()\n' : ''
+    isStandAlone || isAxis ? 'const [ref, setRef] = createSignal<HTMLDivElement>()\n' : ''
   }
   onMount(() => {
     ${
       isStandAlone ? 'const r = ref()\n    if(r) ' : ''
     }setComponent(new ${componentType}(${constructorArgs}));
     ${dataType && !isStandAlone ? 'if (dataProps.data !== undefined) component()?.setData(dataProps.data)' : ''}
-    ${isStandAlone ? '' : `ctx.update("${elementSuffix}", component);`}
+    ${isStandAlone ? '' : `ctx.update("${elementSuffix}", component${isAxis ? ', ref()' : ''});`}
   })
 
   onCleanup(() => {
@@ -115,7 +117,7 @@ export function Vis${componentName}${genericsDefStr}(props: Vis${componentName}P
     componentName === 'LeafletFlowMap'
       ? ''
       : `data-vis-${elementSuffix}`
-  } ${isStandAlone ? `ref={setRef} style={{ ${styles?.join(', ')} }}` : ''} />
+  } ${isStandAlone ? `ref={setRef} style={{ ${styles?.join(', ')} }}` : isAxis ? 'ref={setRef}' : ''} />
 }
 `
 }

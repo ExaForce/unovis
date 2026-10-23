@@ -250,6 +250,84 @@ const yScale = Scale.scalePow().exponent(2)
 }}
 </BrowserOnly>
 
+## Multiple Axes and Named Scales
+`xAxis` and `yAxis` accept an array of _Axis_ components (in the framework wrappers, just add several _Axis_
+children). Axes sharing a side of the chart are stacked outwards in the order they're provided, and `autoMargin`
+reserves the space for all of them. With `autoMargin` disabled they still get stacked, but the `margin` has to fit them.
+
+By default every component is plotted against the container's primary X and Y scales. To plot data of a different
+unit, bind components and axes to a _named scale_ with the `xScaleKey` / `yScaleKey` options. Components sharing a key
+get a common domain calculated from their data. Every scale spans the whole chart unless it's mapped onto a
+[segment](#chart-segments) of it. The settings of the primary scales (`xScale` / `yScale`, `xDomain` / `yDomain` with
+their constraints, and `xRangeSegment` / `yRangeSegment`) don't apply to the named ones: the `xScales` / `yScales`
+container properties configure those, setting their domain, domain constraints, scale instance or segment. A key
+doesn't have to be listed there to be used:
+
+```tsx
+<VisXYContainer data={data} yScales={{ share: { domain: [0, 100] } }}>
+  <VisStackedBar x={d => d.x} y={d => d.volume}/>
+  <VisLine x={d => d.x} y={d => d.share} yScaleKey='share'/>
+  <VisLine x={d => d.x} y={d => d.latency} yScaleKey='latency'/>
+
+  <VisAxis type='y' label='Volume'/>
+  <VisAxis
+    type='y'
+    label='Latency'
+    yScaleKey='latency'
+    gridLine={false}
+  />
+  <VisAxis
+    type='y'
+    label='Share'
+    yScaleKey='share'
+    position='right'
+    gridLine={false}
+  />
+  <VisAxis type='x'/>
+</VisXYContainer>
+```
+
+Here the two left axes are stacked, _Volume_ being the inner one, and the three Y scales get independent domains.
+
+The _Crosshair_ follows a single X scale: the primary one, or the one set by its own `xScaleKey`. It takes its `x`
+accessor from the first component bound to that scale and draws circles for the components bound to it, each one on
+the Y scale of its component. Set `excludeFromCrosshair` on a component to leave its series without circles; the
+_Crosshair_ can still take its `x` accessor from it. If no component is bound to the _Crosshair_'s X scale (e.g. all
+of them use a named one), it has no `x` accessor to snap to the data with: set its `xScaleKey` to the key of the
+components it should follow. Accessors configured on the _Crosshair_ itself replace the ones it takes from the
+components, and their circles all go on the _Crosshair_'s own Y scale.
+
+### Chart Segments
+A scale doesn't have to span the whole chart. `rangeSegment` on a named scale (`xRangeSegment` / `yRangeSegment` for
+the primary ones) maps it onto a part of the chart, as fractions `[start, end]` along its range. `0` is the start
+of the range, where the domain starts: the left of the chart for an X scale and the bottom for a Y scale (the top
+with `yDirection` set to `south`). That's how you get a volume pane under a price chart:
+
+```tsx
+<VisXYContainer
+  data={data}
+  yRangeSegment={[0.25, 1]}
+  yScales={{
+    volume: { rangeSegment: [0, 0.2], domain: [0, undefined] },
+  }}
+>
+  <VisLine x={d => d.date} y={d => d.close}/>
+  <VisStackedBar
+    x={d => d.date}
+    y={d => d.volume}
+    yScaleKey='volume'
+    excludeFromCrosshair
+  />
+  <VisAxis type='y' position='right' label='Price'/>
+  <VisAxis type='x'/>
+  <VisCrosshair/>
+</VisXYContainer>
+```
+
+The axes bound to a segmented scale span only their segment. A scale doesn't need an axis at all: the volume pane
+above stays unlabeled because no _Axis_ is bound to it. The _Crosshair_ is shown over the whole chart even though its
+Y scale, the primary one, takes only the top part of it.
+
 ## Dynamic Y Scale
 You can also set the `yScale` domain dynamically based on the current `xDomain`, meaning that only visible data will be used in the domain calculation.
 Take a look at the example below. The `xDomain` configuration property there is not set, the chart displays the whole dataset and the Y axis shows ticks from 0 to 150.

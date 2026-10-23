@@ -50,6 +50,12 @@ export function VisXYContainerFC<Datum> (props: PropsWithChildren<VisXYContainer
     // or React elements into the config would be both wrong and expensive)
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { data, className, style, children, ...restProps } = props
+    const axes = Array
+      .from(container.current?.querySelectorAll<VisComponentElement<Axis<Datum>>>('vis-axis') ?? [])
+      .map(c => c.__component__)
+      .filter(Boolean)
+    const xAxes = axes.filter(c => c.config.type === AxisType.X)
+    const yAxes = axes.filter(c => c.config.type === AxisType.Y)
 
     return {
       components: Array
@@ -59,14 +65,9 @@ export function VisXYContainerFC<Datum> (props: PropsWithChildren<VisXYContainer
       tooltip: container.current?.querySelector<VisComponentElement<Tooltip>>('vis-tooltip')?.__component__,
       crosshair: container.current?.querySelector<VisComponentElement<Crosshair<Datum>>>('vis-crosshair')?.__component__,
       annotations: container.current?.querySelector<VisComponentElement<Annotations>>('vis-annotations')?.__component__,
-      xAxis: Array
-        .from(container.current?.querySelectorAll<VisComponentElement<Axis<Datum>>>('vis-axis') ?? [])
-        .map(c => c.__component__)
-        .find(c => c.config.type === AxisType.X),
-      yAxis: Array
-        .from(container.current?.querySelectorAll<VisComponentElement<Axis<Datum>>>('vis-axis') ?? [])
-        .map(c => c.__component__)
-        .find(c => c.config.type === AxisType.Y),
+      // A single axis of a type is passed as is, several as an array
+      xAxis: xAxes.length > 1 ? xAxes : xAxes[0],
+      yAxis: yAxes.length > 1 ? yAxes : yAxes[0],
       margin: { top: 5, left: 5, right: 5, bottom: 5 },
       ...restProps,
     }

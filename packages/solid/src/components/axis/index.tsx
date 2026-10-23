@@ -16,11 +16,12 @@ export function VisAxis<Datum>(props: VisAxisProps<Datum>) {
   // Separate the data prop from the config props, so the dataset doesn't end up in the component config
   const [dataProps, config] = splitProps(props, ['data'])
    const ctx = useVisContainer();
-  
+  const [ref, setRef] = createSignal<HTMLDivElement>()
+
   onMount(() => {
     setComponent(new Axis<Datum>(config));
     if (dataProps.data !== undefined) component()?.setData(dataProps.data)
-    ctx.update("axis", component);
+    ctx.update("axis", component, ref());
   })
 
   onCleanup(() => {
@@ -60,5 +61,5 @@ export function VisAxis<Datum>(props: VisAxisProps<Datum>) {
   );
 
 
-  return <div data-vis-axis  />
+  return <div data-vis-axis ref={setRef} />
 }
