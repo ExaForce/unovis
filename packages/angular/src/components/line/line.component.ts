@@ -107,6 +107,21 @@ export class VisLineComponent<Datum> implements LineConfigInterface<Datum>, Afte
    * Default: `false` */
   @Input() excludeFromDomainCalculation?: boolean
 
+  /** Excludes the component from the Crosshair: no circles get rendered for its `y` accessors. The Crosshair can still
+   * take its `x` accessor from the component (see `xScaleKey`), so excluding all the components leaves the Crosshair
+   * line and tooltip working. Default: `false` */
+  @Input() excludeFromCrosshair?: boolean
+
+  /** Key of the container's named X scale the component is bound to (see `xScales` in the XY Container config).
+   * Components bound to the same key share the scale domain. The Crosshair follows a single X scale: the primary one,
+   * or the one named by its own `xScaleKey`. It takes its `x` accessor from the first component bound to that scale
+   * and renders circles only for the components bound to it. Default: `undefined` (the container's primary X scale) */
+  @Input() xScaleKey?: string
+
+  /** Key of the container's named Y scale the component is bound to (see `yScales` in the XY Container config).
+   * Components bound to the same key share the scale domain. Default: `undefined` (the container's primary Y scale) */
+  @Input() yScaleKey?: string
+
   /** Line pattern accessor. Resolves to a `LinePatternType`. The whole data array is passed as the first argument. Default: `undefined` */
   @Input() pattern?: GenericAccessor<LinePatternType, Datum[]>
 
@@ -158,8 +173,8 @@ export class VisLineComponent<Datum> implements LineConfigInterface<Datum>, Afte
   }
 
   private getConfig (): LineConfigInterface<Datum> {
-    const { duration, events, attributes, x, y, id, color, colorKeys, xScale, yScale, excludeFromDomainCalculation, pattern, curveType, lineWidth, lineDashArray, fallbackValue, highlightOnHover, cursor, interpolateMissingData } = this
-    const config = { duration, events, attributes, x, y, id, color, colorKeys, xScale, yScale, excludeFromDomainCalculation, pattern, curveType, lineWidth, lineDashArray, fallbackValue, highlightOnHover, cursor, interpolateMissingData }
+    const { duration, events, attributes, x, y, id, color, colorKeys, xScale, yScale, excludeFromDomainCalculation, excludeFromCrosshair, xScaleKey, yScaleKey, pattern, curveType, lineWidth, lineDashArray, fallbackValue, highlightOnHover, cursor, interpolateMissingData } = this
+    const config = { duration, events, attributes, x, y, id, color, colorKeys, xScale, yScale, excludeFromDomainCalculation, excludeFromCrosshair, xScaleKey, yScaleKey, pattern, curveType, lineWidth, lineDashArray, fallbackValue, highlightOnHover, cursor, interpolateMissingData }
     const keys = Object.keys(config) as (keyof LineConfigInterface<Datum>)[]
     keys.forEach(key => { if (config[key] === undefined) delete config[key] })
 

@@ -18,7 +18,7 @@ interface Component {
 }
 
 interface Container {
-  config: { xAxis?: Component; yAxis?: Component };
+  config: { xAxis?: Component | Component[]; yAxis?: Component | Component[] };
 }
 
 interface Fixture {
@@ -193,6 +193,15 @@ for (const { runtime, fixture } of cases) {
       app.update('axis-type')
       await settle(window)
       assert.equal(app.containers[0].config.xAxis, undefined)
+      assert.equal(app.containers[0].config.yAxis, components.axis)
+      // Several axes of a type are passed as an array in the template order. It comes from the jsdom realm, so it gets copied before the deep comparison
+      app.update('toggle-second-axis')
+      await settle(window)
+      const { secondAxis } = app.components()
+      assert.deepEqual([...app.containers[0].config.yAxis as Component[]], [components.axis, secondAxis])
+      app.update('toggle-second-axis')
+      await settle(window)
+      assert(secondAxis.isDestroyed())
       assert.equal(app.containers[0].config.yAxis, components.axis)
       app.update('axis-type')
       await settle(window)

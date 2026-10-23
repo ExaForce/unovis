@@ -32,8 +32,11 @@ export class XYComponentCore<
 
   protected _defaultConfig: ConfigInterface = XYComponentDefaultConfig as ConfigInterface
 
-  private _xScale: ContinuousScale = Scale.scaleLinear()
-  private _yScale: ContinuousScale = Scale.scaleLinear()
+  // The component's own scale instances, used unless a container provides shared ones (see `setScale`)
+  private _ownXScale: ContinuousScale = Scale.scaleLinear()
+  private _ownYScale: ContinuousScale = Scale.scaleLinear()
+  private _xScale: ContinuousScale = this._ownXScale
+  private _yScale: ContinuousScale = this._ownYScale
 
   get xScale (): ContinuousScale {
     return this.config.xScale || this._xScale
@@ -63,9 +66,10 @@ export class XYComponentCore<
     if (dimension === ScaleDimension.Y) this._yScale?.range(range)
   }
 
-  setScale (dimension: ScaleDimension, scale: ContinuousScale): void {
-    if (scale && (dimension === ScaleDimension.X)) this._xScale = scale
-    if (scale && (dimension === ScaleDimension.Y)) this._yScale = scale
+  /** Sets a scale instance shared with other components. Without one, the component goes back to its own instance */
+  setScale (dimension: ScaleDimension, scale: ContinuousScale | undefined): void {
+    if (dimension === ScaleDimension.X) this._xScale = scale ?? this._ownXScale
+    if (dimension === ScaleDimension.Y) this._yScale = scale ?? this._ownYScale
   }
 
   getDataExtent (dimension: ScaleDimension, scaleByVisibleData: boolean): number[] {

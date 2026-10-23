@@ -13,12 +13,33 @@ import { ContinuousScale } from '@/types/scale'
 import { Direction } from '@/types/direction'
 import { Spacing } from '@/types/spacing'
 
+/** Configuration of a named scale, see `xScales` and `yScales` of the XY Container config */
+export interface XYContainerScaleConfigInterface {
+  /** Scale instance, e.g. Scale.scaleLinear(). If set, the components bound to the scale share this single instance.
+   * By default they have their own scale instances but their `domain` and `range` values are synchronized.
+   * Don't configure one instance for several scales: they would overwrite each other's domain and range.
+   * Default: `undefined` */
+  scale?: ContinuousScale;
+  /** Scale domain (data extent). By default it is calculated automatically from the data of the bound components */
+  domain?: [number | undefined, number | undefined];
+  /** Constraint the minimum value of the scale domain, see `xDomainMinConstraint`. Default: `undefined` */
+  domainMinConstraint?: [number | undefined, number | undefined];
+  /** Constraint the maximum value of the scale domain, see `xDomainMaxConstraint`. Default: `undefined` */
+  domainMaxConstraint?: [number | undefined, number | undefined];
+  /** The part of the chart the scale is mapped to, as fractions `[start, end]` along its range: `0` is where the
+   * domain starts (the left of the chart for an X scale, the bottom for a Y scale or the top with `yDirection: south`)
+   * and `1` where it ends. E.g. `[0, 0.2]` maps a Y scale onto the bottom 20% of the chart (with the default `yDirection`),
+   * which is how you get a volume pane under a price chart. The axes bound to the scale span only its segment.
+   * The primary scales' `xRangeSegment` / `yRangeSegment` don't apply here. Default: `undefined` (the whole chart) */
+  rangeSegment?: [number, number];
+}
+
 export interface XYContainerConfigInterface<Datum> extends ContainerConfigInterface {
   /** An array of visualization components. Default: `[]` */
   components?: XYComponentCore<Datum>[];
 
   /** Scale for X dimension, e.g. Scale.scaleLinear().
-   * If set, this value will override the components' xScale and they will have a single shared xScale instance.
+   * If set, this value will override the xScale of the components without an `xScaleKey` and they will have a single shared xScale instance.
    * By default the components have their own scale instances but their `domain` and `range` values are synchronized.
    * Default: `undefined` */
   xScale?: ContinuousScale;
@@ -41,9 +62,12 @@ export interface XYContainerConfigInterface<Datum> extends ContainerConfigInterf
   /** Force set the X scale range (in the screen space). By default the range is calculated automatically based on the
    * chart's set up */
   xRange?: [number, number];
+  /** The part of the chart the primary X scale is mapped to, as fractions `[start, end]` of its range,
+   * see `rangeSegment` of the named scales. The named scales don't follow it. Default: `undefined` (the whole chart) */
+  xRangeSegment?: [number, number];
 
   /** Scale for Y dimension, e.g. Scale.scaleLinear().
-   * If set, this value will override the components' yScale and they will have a single shared yScale instance.
+   * If set, this value will override the yScale of the components without a `yScaleKey` and they will have a single shared yScale instance.
    * By default the components have their own scale instances but their `domain` and `range` values are synchronized.
    * Default: `undefined` */
   yScale?: ContinuousScale;
@@ -66,13 +90,32 @@ export interface XYContainerConfigInterface<Datum> extends ContainerConfigInterf
   /** Force set the Y scale range (in the screen space). By default the range is calculated automatically based on the
    * chart's set up */
   yRange?: [number, number];
+  /** The part of the chart the primary Y scale is mapped to, as fractions `[start, end]` of its range,
+   * see `rangeSegment` of the named scales. E.g. `[0.25, 1]` leaves the bottom quarter of the chart (the top one with
+   * `yDirection: south`) to other scales. The named scales don't follow it. Default: `undefined` (the whole chart) */
+  yRangeSegment?: [number, number];
   /** Y Axis direction. Default: `Direction.North` */
   yDirection?: Direction.South | Direction.North | string;
 
-  /** X Axis component instance. Default: `undefined` */
-  xAxis?: Axis<Datum>;
-  /** Y Axis component instance. Default: `undefined` */
-  yAxis?: Axis<Datum>;
+  /** Named X scales in addition to the primary one, keyed by the `xScaleKey` the components and axes use to bind
+   * to them. The components bound to one key get a common domain, calculated from their data unless the `domain`
+   * is set here. Each of them spans the whole chart unless its `rangeSegment` is set. The settings of the primary scale
+   * (`xScale`, `xDomain` and its constraints, `xRangeSegment`) don't apply to them. A key doesn't have to be listed
+   * here to be used, the entries only configure the scales. Default: `undefined` */
+  xScales?: Record<string, XYContainerScaleConfigInterface>;
+  /** Named Y scales in addition to the primary one, keyed by the `yScaleKey` the components and axes use to bind
+   * to them. The components bound to one key get a common domain, calculated from their data unless the `domain`
+   * is set here. Each of them spans the whole chart unless its `rangeSegment` is set. The settings of the primary scale
+   * (`yScale`, `yDomain` and its constraints, `yRangeSegment`) don't apply to them. A key doesn't have to be listed
+   * here to be used, the entries only configure the scales. Default: `undefined` */
+  yScales?: Record<string, XYContainerScaleConfigInterface>;
+
+  /** X Axis component instance, or an array of them. Axes sharing a side of the chart are stacked outwards
+   * in the order provided. Each axis can be bound to a named scale with its `xScaleKey`. Default: `undefined` */
+  xAxis?: Axis<Datum> | Axis<Datum>[];
+  /** Y Axis component instance, or an array of them. Axes sharing a side of the chart are stacked outwards
+   * in the order provided. Each axis can be bound to a named scale with its `yScaleKey`. Default: `undefined` */
+  yAxis?: Axis<Datum> | Axis<Datum>[];
   /** Enables automatic calculation of chart margins based on the size of the axes. Default: `true` */
   autoMargin?: boolean;
   /** Tooltip component. Created automatically when the crosshair has a custom template and no tooltip is provided. Default: `undefined` */
@@ -129,13 +172,18 @@ export const XYContainerDefaultConfig: XYContainerConfigInterface<unknown> = {
   xDomainMinConstraint: undefined,
   xDomainMaxConstraint: undefined,
   xRange: undefined,
+  xRangeSegment: undefined,
 
   yScale: undefined,
   yDomain: undefined,
   yDomainMinConstraint: undefined,
   yDomainMaxConstraint: undefined,
   yRange: undefined,
+  yRangeSegment: undefined,
   yDirection: Direction.North,
+
+  xScales: undefined,
+  yScales: undefined,
 
   preventEmptyDomain: null,
   scaleByDomain: false,

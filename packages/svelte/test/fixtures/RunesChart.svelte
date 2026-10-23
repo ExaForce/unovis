@@ -13,6 +13,7 @@
   let owned = $state<VisLine<Datum>>()
   let donut = $state<VisDonut<Datum>>()
   let axis = $state<VisAxis<unknown>>()
+  let secondAxis = $state<VisAxis<unknown>>()
   let legend = $state<VisBulletLegend>()
   const x = (d: Datum): number => d.x
   const y = (d: Datum): number => d.y
@@ -23,6 +24,7 @@
       owned: owned?.getComponent(),
       donut: donut?.getComponent(),
       axis: axis?.getComponent(),
+      secondAxis: secondAxis?.getComponent(),
       legend: legend?.getComponent(),
     }
   }
@@ -36,6 +38,9 @@
       {/if}
       {#if model.showAxis}
         <VisAxis bind:this={axis} type={model.axisType} duration={0}/>
+      {/if}
+      {#if model.showSecondAxis}
+        <VisAxis bind:this={secondAxis} type="y" duration={0}/>
       {/if}
     </VisXYContainer>
   </div>

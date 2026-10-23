@@ -13,6 +13,7 @@ export interface State {
   axisType: 'x' | 'y';
   showLine: boolean;
   showAxis: boolean;
+  showSecondAxis: boolean;
   showDonut: boolean;
   showCharts: boolean;
   legendItems: { name: string; color: string }[];
@@ -29,6 +30,7 @@ export function createState (): State {
     axisType: 'x',
     showLine: true,
     showAxis: true,
+    showSecondAxis: false,
     showDonut: true,
     showCharts: true,
     legendItems: [{ name: 'Before', color: '#ff0000' }],
@@ -71,6 +73,9 @@ export function updateState (state: ReturnType<typeof createState>, action: stri
       break
     case 'toggle-axis':
       state.showAxis = !state.showAxis
+      break
+    case 'toggle-second-axis':
+      state.showSecondAxis = !state.showSecondAxis
       break
     case 'axis-type':
       state.axisType = state.axisType === 'x' ? 'y' : 'x'

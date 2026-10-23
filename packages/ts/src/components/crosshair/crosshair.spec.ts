@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { Crosshair } from '@/components/crosshair'
 
 // Types
-import { ScaleDimension } from '@/types/scale'
+import { Scale, ScaleDimension } from '@/types/scale'
 import { CrosshairCircle } from '@/components/crosshair/types'
 
 // Config
@@ -90,5 +90,29 @@ describe('Crosshair circles paint order', () => {
     crosshair.setScaleRange(ScaleDimension.Y, [300, 0])
     const circles = (crosshair as unknown as CrosshairInternals).getCircleData({ x: 0, a: 1600, b: 3, c: 1599 }, 0)
     expect(circles.map(c => c.id)).toEqual(['stacked-0', 'stacked-1', 'regular-0'])
+  })
+})
+
+describe('Crosshair circles on several Y scales', () => {
+  const primary = Scale.scaleLinear().domain([0, 100]).range([300, 0])
+  const secondary = Scale.scaleLinear().domain([0, 1000]).range([300, 0])
+
+  const getCirclesY = (crosshair: Crosshair<Datum>): number[] => {
+    crosshair.circleYScales = [primary, secondary, primary]
+    crosshair.stacks = [{ indices: [0], baseline: () => 5 }, { indices: [1] }]
+    return (crosshair as unknown as CrosshairInternals).getCircleData(datum, datumIndex).map(c => c.y)
+  }
+
+  it('places the provided accessors on their scales and stacks the values only within their stack', () => {
+    const crosshair = new Crosshair<Datum>()
+    crosshair.accessors = { x: d => d.x, y: [d => d.c], yStacked: [d => d.a, d => d.b], baseline: undefined }
+    expect(getCirclesY(crosshair)).toEqual([primary(10 + 5), secondary(20), primary(70)])
+  })
+
+  it('stacks the configured accessors together on the crosshair Y scale', () => {
+    const crosshair = new Crosshair<Datum>({ x: d => d.x, yStacked: [d => d.a, d => d.b], y: [d => d.c], baseline: () => 1 })
+    crosshair.setScaleDomain(ScaleDimension.Y, [0, 200])
+    crosshair.setScaleRange(ScaleDimension.Y, [300, 0])
+    expect(getCirclesY(crosshair)).toEqual([crosshair.yScale(10 + 1), crosshair.yScale(10 + 20 + 1), crosshair.yScale(70)])
   })
 })

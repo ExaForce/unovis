@@ -25,6 +25,9 @@ export function getComponentCode (
   const complexPropComponent = ['Timeline', 'Crosshair', 'Boxplot']
   const isComplexPropComponent = complexPropComponent.includes(componentName)
 
+  // Axes pass their element to the container, which stacks them in the order of their elements in the template
+  const hasElementRef = isStandAlone || elementSuffix === 'axis'
+
   return `<script setup lang="ts" ${genericsExtend}>
 // !!! This code was automatically generated. You should not change it !!!
 ${importStatements.map(s => `import { ${s.elements.join(', ')} } from '${s.source}'`).join('\n  ')}${componentName === 'Timeline' ? '\nimport { XYComponentConfigInterface, StringAccessor } from "@unovis/ts"' : ''}
@@ -44,13 +47,13 @@ const config = useForwardProps(props)
 // component declaration
 // (a shallow ref keeps the unovis instance raw — deep-proxying it adds overhead and is not needed)
 const component = shallowRef<${componentType}>()
-${isStandAlone ? 'const elRef = ref<HTMLDivElement>()' : ''}
+${hasElementRef ? 'const elRef = ref<HTMLDivElement>()' : ''}
 
 onMounted(() => {
   nextTick(() => {
     ${isStandAlone ? 'if(elRef.value)\n    ' : ''}component.value = new ${componentType}(${constructorArgs})
     ${propDefs?.length && !isStandAlone ? 'if (data.value !== undefined) component.value?.setData(data.value)' : ''}
-    ${isStandAlone ? '' : 'accessor?.update(component.value)'}
+    ${isStandAlone ? '' : `accessor?.update(component.value${elementSuffix === 'axis' ? ', elRef.value' : ''})`}
   })
 })
 
@@ -86,7 +89,7 @@ export const Vis${componentName}Selectors = ${componentName}.selectors
 </script>
 
 <template>
-  <div data-vis-${elementSuffix} ${isStandAlone ? 'ref="elRef"' : ''}/>
+  <div data-vis-${elementSuffix} ${hasElementRef ? 'ref="elRef"' : ''}/>
 </template>
 
 ${isStandAlone ? `\n<style>\n  [data-vis-${elementSuffix}] {\n    ${styles?.join(';\n    ')};\n  }\n</style>` : ''}

@@ -14,10 +14,12 @@ import { getColor } from '@/utils/color'
 // Types
 import { Position } from '@/types/position'
 import { FindNearestDirection } from '@/types/data'
+import { ContinuousScale } from '@/types/scale'
+import { NumericAccessor } from '@/types/accessor'
 import { Spacing } from '@/types/spacing'
 
 // Local Types
-import { CrosshairAccessors, CrosshairCircle } from './types'
+import { CrosshairAccessors, CrosshairCircle, CrosshairStack } from './types'
 import { CrosshairSnapMode, CROSSHAIR_CIRCLE_OVERLAP_RADII } from './constants'
 
 // Config
@@ -56,10 +58,29 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
   public set colorKeys (colorKeys: string[]) { this._colorKeys = colorKeys }
   public get colorKeys (): string[] { return this.config.colorKeys ?? this._colorKeys }
 
+  /** Y scale per circle (stacked first, then regular), set externally (e.g. from XYContainer) when the
+   * components are bound to different Y scales. The crosshair's own Y scale is used for the circles without one */
+  public circleYScales: (ContinuousScale | undefined)[] = []
+
+  /** Groups of the stacked accessors whose values accumulate together, set externally (e.g. from XYContainer) along with
+   * `circleYScales`, so the components bound to different Y scales get stacked separately. Without them, all the
+   * stacked accessors form a single stack starting from the `baseline` */
+  public stacks: CrosshairStack<Datum>[] = []
+
+  /** The part of the chart the crosshair's Y scale is mapped onto, as fractions `[start, end]` of its range, set
+   * externally (e.g. from XYContainer). The crosshair is shown over the whole chart regardless */
+  public yRangeSegment: [number, number] | undefined
+
   /** Data indices sorted by x value with the corresponding sorted values, so per-mousemove
    * nearest-datum lookups can bisect instead of re-sorting the dataset on every frame.
    * Invalidated when the data, config, or externally provided accessors change */
   private _sortedDataCache: { values: number[]; indices: number[] } | null = null
+
+  /** Whether the accessors come from the crosshair's own config rather than from the container */
+  private _hasConfiguredAccessors (): boolean {
+    const { config } = this
+    return !!(config.x || config.y || config.yStacked)
+  }
 
   public set accessors (accessors: CrosshairAccessors<Datum>) {
     this._accessors = accessors
@@ -69,7 +90,7 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
   public get accessors (): CrosshairAccessors<Datum> {
     const { config } = this
 
-    const hasConfig = !!(config.x || config.y || config.yStacked)
+    const hasConfig = this._hasConfiguredAccessors()
     const x = hasConfig ? config.x : this._accessors.x
     const yAcc = hasConfig ? config.y : this._accessors.y
     const y = yAcc ? (isArray(yAcc) ? yAcc : [yAcc]) : undefined
@@ -172,6 +193,41 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
     return value - values[index - 1] > values[index] - value ? indices[index] : indices[index - 1]
   }
 
+  /** Returns the datum with the circle nearest to the pointer, its index and the squared distance to it, measured in the
+   * pixel space with the circles on several Y scales (see `_getCirclesPlacement`). A linear scan, as `getNearest2D` does */
+  private _getNearestDatum2D (xPx: number, yPx: number, accessors: CrosshairAccessors<Datum>): { datum: Datum; index: number; distanceSq: number } | undefined {
+    const data = this.datamodel.data
+    if (!data?.length || !accessors.x) return undefined
+
+    const placeCircles = this._getCirclesPlacement(accessors)
+    let nearest: { datum: Datum; index: number; distanceSq: number } | undefined
+    data.forEach((d, i) => {
+      const x = this.xScale(getNumber(d, accessors.x, i))
+      if (!isFinite(x)) return
+
+      const { values, y } = placeCircles(d, i)
+      values.forEach((value, j) => {
+        // There's nothing to snap to where the value is missing
+        if (!isNumber(value)) return
+        const distanceSq = (x - xPx) ** 2 + (y[j] - yPx) ** 2
+        if (distanceSq < (nearest?.distanceSq ?? Infinity)) nearest = { datum: d, index: i, distanceSq }
+      })
+    })
+
+    return nearest
+  }
+
+  /** Y range of the whole chart: the range of the crosshair's Y scale, extended beyond its `yRangeSegment` if it has one */
+  private _getChartYRange (): number[] {
+    const range = this.yScale.range()
+    const segment = this.yRangeSegment
+    if (!segment || segment[0] === segment[1]) return range
+
+    const length = (range[1] - range[0]) / (segment[1] - segment[0])
+    const start = range[0] - length * segment[0]
+    return [start, start + length]
+  }
+
   _render (customDuration?: number): void {
     const { config, datamodel } = this
     const duration = isNumber(customDuration) ? customDuration : config.duration
@@ -202,10 +258,17 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
 
       // In `CrosshairSnapMode.XY` mode we snap to the data point closest to the pointer in both X and Y (pixel space).
       // This requires a real pointer position, so we fall back to X-only snapping when `forceShowAt` is set
-      // or there's no pointer Y available yet.
-      const useXYMode = config.snapMode === CrosshairSnapMode.XY && !isForceShowAtDefined && this._yPx !== undefined
+      // or there's no pointer Y available yet. The same goes when the components provide no circles to snap to
+      // (e.g. they're all excluded from the crosshair).
+      const accessors = this.accessors
+      const yPx = this._yPx
+      const hasNoProvidedCircles = !this._hasConfiguredAccessors() && !accessors.y?.length && !accessors.yStacked?.length
+      const useXYMode = config.snapMode === CrosshairSnapMode.XY && !isForceShowAtDefined && xPx !== undefined && yPx !== undefined && !hasNoProvidedCircles
       if (useXYMode) {
-        const nearest = getNearest2D(datamodel.data, [this._xPx, this._yPx], this.xScale, this.yScale, this.accessors.x, this.accessors.y, this.accessors.yStacked, this.accessors.baseline)
+        // With all the circles on the crosshair's own Y scale, `getNearest2D` finds the nearest one
+        const nearest = this._isSingleYScale(accessors)
+          ? getNearest2D(datamodel.data, [xPx, yPx], this.xScale, this.yScale, accessors.x, accessors.y, accessors.yStacked, accessors.baseline)
+          : this._getNearestDatum2D(xPx, yPx, accessors)
         if (nearest) {
           nearestDatum = nearest.datum
           nearestDatumIndex = nearest.index
@@ -218,7 +281,7 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
     }
 
     const xRange = this.xScale.range()
-    const yRange = this.yScale.range()
+    const yRange = this._getChartYRange()
     const xClamped = config.snapToData && nearestDatum
       ? clamp(Math.round(this.xScale(getNumber(nearestDatum, this.accessors.x, nearestDatumIndex))), 0, this._width)
       : clamp(xPx, xRange[0], xRange[1])
@@ -445,21 +508,67 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
     return order.map(i => circles[i])
   }
 
+  /** Whether all the circles go on the crosshair's own Y scale in a single stack starting from the `baseline`, as when
+   * the components share that scale. Then `circleYScales` and `stacks` change nothing, and the circles are placed as by `getNearest2D` */
+  private _isSingleYScale (accessors: CrosshairAccessors<Datum>): boolean {
+    // The per-circle scales and the stacks match the accessors provided by the container, not the ones configured on the crosshair
+    if (this._hasConfiguredAccessors()) return true
+
+    const [stack, ...otherStacks] = this.stacks
+    const isSingleStack = !stack || (!otherStacks.length && (this.config.baseline ?? stack.baseline) === accessors.baseline &&
+      stack.indices.length === (accessors.yStacked?.length ?? 0) && stack.indices.every((index, i) => index === i))
+    return isSingleStack && this.circleYScales.every(scale => !scale || scale === this.yScale)
+  }
+
+  /** Returns a function placing the circles of a datum on several Y scales: each circle goes on its scale from `circleYScales`,
+   * and the stacked values accumulate only within their stack (see `stacks`). The function reads every accessor once and
+   * returns the values along with the Y positions of the circles, stacked first, then regular */
+  private _getCirclesPlacement (accessors: CrosshairAccessors<Datum>): (datum: Datum, datumIndex: number) => { values: (number | null | undefined)[]; y: number[] } {
+    const { config } = this
+    const yStackedAccessors = accessors.yStacked ?? []
+    const circleAccessors = [...yStackedAccessors, ...(accessors.y ?? [])]
+    const scales = circleAccessors.map((_, i) => this.circleYScales[i] ?? this.yScale)
+    const stacks = this.stacks.length ? this.stacks : [{ indices: yStackedAccessors.map((_, i) => i), baseline: accessors.baseline }]
+    const baselines = stacks.map(stack => config.baseline ?? stack.baseline)
+
+    return (datum, datumIndex) => {
+      const values = circleAccessors.map(a => getNumber(datum, a, datumIndex))
+      const y: number[] = []
+      stacks.forEach(({ indices }, i) => {
+        const baselineValue = getNumber(datum, baselines[i], datumIndex) || 0
+        // The values that have been read are passed in place of the accessors
+        getStackedValues(datum, datumIndex, ...indices.map(index => values[index]))
+          .forEach((value, j) => { y[indices[j]] = scales[indices[j]]((value ?? 0) + baselineValue) })
+      })
+      for (let i = yStackedAccessors.length; i < values.length; i += 1) y[i] = scales[i](values[i] ?? NaN)
+
+      return { values, y }
+    }
+  }
+
   private getCircleData (datum: Datum, datumIndex: number): CrosshairCircle[] {
     const { config } = this
     const colorOptions = { colorFn: this._colorFunction }
     const colorKeys = this.colorKeys
 
     if (config.snapToData && datum) {
-      const yAccessors = this.accessors.y ?? []
-      const yStackedAccessors = this.accessors.yStacked ?? []
-      const baselineValue = getNumber(datum, this.accessors.baseline, datumIndex) || 0
-      const stackedValues: CrosshairCircle[] = getStackedValues(datum, datumIndex, ...yStackedAccessors)
-        .map((value, index) => ({
+      const accessors = this.accessors
+      const yAccessors = accessors.y ?? []
+      const yStackedAccessors = accessors.yStacked ?? []
+      // On several Y scales every accessor is read once. On a single one they're read as `getNearest2D` reads them, so
+      // the circles of impure accessors (e.g. random values) stay where they've always been
+      const placement = this._isSingleYScale(accessors) ? undefined : this._getCirclesPlacement(accessors)(datum, datumIndex)
+      const getValue = (a: NumericAccessor<Datum>, circleIndex: number): number | null | undefined => placement
+        ? placement.values[circleIndex]
+        : getNumber(datum, a, datumIndex)
+      const baselineValue = placement ? 0 : getNumber(datum, accessors.baseline, datumIndex) || 0
+      const stackedY = placement?.y ?? getStackedValues(datum, datumIndex, ...yStackedAccessors).map(value => this.yScale(value + baselineValue))
+      const stackedValues: CrosshairCircle[] = yStackedAccessors
+        .map((a, index) => ({
           id: `stacked-${index}`,
-          y: this.yScale(value + baselineValue),
-          opacity: isNumber(getNumber(datum, yStackedAccessors[index], datumIndex)) ? 1 : 0,
-          magnitude: Math.abs(getNumber(datum, yStackedAccessors[index], datumIndex)),
+          y: stackedY[index],
+          opacity: isNumber(getValue(a, index)) ? 1 : 0,
+          magnitude: Math.abs(getValue(a, index)),
           color: getColor(datum, config.color, index, colorKeys?.[index], colorOptions),
           strokeColor: config.strokeColor ? getColor(datum, config.strokeColor, index, colorKeys?.[index], colorOptions) : undefined,
           strokeWidth: config.strokeWidth ? getNumber(datum, config.strokeWidth, index) : undefined,
@@ -467,11 +576,11 @@ export class Crosshair<Datum> extends XYComponentCore<Datum, CrosshairConfigInte
 
       const regularValues: CrosshairCircle[] = yAccessors
         .map((a, index) => {
-          const value = getNumber(datum, a, datumIndex)
           const circleIndex = stackedValues.length + index
+          const value = getValue(a, circleIndex)
           return {
             id: `regular-${index}`,
-            y: this.yScale(value),
+            y: placement ? placement.y[circleIndex] : this.yScale(value),
             opacity: isNumber(value) ? 1 : 0,
             magnitude: Math.abs(value),
             color: getColor(datum, config.color, circleIndex, colorKeys?.[circleIndex], colorOptions),

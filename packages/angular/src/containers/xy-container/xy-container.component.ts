@@ -25,6 +25,7 @@ import {
   XYComponentCore,
   XYContainer,
   XYContainerConfigInterface,
+  XYContainerScaleConfigInterface,
 } from '@unovis/ts'
 import { VisXYComponent } from '../../core'
 import { VisTooltipComponent } from '../../components/tooltip/tooltip.component'
@@ -78,6 +79,12 @@ export class VisXYContainerComponent<Datum> implements AfterViewInit, AfterConte
   /** Force set the X scale range (in the screen space). By default the range is calculated automatically based on the
    * chart's set up */
   @Input() xRange?: [number, number]
+  /** The part of the chart the primary X scale is mapped to, as fractions `[start, end]` of its range,
+   * see `rangeSegment` of the named scales. Default: `undefined` (the whole chart) */
+  @Input() xRangeSegment?: [number, number]
+  /** Named X scales in addition to the primary one, keyed by the `xScaleKey` the components and axes use to bind
+   * to them. Default: `undefined` */
+  @Input() xScales?: Record<string, XYContainerScaleConfigInterface>
 
   /** Scale for Y dimension, e.g. Scale.ScaleLinear. Default: `Scale.ScaleLinear()` */
   @Input() yScale?: ContinuousScale
@@ -100,6 +107,12 @@ export class VisXYContainerComponent<Datum> implements AfterViewInit, AfterConte
   /** Force set the Y scale range (in the screen space). By default the range is calculated automatically based on the
    * chart's set up */
   @Input() yRange?: [number, number]
+  /** The part of the chart the primary Y scale is mapped to, as fractions `[start, end]` of its range,
+   * see `rangeSegment` of the named scales. Default: `undefined` (the whole chart) */
+  @Input() yRangeSegment?: [number, number]
+  /** Named Y scales in addition to the primary one, keyed by the `yScaleKey` the components and axes use to bind
+   * to them. Default: `undefined` */
+  @Input() yScales?: Record<string, XYContainerScaleConfigInterface>
   /** Y Axis direction. Default: `Direction.North` */
   @Input() yDirection?: Direction.South | Direction.North | string = Direction.North
   /** Prevents the chart domain from being empty (when domain's min and max values are equal).
@@ -176,16 +189,19 @@ export class VisXYContainerComponent<Datum> implements AfterViewInit, AfterConte
   getConfig (): XYContainerConfigInterface<Datum> {
     const {
       duration, margin, padding, scaleByDomain, autoMargin, bleed, width, height,
-      xScale, xDomain, xDomainMinConstraint, xDomainMaxConstraint, xRange,
-      yScale, yDomain, yDomainMinConstraint, yDomainMaxConstraint, yRange,
+      xScale, xDomain, xDomainMinConstraint, xDomainMaxConstraint, xRange, xRangeSegment, xScales,
+      yScale, yDomain, yDomainMinConstraint, yDomainMaxConstraint, yRange, yRangeSegment, yScales,
       yDirection, ariaLabel, colorFunction,
     } = this
     const visComponents = this.visComponents.toArray().map(d => d.component)
 
     const crosshair = visComponents.find(c => c instanceof Crosshair) as Crosshair<Datum>
     const tooltip = this.tooltipComponent?.component as Tooltip
-    const xAxis = visComponents.find(c => c instanceof Axis && c?.config?.type === 'x') as Axis<Datum>
-    const yAxis = visComponents.find(c => c instanceof Axis && c?.config?.type === 'y') as Axis<Datum>
+    // A single axis of a type is passed as is, several as an array
+    const xAxes = visComponents.filter(c => c instanceof Axis && c?.config?.type === 'x') as Axis<Datum>[]
+    const yAxes = visComponents.filter(c => c instanceof Axis && c?.config?.type === 'y') as Axis<Datum>[]
+    const xAxis = xAxes.length > 1 ? xAxes : xAxes[0]
+    const yAxis = yAxes.length > 1 ? yAxes : yAxes[0]
     const annotations = this.annotationsComponent?.component as Annotations
 
     const components = visComponents.filter(c => !(c instanceof Crosshair) && !(c instanceof Tooltip) && !(c instanceof Axis))
@@ -210,11 +226,15 @@ export class VisXYContainerComponent<Datum> implements AfterViewInit, AfterConte
       xDomainMinConstraint,
       xDomainMaxConstraint,
       xRange,
+      xRangeSegment,
+      xScales,
       yScale,
       yDomain,
       yDomainMinConstraint,
       yDomainMaxConstraint,
       yRange,
+      yRangeSegment,
+      yScales,
       yDirection,
       ariaLabel,
       colorFunction,
