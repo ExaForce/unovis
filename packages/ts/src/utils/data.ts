@@ -3,7 +3,7 @@ import { throttle as _throttle } from 'throttle-debounce'
 
 // Types
 import { NumericAccessor, StringAccessor, BooleanAccessor, ColorAccessor, GenericAccessor } from '@/types/accessor'
-import { FindNearestDirection, StackValuesRecord } from '@/types/data'
+import { FindNearestDirection, SnapDirection, StackValuesRecord } from '@/types/data'
 import { ContinuousScale } from '@/types/scale'
 
 export const isNumber = <T>(a: T): a is T extends number ? T : never => typeof a === 'number'
@@ -369,9 +369,15 @@ export function getNearest<Datum> (
   return value - values[index - 1] > values[index] - value ? dataWithIndexSorted[index][0] : dataWithIndexSorted[index - 1][0]
 }
 
+function getDistanceSq (x: number, y: number, point: [number, number], offset: [number, number] = [0, 0], direction = SnapDirection.XY): number {
+  const dx = direction === SnapDirection.Y ? 0 : point[0] - x - offset[0]
+  const dy = direction === SnapDirection.X ? 0 : point[1] - y - offset[1]
+  return dx * dx + dy * dy
+}
+
 /** Finds the datum nearest to a point in the scaled (pixel) space, considering all the provided Y accessors
- * (regular and stacked) so that multi-series charts pick the nearest series point.
- * Returns the datum, its index and the squared distance to it, or `undefined` when there's nothing to snap to */
+ * (regular and stacked) so that multi-series charts pick the nearest series point, moved and measured as `getSnapOffset` says.
+ * Returns the datum, its index, the series index (stacked first) and the squared distance, or `undefined` when there's nothing to snap to */
 export function getNearest2D<Datum> (
   data: Datum[],
   point: [number, number],
@@ -380,13 +386,14 @@ export function getNearest2D<Datum> (
   xAccessor: NumericAccessor<Datum>,
   yAccessors: NumericAccessor<Datum>[] = [],
   yStackedAccessors: NumericAccessor<Datum>[] = [],
-  baselineAccessor?: NumericAccessor<Datum>
-): { datum: Datum; index: number; distanceSq: number } | undefined {
+  baselineAccessor?: NumericAccessor<Datum>,
+  getSnapOffset?: (index: number, seriesIndex: number) => { offset: [number, number]; direction?: SnapDirection } | undefined
+): { datum: Datum; index: number; seriesIndex: number; distanceSq: number } | undefined {
   if (!data?.length || !xAccessor) return undefined
 
-  const [pointX, pointY] = point
   let nearestDatum: Datum | undefined
   let nearestIndex = -1
+  let nearestSeriesIndex = -1
   let minDistanceSq = Infinity
 
   // Linear scan using squared distances (no `sqrt`, no sorting): O(n) per call, which is fast enough
@@ -396,7 +403,6 @@ export function getNearest2D<Datum> (
     const datum = data[i]
     const x = xScale(getNumber(datum, xAccessor, i))
     if (!isFinite(x)) continue
-    const distanceXSq = (x - pointX) ** 2
 
     // Stacked series (e.g. StackedBar, Area)
     if (yStackedAccessors.length) {
@@ -405,11 +411,13 @@ export function getNearest2D<Datum> (
       for (let j = 0; j < stackedValues.length; j++) {
         if (!isNumber(getNumber(datum, yStackedAccessors[j], i))) continue
         const y = yScale(stackedValues[j] + baselineValue)
-        const distanceSq = distanceXSq + (y - pointY) ** 2
+        const snap = getSnapOffset?.(i, j)
+        const distanceSq = getDistanceSq(x, y, point, snap?.offset, snap?.direction)
         if (distanceSq < minDistanceSq) {
           minDistanceSq = distanceSq
           nearestDatum = datum
           nearestIndex = i
+          nearestSeriesIndex = j
         }
       }
     }
@@ -419,17 +427,19 @@ export function getNearest2D<Datum> (
       const value = getNumber(datum, yAccessors[j], i)
       if (!isNumber(value)) continue
       const y = yScale(value)
-      const distanceSq = distanceXSq + (y - pointY) ** 2
+      const snap = getSnapOffset?.(i, yStackedAccessors.length + j)
+      const distanceSq = getDistanceSq(x, y, point, snap?.offset, snap?.direction)
       if (distanceSq < minDistanceSq) {
         minDistanceSq = distanceSq
         nearestDatum = datum
         nearestIndex = i
+        nearestSeriesIndex = yStackedAccessors.length + j
       }
     }
   }
 
   if (nearestIndex === -1) return undefined
-  return { datum: nearestDatum, index: nearestIndex, distanceSq: minDistanceSq }
+  return { datum: nearestDatum, index: nearestIndex, seriesIndex: nearestSeriesIndex, distanceSq: minDistanceSq }
 }
 
 export function filterDataByRange<Datum> (

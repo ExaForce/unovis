@@ -110,7 +110,17 @@ smallest of them is 1px across; if even that's not enough, they are pushed into 
 `spreadPadding` sets the gap between the neighbouring points in pixels. It's `1` by default.
 <XYWrapperWithInput {...groupSwarmProps()} spreadMax={0.45} property="spreadPadding" inputType="range" inputProps={{ min: 0, max: 4, step: 0.5 }} defaultValue={1}/>
 
-Note that _Crosshair_ follows the values of the points, not their positions in the swarm.
+### Crosshair
+_Crosshair_ draws its circles where the spread points are, while its lines stay at the values: with `spreadAxis: 'x'`
+the vertical line stays on the category, with `spreadAxis: 'y'` the horizontal one stays in the middle of the swarm.
+Set its `snapMode` to `'xy'` to snap to the point under the pointer: the default `'x'` mode looks at the X values only,
+so of the points that share one it can take any. The circles follow the points with the accessors _Crosshair_ takes
+from _XYContainer_; with the ones set on _Crosshair_ itself, they stay at the values.
+<XYWrapper {...groupSwarmProps()} spreadMax={0.45} components={[
+  ...groupSwarmProps().components,
+  { name: 'Crosshair', key: 'crosshair', props: { snapMode: 'xy', showHorizontalLine: true, template: d => `${swarmGroups[d.group]}: ${d.value}` } },
+  { name: 'Tooltip', key: 'tooltip', props: {} },
+]}/>
 
 ## Point Labels
 You can also place labels on _Scatter's_ points by passing a string accessor function to the `label` property.
