@@ -270,6 +270,9 @@ importers:
       d3-random:
         specifier: ~3
         version: 3.0.1
+      d3-scale:
+        specifier: ~4
+        version: 4.0.2
       fuse.js:
         specifier: ^6.6.2
         version: 6.6.2
