@@ -21,6 +21,10 @@ import {
   ScaleSymLog,
   ScaleTime,
 } from 'd3-scale'
+
+// Utils
+import { scaleDuration } from '@/utils/scale-duration'
+
 // Todo Ordinal Scales: ScaleOrdinal, ScaleBand, ScalePoint, ScaleThreshold, ScaleQuantile, ScaleQuantize, ScaleDiverging, ScaleSequential
 
 export type ContinuousScale = ScaleLinear<number, number> | ScalePower<number, number> | ScaleLogarithmic<number, number> | ScaleSymLog<number, number> | ScaleTime<number, number>
@@ -34,6 +38,7 @@ export const Scale = {
   scaleIdentity,
   scaleTime,
   scaleUtc,
+  scaleDuration,
   scaleSequential,
   scaleDiverging,
   scaleQuantize,
