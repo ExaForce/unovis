@@ -1,15 +1,16 @@
 import { beforeAll, describe, expect, it } from 'vitest'
+import { scaleLinear } from 'd3-scale'
 
 // Types
 import { Rect } from '@/types/misc'
-import { ScaleDimension } from '@/types/scale'
+import { ContinuousScale, Scale, ScaleDimension } from '@/types/scale'
 import { TextAlign, TrimMode } from '@/types/text'
 
 // Local
 import { Axis } from './index'
 import { AxisConfigInterface } from './config'
 import { AxisType, TickSets, TickValues } from './types'
-import { getRotatedTickTextMaxWidth, mergeTickValues, tickKey } from './tick-fit'
+import { getNestedTickValues, getRotatedTickTextMaxWidth, mergeTickValues, tickKey } from './tick-fit'
 import * as s from './style'
 
 const FONT_SIZE = 12
@@ -58,8 +59,9 @@ type RenderedLabel = {
   hidden: boolean;
 }
 
-function createAxis (config: AxisConfigInterface<unknown>, size: AxisSize, domain: [number, number]): Axis<unknown> {
+function createAxis (config: AxisConfigInterface<unknown>, size: AxisSize, domain: [number, number], scale?: ContinuousScale): Axis<unknown> {
   const axis = new Axis<unknown>({ type: AxisType.X, ...config })
+  if (scale) axis.setScale(ScaleDimension.X, scale)
   axis.setSize(size.width, size.height, size.containerWidth, size.containerHeight)
   axis.setScaleDomain(ScaleDimension.X, domain)
   axis.setScaleRange(ScaleDimension.X, [0, size.width])
@@ -308,5 +310,31 @@ describe('Axis tick labels (jsdom)', () => {
         expect(label.firstLineY).toBeCloseTo((tickSize as number) + tickPadding + FONT_SIZE / 2)
       })
     })
+  })
+})
+
+describe('Axis ticks on a duration scale', () => {
+  const SECOND = 1000
+  const size: AxisSize = { width: 600, height: 300, containerWidth: 700, containerHeight: 360 }
+  const createDurationAxis = (maxSeconds: number, numTicks: number): Axis<unknown> => createAxis({
+    numTicks,
+    tickTextAdaptiveSets: true,
+    tickFormat: tick => `${+tick / SECOND}s`,
+  }, size, [0, maxSeconds * SECOND], Scale.scaleDuration())
+
+  it('labels whole minutes instead of decimal steps', () => {
+    const { labeledTicks } = internals(createDurationAxis(300, 5))._getFittingTickValues()
+    expect(labeledTicks).toEqual([0, 60, 120, 180, 240, 300].map(seconds => seconds * SECOND))
+  })
+
+  it('keeps the labels on the marks when the finer step does not nest them', () => {
+    const { labeledTicks, originalTicks } = internals(createDurationAxis(90, 6))._getFittingTickValues()
+    const markKeys = new Set(originalTicks.map(tickKey))
+    expect(labeledTicks).toEqual([0, 15, 30, 45, 60, 75, 90].map(seconds => seconds * SECOND))
+    labeledTicks.forEach(tick => expect(markKeys.has(tickKey(tick))).toBe(true))
+  })
+
+  it('still refines the decimal steps of linear scales', () => {
+    expect(getNestedTickValues(scaleLinear().domain([0, 10]), 5)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
   })
 })
