@@ -334,6 +334,11 @@ tickFormat: (tick, i, ticks, timeUnit) =>
   timeUnit === AxisTimeTickUnit.Day ? formatDayLabel(tick) : formatDefaultLabel(tick)
 ```
 
+#### Duration Ticks
+For an axis showing durations, give the container [`Scale.scaleDuration()`](/docs/containers/XY_Container#duration-scale-new) as its scale.
+Its ticks fall on whole milliseconds, seconds, minutes, hours, days or weeks instead of decimal steps, and the adaptive
+tick sets are fitted among them with no extra _Axis_ configuration.
+
 :::note
 `tickTextAdaptiveSets` takes over the narrow-width behavior: it disables the width-based `minMaxTicksOnlyWhenWidthIsLess` fallback, and has no effect when `minMaxTicksOnly` is enabled.
 :::
