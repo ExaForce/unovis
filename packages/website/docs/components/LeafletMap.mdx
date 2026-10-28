@@ -4,6 +4,8 @@ sidebar_label: Leaflet Map
 description: Learn how to set up a Leaflet map
 ---
 import BrowserOnly from '@docusaurus/BrowserOnly'
+import Tabs from '@theme/Tabs'
+import TabItem from '@theme/TabItem'
 import { sum } from 'd3-array'
 import { mapKey } from '@unovis/shared/examples/basic-leaflet-map/constants'
 
@@ -383,6 +385,126 @@ in the form of a URL template. Only when `renderer` is set to `LeafletMapRendere
 can MapLibre's [`StyleSpecification`](https://maplibre.org/maplibre-gl-js-docs/style-spec/root/) object
 be used.
 :::
+
+## MapLibre worker loading
+With the MapLibre renderer, tiles are parsed off the main thread in a Web Worker. Bundlers can't reliably
+resolve MapLibre's own worker file via `import.meta.url`, so by default _LeafletMap_ starts the worker from
+a `Blob` URL of a prebuilt worker bundled with _Unovis_ (`useMaplibreWorkerBlob: true`). This works out of
+the box with every bundler and doesn't require any extra configuration, but does require `worker-src blob:`
+in your [CSP](../guides/csp#recommended-csp-header) if you enforce one.
+
+Set `useMaplibreWorkerBlob: false` if your [CSP](../guides/csp#recommended-csp-header) doesn't allow `blob:` in
+`worker-src`. _LeafletMap_ then loads the same prebuilt worker from a same-origin file that ships with _Unovis_
+(`maplibre-gl-worker.js`, next to the component's module), so your bundler has to emit that file via
+`new URL('./maplibre-gl-worker.js', import.meta.url)` (Vite and webpack 5 do this out of the box; Angular's
+builder doesn't, so the worker silently fails to load and the map stays empty). If your bundler can't, serve the
+worker file yourself. A worker URL you set via `setWorkerUrl()` always takes precedence over both
+modes, so you must:
+
+1. Copy `node_modules/@unovis/ts/components/leaflet-map/modules/maplibre-gl-worker.js` into a folder your app
+   serves as a static asset (its name doesn't matter, but it must be reachable by URL at runtime). Don't copy
+   MapLibre's own `maplibre-gl/dist/maplibre-gl-worker.mjs`: it imports a sibling chunk and won't start on its own.
+2. Call MapLibre's `setWorkerUrl()` with that URL yourself, **before** the map is initialized. Import it from the
+   same `maplibre-gl` copy _Unovis_ uses (add `maplibre-gl` to your dependencies with a matching version), as the
+   worker URL is a global setting of that module.
+
+<Tabs groupId="framework">
+
+<TabItem value="react" label="React">
+
+**Vite** — static files placed in `public/` are served as-is from `/`:
+
+```ts
+// main.tsx, before rendering the LeafletMap component
+import { setWorkerUrl } from 'maplibre-gl'
+
+setWorkerUrl('/maplibre-gl-worker.js')
+```
+
+Copy the file into `public/maplibre-gl-worker.js` (e.g. via a `postinstall`/`prebuild` script, or a
+Vite plugin such as `vite-plugin-static-copy`).
+
+</TabItem>
+
+<TabItem value="angular" label="Angular">
+
+```ts
+// main.ts, before bootstrapping the app
+import { setWorkerUrl } from 'maplibre-gl'
+
+// Resolve against `<base href>` so the URL also works when the app isn't served from `/`
+setWorkerUrl(new URL('assets/maplibre-gl-worker.js', document.baseURI).href)
+```
+
+```json title="angular.json — copy the worker file into the build output"
+"assets": [
+  { "glob": "maplibre-gl-worker.js", "input": "node_modules/@unovis/ts/components/leaflet-map/modules", "output": "/assets" }
+]
+```
+
+This applies the same way whether Angular serves your app with its Vite-based dev server or bundles it
+with esbuild for production — both just need the file to exist at the `assets` path you copied it to.
+
+</TabItem>
+
+<TabItem value="svelte" label="Svelte / SvelteKit">
+
+Files in SvelteKit's `static/` directory are served from `/`:
+
+```ts
+// hooks.client.ts, or any module that runs before the map component
+import { setWorkerUrl } from 'maplibre-gl'
+
+setWorkerUrl('/maplibre-gl-worker.js')
+```
+
+Copy the file into `static/maplibre-gl-worker.js` as part of your build (e.g. a small script run
+before `vite build`, or in `vite.config.ts`'s `buildStart` hook).
+
+</TabItem>
+
+<TabItem value="vue" label="Vue">
+
+Same as React's Vite setup — copy the file into `public/maplibre-gl-worker.js` and set the URL before
+the map initializes:
+
+```ts
+// main.ts
+import { setWorkerUrl } from 'maplibre-gl'
+
+setWorkerUrl('/maplibre-gl-worker.js')
+```
+
+</TabItem>
+
+<TabItem value="solid" label="Solid">
+
+Same pattern — copy the file into `public/maplibre-gl-worker.js` and set the URL in your entry point
+before the map component mounts:
+
+```ts
+// index.tsx
+import { setWorkerUrl } from 'maplibre-gl'
+
+setWorkerUrl('/maplibre-gl-worker.js')
+```
+
+</TabItem>
+
+<TabItem value="ts" label="Vanilla TypeScript">
+
+```ts
+// app.ts, before creating the LeafletMap instance
+import { setWorkerUrl } from 'maplibre-gl'
+
+setWorkerUrl('/maplibre-gl-worker.js')
+```
+
+Serve `maplibre-gl-worker.js` from your static file host alongside the rest of your app.
+
+</TabItem>
+
+</Tabs>
 
 ## Tooltip
 ### For points and clusters

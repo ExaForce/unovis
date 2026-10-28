@@ -1,5 +1,6 @@
 import { ComponentConfigInterface, ComponentDefaultConfig } from '@/core/component/config'
-import { ColorAccessor, NumericAccessor, StringAccessor } from '@/types/accessor'
+import { ColorAccessor, GenericAccessor, NumericAccessor, StringAccessor } from '@/types/accessor'
+import { Gradient } from '@/types/gradient'
 import { FitMode, TrimMode } from '@/types/text'
 
 // Local Types
@@ -26,6 +27,9 @@ export interface TreemapConfigInterface<Datum> extends ComponentConfigInterface 
   /** Color accessor function for tiles. Default: `undefined` */
   tileColor?: ColorAccessor<TreemapNode<Datum>>;
 
+  /** Tile fill gradient accessor. Resolves to a `Gradient` object, or `true` for the default gradient (a top to bottom fade within each tile). Default: `undefined` */
+  tileGradient?: GenericAccessor<Gradient | boolean, TreemapNode<Datum>>;
+
   /** D3 tile function (e.g. `treemapSquarify`, `treemapDice` from `d3-hierarchy`). Default: `undefined`. */
   tileFunction?: TreemapTileFunction<TreemapDatum<Datum>>;
 
@@ -51,7 +55,7 @@ export interface TreemapConfigInterface<Datum> extends ComponentConfigInterface 
   /** Label offset in the X direction. Default: `4` */
   labelOffsetX?: number;
 
-  /** Label offset in the Y direction. Default: `4` */
+  /** Label offset in the Y direction. Default: `1` */
   labelOffsetY?: number;
 
   /** How labels should fit within tiles: wrap or trim. Applicable only for leaf nodes. Default: `FitMode.Wrap` */
@@ -96,6 +100,7 @@ export const TreemapDefaultConfig: TreemapConfigInterface<unknown> = {
   id: (d: unknown, i: number): string | number => (d as { id: string }).id ?? i,
   value: undefined,
   tileColor: undefined,
+  tileGradient: undefined,
   layers: [],
   tileFunction: undefined,
   tileSort: undefined,
@@ -104,7 +109,7 @@ export const TreemapDefaultConfig: TreemapConfigInterface<unknown> = {
   tileShowHtmlTooltip: true,
   labelInternalNodes: false,
   labelOffsetX: 4,
-  labelOffsetY: 4,
+  labelOffsetY: 1,
   labelFit: FitMode.Wrap,
   labelTrimMode: TrimMode.Middle,
   tileBorderRadius: 2,
