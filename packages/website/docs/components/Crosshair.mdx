@@ -92,6 +92,14 @@ The `onCrosshairMove` callback receives the `PointerEvent` (or the `WheelEvent`)
 _Crosshair_ listens to `pointermove` and `pointerout` events of the chart, so if you trigger it programmatically (e.g. in tests),
 dispatch them instead of `mousemove` and `mouseout`, the same way as for the [Tooltip](/docs/components/Tooltip#pointer-events).
 
+When the [XY Container](/docs/containers/XY_Container#zoom-and-pan) has `zoom` enabled, two fingers pinch and pan the chart
+instead, and the chart gets `touch-action: none`.
+
+## Keyboard Navigation
+In an XY Container, the _Crosshair_ makes the chart navigable with the keyboard: the arrow keys move it between the data points
+and highlight the series, and the active data point is announced to screen readers. In that case `onCrosshairMove`
+receives the `KeyboardEvent`. See [Keyboard Navigation](/docs/containers/XY_Container#keyboard-navigation) for the keys and options.
+
 ## Horizontal Line
 Set `showHorizontalLine` to `true` to render a horizontal line in addition to the vertical crosshair.
 The line is placed at the Y position of the crosshair circle closest to the pointer (i.e. the snapped data point), or follows the pointer when there are no circles to snap to (for example, when `snapToData` is `false`).
