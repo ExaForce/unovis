@@ -21,7 +21,8 @@ import { CoreDataModel } from '@/data-models/core'
 // Types
 import { Spacing } from '@/types/spacing'
 import { AxisType } from '@/components/axis/types'
-import { ContinuousScale, ScaleDimension } from '@/types/scale'
+import { ContinuousScale } from '@/types/scale'
+import { ScaleDimension } from '@/types/scale-dimension'
 import { Direction } from '@/types/direction'
 
 // Utils
@@ -255,8 +256,6 @@ export class XYContainer<Datum> extends ContainerCore {
   }
 
   public updateComponents<C extends XYConfigInterface<Datum>> (componentConfigs: C[], preventRender?: boolean): void {
-    const { config } = this
-
     // Configs are matched to components by array index
     if (componentConfigs && componentConfigs.length !== this.components.length) {
       console.warn('Unovis | XY Container: The number of provided component configs doesn\'t match the number of components. Configs are matched to components by index, so some components won\'t be updated')
