@@ -28,3 +28,9 @@ export type CrosshairSeries = {
   /** Vertical position of the series' Crosshair circle in pixels */
   y: number;
 }
+
+/** Tick formats of the X and Y axes */
+export type CrosshairTickFormats = {
+  x?: (tick: number | Date, i: number, ticks: number[] | Date[]) => string;
+  y?: (tick: number | Date, i: number, ticks: number[] | Date[]) => string;
+}

@@ -90,6 +90,19 @@ export interface CrosshairConfigInterface<Datum> extends WithOptional<XYComponen
    * working, but a swipe that starts on the chart won't scroll the page or its scrollable containers. When `false`, the browser
    * handles touch gestures as usual and a drag hides the Crosshair once the browser takes the gesture over. Default: `true` */
   followTouchMove?: boolean;
+  /** Lets keyboard users explore the data. In an XY Container, the chart becomes a single tab stop:
+   * - `←` / `→` move the Crosshair between the data points, `Home` / `End` jump to the first and last ones,
+   *   `Page Up` / `Page Down` jump by a tenth of them;
+   * - `↑` / `↓` highlight the series above or below;
+   * - `+` / `-` zoom around the active data point when the container has a `Zoom`;
+   * - `Esc` hides the Crosshair.
+   *
+   * The active data point is announced to screen readers. When the chart is zoomed, it pans to keep the data point visible. Default: `true` */
+  keyboardNavigation?: boolean;
+  /** Custom screen reader announcement for the active data point. Receives the X value, the datum, its index, and
+   * the index of the highlighted series (in the order of the Crosshair circles: stacked first) or `undefined`.
+   * By default, the text of the `template` or the X and Y values. Default: `undefined` */
+  keyboardAnnouncement?: (x: number | Date, datum: Datum, datumIndex: number, seriesIndex?: number) => string;
 }
 
 export const CrosshairDefaultConfig: CrosshairConfigInterface<unknown> = {
@@ -114,5 +127,7 @@ export const CrosshairDefaultConfig: CrosshairConfigInterface<unknown> = {
   skipRangeCheck: false,
   visibilityThreshold: 0.35,
   followTouchMove: true,
+  keyboardNavigation: true,
+  keyboardAnnouncement: undefined,
 }
 
