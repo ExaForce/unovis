@@ -270,50 +270,20 @@ It comes in hand when you're updating xDomain programmatically using, for exampl
   showContext='container'/>
 
 ## Zoom and Pan
-Set `zoom` to `true` to let users zoom and pan the chart along the X axis:
-- the mouse wheel zooms once the chart has been clicked or focused (so it doesn't hijack the page scroll), and a horizontal scroll pans;
-- trackpad pinch and <kbd>Ctrl</kbd> / <kbd>⌘</kbd> + wheel zoom right away;
-- dragging with the mouse pans the zoomed chart;
-- on touch screens, two fingers pinch and pan, while one finger keeps moving the [Crosshair](/docs/components/Crosshair);
-- <kbd>+</kbd> and <kbd>-</kbd> zoom the focused chart;
-- double click resets the zoom.
-
-Combine it with `scaleByDomain` to fit the Y axis to the visible data. Try it below:
+Add a [Zoom](/docs/components/Zoom) component to let users zoom and pan the chart along the X axis with the mouse wheel,
+the trackpad, mouse drags, touch gestures and the keyboard. Combine it with `scaleByDomain` to fit the Y axis to the visible data:
 
 <XYWrapper
   {...xyContainerProps('Line', 150)}
   data={variedData}
   showAxes
-  containerProps={{ zoom: true, scaleByDomain: true }}
+  containerProps={{ scaleByDomain: true }}
   components={[
     component('Line'),
     { name: 'Crosshair', props: { template: d => `x: ${d.x}, y: ${d.y.toFixed(1)}` }, key: 'crosshair' },
+    { name: 'Zoom', props: {}, key: 'zoom' },
   ]}
   excludeTabs/>
-
-The container applies the zoom by itself and reports the visible domain via the `onZoom` callback, which receives
-`undefined` when the zoom is reset. You don't need to feed it back as `xDomain`, but setting a new `xDomain` value
-replaces the zoomed domain. That's how you can sync the chart with a [Brush](/docs/components/Brush):
-
-```tsx
-const [zoomDomain, setZoomDomain] = useState<[number, number] | undefined>()
-const [brushDomain, setBrushDomain] = useState<[number, number] | undefined>()
-
-<VisXYContainer data={data} xDomain={brushDomain} zoom scaleByDomain onZoom={setZoomDomain}>
-  {/* … */}
-</VisXYContainer>
-<VisXYContainer data={data}>
-  <VisArea x={x} y={y}/>
-  <VisBrush
-    selection={zoomDomain ?? null}
-    onBrushMove={(selection, _, userDriven) => { if (userDriven) { setBrushDomain(selection); setZoomDomain(selection) } }}
-  />
-</VisXYContainer>
-```
-
-By default, you can zoom out to the extent of the data combined with `xDomain`, and zoom in until the domain is two
-data steps wide. Use `zoomExtent` and `zoomMinSpan` to change that. Call the container's `resetZoom()` method to
-reset the zoom programmatically.
 
 ## Y Direction
 You can set `yDirection` to change the direction of data along the Y axis. Supported values are `Direction.North` and `Direction.South`.
@@ -442,32 +412,9 @@ users a text summary of the visualization:
 ```
 
 ### Keyboard Navigation
-Charts with a [Crosshair](/docs/components/Crosshair) can be explored with the keyboard. The chart becomes a single tab stop,
-and when it's focused with the keyboard, the Crosshair moves to the first data point:
-
-| Key | Action |
-| --- | --- |
-| <kbd>←</kbd> / <kbd>→</kbd> | Previous / next data point |
-| <kbd>Home</kbd> / <kbd>End</kbd> | First / last data point |
-| <kbd>Page Up</kbd> / <kbd>Page Down</kbd> | Jump by a tenth of the data points |
-| <kbd>↑</kbd> / <kbd>↓</kbd> | Highlight the series above / below |
-| <kbd>+</kbd> / <kbd>-</kbd> | Zoom in / out (when `zoom` is enabled) |
-| <kbd>Esc</kbd> | Hide the Crosshair |
-
-The active data point is announced to screen readers through a live region. By default, the announcement is the text
-of the Crosshair `template`, or the X and Y values when there's no template. Provide `keyboardAnnouncement` to customize it:
-
-```tsx
-<VisXYContainer
-  data={data}
-  keyboardAnnouncement={(x, d, i, seriesIndex) => `${formatDate(x)}: ${d.revenue} US dollars`}
->
-  {/* … */}
-</VisXYContainer>
-```
-
-When `zoom` is enabled, the chart pans to keep the active data point visible. The Crosshair's `onCrosshairMove` callback
-receives the `KeyboardEvent`. Set `keyboardNavigation` to `false` to turn keyboard navigation off.
+Charts with a [Crosshair](/docs/components/Crosshair) can be explored with the keyboard: the chart becomes a single tab stop,
+the arrow keys move the Crosshair between the data points and the series, and the active data point is announced to screen readers.
+See [Keyboard Navigation](/docs/components/Crosshair#keyboard-navigation) in the _Crosshair_ docs for the keys and options.
 
 ## SVG Defs
 You can use the `svgDefs` property to inject custom SVG definitions — gradients, patterns, clip paths, and
