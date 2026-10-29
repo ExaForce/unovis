@@ -1,6 +1,39 @@
 import { readFileSync } from 'fs'
+import { posix } from 'path'
 import ts from 'typescript'
 import { ComponentInput, ConfigProperty, GenericParameter } from './types'
+
+/** Top-level directories of `packages/ts/src`, which are published at the root of `@unovis/ts`. */
+const unovisSourceDirs = ['core', 'types', 'utils', 'components', 'containers', 'styles', 'data-models', 'data']
+
+/**
+ * Rewrites an import specifier found inside `@unovis/ts` sources into the granular public
+ * subpath a framework wrapper can import (`@unovis/ts/components/area/config`).
+ *
+ * Wrappers must not import the `@unovis/ts` root barrel: it re-exports every component, so a
+ * bundler has to resolve and transform the whole library — including the lazily loaded map and
+ * graph layout dependencies — even for an app that only renders a line chart.
+ *
+ * `containingDir` is the source directory of the file that declared the import (`/components/area`)
+ * and is required to resolve relative specifiers. Specifiers that don't belong to `@unovis/ts`
+ * (`d3-shape`, `elkjs`) are returned untouched.
+ */
+export function resolveUnovisImportSource (importSource: string, containingDir?: string): string {
+  // `@/*` is the internal path alias configured in packages/ts/tsconfig.json
+  if (importSource.startsWith('@/')) return `@unovis/ts/${importSource.slice(2)}`
+
+  if (importSource.startsWith('./') || importSource.startsWith('../')) {
+    // Without the declaring file's location a relative specifier can't be resolved,
+    // so fall back to the root barrel rather than emitting a broken path.
+    if (!containingDir) return '@unovis/ts'
+    return `@unovis/ts${posix.normalize(`${containingDir}/${importSource}`)}`
+  }
+
+  const [firstSegment] = importSource.split('/')
+  if (importSource.includes('/') && unovisSourceDirs.includes(firstSegment)) return `@unovis/ts/${importSource}`
+
+  return importSource
+}
 
 export function getTypeName (type: ts.Node | undefined): string {
   switch (type.kind) {
@@ -190,8 +223,9 @@ export function getImportStatements (
   generics: GenericParameter[] = [],
   additionalComponentTypes: string[] = [],
   importSourceMap?: Record<string, string>
-): { source: string; elements: string[] }[] {
+): { source: string; elements: string[]; typeOnly?: boolean }[] {
   const importSources: Record<string, string> = {}
+  const typeOnlyImports = new Set<string>()
 
   // We assume that all extend types in generics come from unovis/ts
   const genericExtends = generics.map(g => g.extends).filter(g => g)
@@ -207,21 +241,12 @@ export function getImportStatements (
     if (!namedBindings || !ts.isNamedImports(namedBindings)) continue
     for (const importEl of namedBindings.elements) {
       const typeName = importEl.name.escapedText as string
+      if (importDec.importClause.isTypeOnly || importEl.isTypeOnly) typeOnlyImports.add(typeName)
       if (importSourceMap?.[typeName]) {
         importSources[typeName] = importSourceMap[typeName]
       } else {
-        let importSource: string = (importDec.moduleSpecifier as ts.StringLiteral).text
-        // Strip @/ prefix to check the actual path
-        const pathToCheck = importSource.replace(/^@\//, '')
-        if (!importSource || importSource.startsWith('./') || importSource.startsWith('core/') ||
-          importSource.startsWith('types/') || importSource.startsWith('utils/') || importSource.startsWith('components/') ||
-          importSource.startsWith('styles/') || importSource.startsWith('data-models/') || importSource.startsWith('data/') ||
-          pathToCheck.startsWith('core/') || pathToCheck.startsWith('types/') || pathToCheck.startsWith('utils/') ||
-          pathToCheck.startsWith('components/') || pathToCheck.startsWith('styles/') || pathToCheck.startsWith('data-models/') ||
-          pathToCheck.startsWith('data/')
-        ) importSource = '@unovis/ts'
-
-        importSources[typeName] = importSource
+        const importSource: string = (importDec.moduleSpecifier as ts.StringLiteral).text
+        importSources[typeName] = importSource ? resolveUnovisImportSource(importSource) : '@unovis/ts'
       }
     }
   }
@@ -230,7 +255,7 @@ export function getImportStatements (
   const typeList = gatherTypeReferences(configInterfaceMembers.map(node => (node as ts.IndexSignatureDeclaration).type))
     .filter(name => !genericNames.includes(name)) // Filter out generics
 
-  const importStatements: { source: string; elements: string[] }[] = []
+  const importStatements: { source: string; elements: string[]; typeOnly?: boolean }[] = []
   for (const name of Array.from(new Set([...componentTypes, ...genericExtends, ...genericDefaults, ...typeList]))) {
     const importSource: string = importSources[name]
     if (!importSource) {
@@ -239,8 +264,11 @@ export function getImportStatements (
     }
 
     const statement = importStatements.find(s => s.source === importSource)
-    if (!statement) importStatements.push({ source: importSource, elements: [name] })
-    else statement.elements.push(name)
+    if (!statement) importStatements.push({ source: importSource, elements: [name], typeOnly: typeOnlyImports.has(name) })
+    else {
+      statement.elements.push(name)
+      statement.typeOnly &&= typeOnlyImports.has(name)
+    }
   }
 
   return importStatements
@@ -329,23 +357,7 @@ export function getConfigSummary (
     const importDeclarations: any[] = sourceStatements.filter(node => node.kind === ts.SyntaxKind.ImportDeclaration)
     for (const importDec of importDeclarations) {
       if (!importDec.importClause?.namedBindings?.elements) continue
-      let importSource: string = importDec.moduleSpecifier.text
-      if (importSource.startsWith('./') || importSource.startsWith('../')) {
-        importSource = `@unovis/ts${path}/${importSource.replace(/^\.\//, '')}`
-      } else if (
-        importSource.startsWith('core/') || importSource.startsWith('types/') ||
-        importSource.startsWith('utils/') || importSource.startsWith('components/') ||
-        importSource.startsWith('styles/') || importSource.startsWith('data-models/') ||
-        importSource.startsWith('data/') ||
-        importSource.startsWith('@/core/') || importSource.startsWith('@/types/') ||
-        importSource.startsWith('@/utils/') || importSource.startsWith('@/components/') ||
-        importSource.startsWith('@/styles/') || importSource.startsWith('@/data-models/') ||
-        importSource.startsWith('@/data/')
-      ) {
-        // Strip @/ prefix if present, then normalize to @unovis/ts
-        const normalizedSource = importSource.replace(/^@\//, '')
-        importSource = `@unovis/ts/${normalizedSource}`
-      }
+      const importSource = resolveUnovisImportSource(importDec.moduleSpecifier.text, path)
       for (const importEl of importDec.importClause.namedBindings.elements) {
         importSourceMap[importEl.name.escapedText] = importSource
       }

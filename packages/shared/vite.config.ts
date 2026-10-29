@@ -11,7 +11,7 @@ import vue from '@vitejs/plugin-vue'
 import solid from 'vite-plugin-solid'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 
-import { MAPLIBRE_WORKER_SOURCE_DIST_PATH, MAPLIBRE_WORKER_SOURCE_ID } from '../ts/vite-plugin-maplibre-worker-source'
+import { MAPLIBRE_WORKER_FILE_DIST_PATH, MAPLIBRE_WORKER_SOURCE_DIST_PATH, MAPLIBRE_WORKER_SOURCE_ID } from '../ts/vite-plugin-maplibre-worker-source'
 
 const here = fileURLToPath(new URL('.', import.meta.url))
 const pkgSrc = (name: string): string => resolve(here, '..', name, 'src')
@@ -30,6 +30,70 @@ const isAngularFile = (id: string): boolean => {
 export default defineConfig({
   root: 'gallery-dev-server',
   plugins: [
+    {
+      name: 'unovis-gallery-example-metadata',
+      resolveId (id) {
+        if (id === 'virtual:gallery-examples') return '\0virtual:gallery-examples'
+      },
+      async load (id) {
+        if (id !== '\0virtual:gallery-examples') return
+        const registryPath = resolve(here, 'examples/examples-list.tsx')
+        const metadataPath = resolve(here, 'examples/metadata.json')
+        this.addWatchFile(registryPath)
+        this.addWatchFile(metadataPath)
+        const metadata: Record<string, { title: string }> = JSON.parse(await readFile(metadataPath, 'utf8'))
+        const source = ts.createSourceFile(registryPath, await readFile(registryPath, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+        const property = (node: ts.ObjectLiteralExpression, name: string): ts.Expression | undefined => {
+          const entry = node.properties.find(p => ts.isPropertyAssignment(p) && p.name.getText(source) === name)
+          return entry && ts.isPropertyAssignment(entry) ? entry.initializer : undefined
+        }
+        const entries: Promise<[string, { title: string; category: string }]>[] = []
+        const visit = (node: ts.Node): void => {
+          if (ts.isObjectLiteralExpression(node)) {
+            const title = property(node, 'title')
+            const examples = property(node, 'examples')
+            if (title && ts.isStringLiteralLike(title) && examples && ts.isArrayLiteralExpression(examples)) {
+              for (const item of examples.elements) {
+                if (!ts.isPropertyAccessExpression(item) || !ts.isCallExpression(item.expression)) continue
+                const path = item.expression.arguments[0]
+                if (!path || !ts.isStringLiteralLike(path)) continue
+                const slug = path.text.replace('./', '')
+                const indexPath = resolve(here, 'examples', slug, 'index.tsx')
+                this.addWatchFile(indexPath)
+                entries.push(readFile(indexPath, 'utf8').then((content): [string, { title: string; category: string }] => {
+                  const index = ts.createSourceFile(indexPath, content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+                  let exampleTitle = metadata[slug]?.title ?? slug
+                  const findTitle = (child: ts.Node): void => {
+                    if (ts.isPropertyAssignment(child) && child.name.getText(index) === 'title' && ts.isStringLiteralLike(child.initializer)) {
+                      exampleTitle = child.initializer.text
+                    }
+                    ts.forEachChild(child, findTitle)
+                  }
+                  findTitle(index)
+                  return [slug, { title: exampleTitle, category: title.text }]
+                }))
+              }
+              return
+            }
+          }
+          ts.forEachChild(node, visit)
+        }
+        visit(source)
+        return `export default ${JSON.stringify(Object.fromEntries(await Promise.all(entries)))}`
+      },
+    },
+    // `@unovis/ts` is aliased to its sources here, where the prebuilt MapLibre worker file that
+    // `useMaplibreWorkerBlob: false` loads via `new URL(..., import.meta.url)` doesn't exist. Serve it from `dist`.
+    {
+      name: 'unovis-maplibre-worker-file',
+      configureServer (server: ViteDevServer) {
+        server.middlewares.use(async (req: IncomingMessage, res: ServerResponse, next: (err?: unknown) => void) => {
+          if (!req.url?.split('?')[0].endsWith(`/${MAPLIBRE_WORKER_FILE_DIST_PATH}`)) return next()
+          res.setHeader('Content-Type', 'text/javascript')
+          res.end(await readFile(resolve(pkgDist('ts'), MAPLIBRE_WORKER_FILE_DIST_PATH)))
+        })
+      },
+    },
     // Opt-in Content-Security-Policy for verifying the @unovis/ts Emotion nonce
     // fix end-to-end. Enable with `UNOVIS_CSP=1 pnpm dev:gallery`. Sets a real
     // response header (browser-enforced, not just a meta tag) and injects a
@@ -66,10 +130,12 @@ export default defineConfig({
                 // self-host fonts can tighten this to `'self' data:`.
                 "font-src 'self' data: https:",
                 "connect-src 'self' ws: wss: http: https:",
-                // ELK.js (elk-layered-graph example) spawns its layout engine
-                // in a Worker created from a `Blob` URL — falls back to
-                // script-src otherwise, which doesn't allow blob:.
-                "worker-src 'self' blob:",
+                // Strict by default: workers may only start from same-origin files, so
+                // `blob:` workers (ELK.js in the elk-layered-graph example, LeafletMap with the
+                // default `useMaplibreWorkerBlob: true`) are expected to be blocked, while the
+                // `leaflet-map-csp-worker` example must work. `UNOVIS_CSP_ALLOW_BLOB_WORKERS=1
+                // pnpm dev:gallery:csp` allows `blob:` to match the recommended CSP from the docs.
+                process.env.UNOVIS_CSP_ALLOW_BLOB_WORKERS ? "worker-src 'self' blob:" : "worker-src 'self'",
               ].join('; ')
             )
             next()
@@ -355,6 +421,11 @@ export default defineConfig({
       // @unovis/angular's dist/ is only produced by `ng build`; point at source
       // (public-api) so it resolves without a prior build, like solid/svelte.
       '@unovis/angular': `${pkgSrc('angular')}/public-api.ts`,
+      // `@unovis/ts` sources import each other through the `@/*` alias declared in
+      // packages/ts/tsconfig.json. Must stay last: Vite matches a string alias as
+      // `id === find || id.startsWith(find + '/')`, so '@' catches `@/types/curve`
+      // but never `@unovis/*`.
+      '@': pkgSrc('ts'),
     },
   },
   server: {

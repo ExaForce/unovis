@@ -55,7 +55,6 @@
 | d3                               | perpetual      | ISC          | 7.9.0             | Mike Bostock https://bost.ocks.org/mike                           |
 | d3-collection                    | perpetual      | BSD-3-Clause | 1.0.7             | Mike Bostock http://bost.ocks.org/mike                            |
 | d3-geo-projection                | perpetual      | ISC          | 4.0.0             | Mike Bostock https://bost.ocks.org/mike                           |
-| d3-interpolate-path              | perpetual      | BSD-3-Clause | 2.3.0             | Peter Beshai <peter.beshai@gmail.com> (http://github.com/pbeshai) |
 | d3-sankey                        | perpetual      | BSD-3-Clause | 0.12.3            | Mike Bostock https://bost.ocks.org/mike/                          |
 | elkjs                            | perpetual      | EPL-2.0      | 0.10.2            | Ulf Rüegg uruurumail@gmail.com                                    |
 | geojson                          | perpetual      | MIT          | 0.5.0             | Casey Cesari                                                      |
@@ -70,7 +69,7 @@
 | jsdom                            | perpetual      | MIT          | 30.0.1            | n/a                                                               |
 | rimraf                           | perpetual      | ISC          | 3.0.2             | Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)               |
 | typescript                       | perpetual      | Apache-2.0   | 5.6.3             | Microsoft Corp.                                                   |
-| vite                             | perpetual      | MIT          | 7.3.6             | Evan You                                                          |
+| vite                             | perpetual      | MIT          | 7.3.7             | Evan You                                                          |
 | vite-plugin-dts                  | perpetual      | MIT          | 3.9.1             | qmhc                                                              |
 | vitest                           | perpetual      | MIT          | 4.1.11            | Anthony Fu <anthonyfu117@hotmail.com>                             |
 

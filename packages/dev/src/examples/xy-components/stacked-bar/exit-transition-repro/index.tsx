@@ -1,8 +1,12 @@
+import { ExampleControls } from '@src/components/ExampleControls'
+import { useComponentState } from '@src/components/ExampleControls/useComponentState'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { VisXYContainer, VisStackedBar, VisAxis } from '@unovis/react'
 
 import { ExampleViewerDurationProps } from '@src/components/ExampleViewer/index'
+import { usePlayback } from '@src/components/PlaybackControl'
+import controls from '@src/controls.module.css'
 
 export const title = 'Enter & Exit Transitions'
 export const subTitle = 'Rapid data updates, negative stacks'
@@ -20,15 +24,16 @@ const datasets: Rec[][] = [
 ]
 
 export const component = (props: ExampleViewerDurationProps): React.ReactNode => {
+  const [playing, setPlaying] = usePlayback(false)
   const [index, setIndex] = useState(0)
-  const [running, setRunning] = useState<number | false>(false)
+  const [running, setRunning] = useComponentState<number | false>('example', 'interval', 350)
   const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
 
   useEffect(() => {
-    if (running) intervalRef.current = setInterval(() => setIndex(i => i + 1), running)
+    if (playing && running) intervalRef.current = setInterval(() => setIndex(i => i + 1), running)
     else clearInterval(intervalRef.current)
     return () => clearInterval(intervalRef.current)
-  }, [running])
+  }, [playing, running])
 
   const next = useCallback(() => setIndex(i => i + 1), [])
   const doubleUpdate = useCallback(() => {
@@ -38,11 +43,14 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
 
   return (
     <div>
-      <button onClick={next}>Next dataset</button>
-      <button onClick={doubleUpdate}>Double update</button>
-      <button onClick={() => setRunning(r => (r ? false : 350))}>{running ? 'Stop' : 'Auto-cycle'}</button>
-      <button onClick={() => setRunning(r => (r ? false : 16))}>Auto-fast</button>
-      <span style={{ marginLeft: 10 }}>dataset: {index % datasets.length}</span>
+      <ExampleControls components={['example']}/>
+      <div className={controls.devButtonRow}>
+        <button onClick={next}>Next dataset</button>
+        <button onClick={doubleUpdate}>Double update</button>
+        <button onClick={() => { setPlaying(!playing); setRunning(350) }}>{playing ? 'Stop' : 'Auto-cycle'}</button>
+        <button onClick={() => { setPlaying(!playing); setRunning(16) }}>Auto-fast</button>
+        <span style={{ marginLeft: 10 }}>dataset: {index % datasets.length}</span>
+      </div>
       <VisXYContainer<Rec> data={datasets[index % datasets.length]} height={300} xDomain={[0, 8]}>
         <VisStackedBar<Rec>
           x={d => d.x}

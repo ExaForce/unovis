@@ -1,4 +1,8 @@
-import React, { useState } from 'react'
+import { ExampleControls } from '@src/components/ExampleControls'
+import { useComponentState } from '@src/components/ExampleControls/useComponentState'
+import { useComponentConfig } from '@src/components/ExampleControls/useComponentConfig'
+import React from 'react'
+import { randomNumberGenerator } from '@src/utils/data'
 import { VisSingleContainer, VisCircularBar, VisCircularBarSelectors, VisTooltip } from '@unovis/react'
 import type { CircularBarArcDatum } from '@unovis/ts'
 import { ExampleViewerDurationProps } from '@src/components/ExampleViewer/index'
@@ -13,7 +17,7 @@ const maxBarCount = 12
 // A regular value, a tiny value, `0`, `null` (missing), then regular values again
 const edgeCaseValues: (number | null)[] = [0.8, 0.002, 0, null, 0.5, 0.35, 0.05, 1, 0.65, 0.01, 0.4, 0.9]
 const mixedValues: number[] = Array.from({ length: maxBarCount }, (_, i) => 0.35 + 0.65 * Math.abs(Math.sin(1 + 1.7 * i)))
-const getRandomValues = (): number[] => Array.from({ length: maxBarCount }, () => Math.random())
+const getRandomValues = (): number[] => Array.from({ length: maxBarCount }, () => randomNumberGenerator())
 
 const dataPresets: { label: string; getValues: () => (number | null)[] }[] = [
   { label: 'Small, zero and missing', getValues: () => edgeCaseValues },
@@ -59,19 +63,33 @@ const initialShapeParams: ShapeParams = {
 const rowStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: '130px 52px 1fr 48px', gap: 8, alignItems: 'center', fontSize: 12, color: '#374151' }
 
 export const component = (props: ExampleViewerDurationProps): React.ReactNode => {
-  const [barCount, setBarCount] = useState(5)
-  const [presetIndex, setPresetIndex] = useState(0)
-  const [values, setValues] = useState<(number | null)[]>(dataPresets[0].getValues())
-  const [barMinLength, setBarMinLength] = useState(0)
-  const [shape, setShape] = useState<ShapeParams>(initialShapeParams)
-  const [angleRangeKey, setAngleRangeKey] = useState(Object.keys(angleRanges)[0])
-  const [showBackground, setShowBackground] = useState(true)
-  const [sorted, setSorted] = useState(false)
-  const [showIcons, setShowIcons] = useState(true)
+  const [barCount, setBarCount] = useComponentState('example', 'barCount', 5)
+  const [presetIndex, setPresetIndex] = useComponentState('example', 'presetIndex', 0)
+  const [values, setValues] = useComponentState<(number | null)[]>('example', 'values', dataPresets[0].getValues())
+  const [barMinLength, setBarMinLength] = useComponentState('circularBar', 'barMinLength', 0)
+  const [shape, setShape] = useComponentState<ShapeParams>('example', 'shape', initialShapeParams)
+  const [angleRangeKey, setAngleRangeKey] = useComponentState('example', 'angleRangeKey', Object.keys(angleRanges)[0])
+  const [showBackground, setShowBackground] = useComponentState('circularBar', 'showBackground', true)
+  const [sorted, setSorted] = useComponentState('example', 'sorted', false)
+  const [showIcons, setShowIcons] = useComponentState('example', 'showIcons', true)
 
   const data = values.slice(0, barCount)
   const resolve = (p: AutoNumber): number | undefined => p.auto ? undefined : p.value
-  const setShapeParam = (key: keyof ShapeParams, update: Partial<AutoNumber>): void => setShape({ ...shape, [key]: { ...shape[key], ...update } })
+  const { config, reset } = useComponentConfig('circularBar', {
+    innerRadius: resolve(shape.innerRadius),
+    barPadding: resolve(shape.barPadding),
+    cornerRadius: resolve(shape.cornerRadius),
+    innerCornerRadius: resolve(shape.innerCornerRadius),
+    iconSize: resolve(shape.iconSize),
+    angleRange: angleRanges[angleRangeKey],
+    sortFunction: sorted ? (a: number | null, b: number | null): number => (b ?? -1) - (a ?? -1) : undefined,
+    icon: showIcons ? getCircularBarIcon : undefined,
+  })
+  const effectiveAngleRangeKey = Object.keys(angleRanges).find(key => JSON.stringify(angleRanges[key]) === JSON.stringify(config.angleRange)) ?? 'custom'
+  const setShapeParam = (key: keyof ShapeParams, update: Partial<AutoNumber>): void => {
+    setShape({ ...shape, [key]: { auto: config[key] === undefined, value: config[key] ?? shape[key].value, ...update } })
+    reset([key])
+  }
   const selectPreset = (index: number): void => {
     setPresetIndex(index)
     setValues(dataPresets[index].getValues())
@@ -80,6 +98,7 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start', width: '100%' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: 360 }}>
+        <ExampleControls components={['example', 'circularBar']}/>
         <label style={rowStyle}>
           <span>Bars</span>
           <span/>
@@ -97,24 +116,30 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
         <label style={rowStyle}>
           <span>barMinLength</span>
           <span/>
-          <input type="range" min={0} max={60} step={1} value={barMinLength} onChange={e => setBarMinLength(+e.target.value)}/>
+          <input type="range"
+            min={Math.min(0, barMinLength ?? 0)}
+            max={Math.max(60, barMinLength ?? 60)}
+            step={Number.isInteger(barMinLength) ? 1 : 'any'}
+            value={barMinLength} onChange={e => setBarMinLength(+e.target.value)}/>
           <span>{barMinLength}px</span>
         </label>
         {shapeControls.map(c => (
           <div key={c.key} style={rowStyle}>
             <span>{c.key}</span>
             <label>
-              <input type="checkbox" checked={shape[c.key].auto} onChange={e => setShapeParam(c.key, { auto: e.target.checked })}/> auto
+              <input type="checkbox" checked={config[c.key] === undefined} onChange={e => setShapeParam(c.key, { auto: e.target.checked })}/> auto
             </label>
-            <input type="range" aria-label={c.key} min={0} max={c.max} step={1} value={shape[c.key].value} disabled={shape[c.key].auto}
+            <input type="range" aria-label={c.key} min={Math.min(0, config[c.key] ?? 0)} max={Math.max(c.max, config[c.key] ?? c.max)}
+              step={Number.isInteger(config[c.key] ?? 0) ? 1 : 'any'} value={config[c.key] ?? shape[c.key].value} disabled={config[c.key] === undefined}
               onChange={e => setShapeParam(c.key, { value: +e.target.value })}/>
-            <span>{shape[c.key].auto ? 'auto' : `${shape[c.key].value}px`}</span>
+            <span>{config[c.key] === undefined ? 'auto' : `${config[c.key]}px`}</span>
           </div>
         ))}
         <label style={rowStyle}>
           <span>angleRange</span>
           <span/>
-          <select value={angleRangeKey} onChange={e => setAngleRangeKey(e.target.value)}>
+          <select value={effectiveAngleRangeKey} onChange={e => { setAngleRangeKey(e.target.value); reset(['angleRange']) }}>
+            {effectiveAngleRangeKey === 'custom' && <option value="custom" disabled>Custom ({config.angleRange?.join(', ')})</option>}
             {Object.keys(angleRanges).map(k => <option key={k} value={k}>{k}</option>)}
           </select>
           <span/>
@@ -127,13 +152,13 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
         </label>
         <label style={rowStyle}>
           <span>Sort descending</span>
-          <input type="checkbox" checked={sorted} onChange={e => setSorted(e.target.checked)}/>
+          <input type="checkbox" checked={!!config.sortFunction} onChange={e => { setSorted(e.target.checked); reset(['sortFunction']) }}/>
           <span/>
           <span/>
         </label>
         <label style={rowStyle}>
           <span>icon</span>
-          <input type="checkbox" checked={showIcons} onChange={e => setShowIcons(e.target.checked)}/>
+          <input type="checkbox" checked={!!config.icon} onChange={e => { setShowIcons(e.target.checked); reset(['icon']) }}/>
           <span/>
           <span/>
         </label>

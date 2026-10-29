@@ -22,7 +22,7 @@ module.exports = {
     rules: [
       {
         test: /\.(ts|tsx|js|jsx)?$/,
-        exclude: /node_modules/,
+        exclude: [/node_modules/, /maplibre-gl-worker\.js$/], // The prebuilt worker must be emitted as is
         use: [
           {
             loader: require.resolve('ts-loader'),
@@ -61,7 +61,7 @@ module.exports = {
         //   which webpack can't statically resolve and flags as a critical dependency. Disabling
         //   webpack's `new URL()` parsing for this module (it isn't used for asset imports here)
         //   removes the warning at its source instead of suppressing it.
-        test: /maplibre-gl\.mjs$/,
+        test: /maplibre-gl(?:-dev)?\.mjs$/,
         type: 'javascript/esm',
         parser: { url: false },
       },
@@ -80,7 +80,13 @@ module.exports = {
       '@unovis/ts': path.resolve(__dirname, '../ts/src/'),
       '@': path.resolve(__dirname, '../ts/src/'),
 
+      // webpack can misbind named classes in MapLibre's minified ESM; bundle its readable ESM instead.
+      'maplibre-gl$': require.resolve('maplibre-gl/dist/maplibre-gl-dev.mjs', { paths: [path.resolve(__dirname, '../ts')] }),
+
       // Unovis React
+      // Keep capture readiness and animation overrides in the dev app, outside copyable examples.
+      // The exact-match alias preserves normal @unovis/react/* subpath resolution.
+      '@unovis/react$': path.resolve(__dirname, './src/capture/react.tsx'),
       '@unovis/react': path.resolve(__dirname, '../react/src/'),
       // The react wrappers import their helpers as `src/utils/...` (tsconfig `baseUrl`)
       'src/utils': path.resolve(__dirname, '../react/src/utils'),
@@ -108,6 +114,12 @@ module.exports = {
     new NormalModuleReplacementPlugin(
       /^virtual:maplibre-worker-source$/,
       path.resolve(__dirname, '../ts/dist/components/leaflet-map/modules/maplibre-worker-source.js')
+    ),
+    // `LeafletMap` references the same-origin worker file via `new URL('./maplibre-gl-worker.js', import.meta.url)`.
+    //   The file only exists in the core's `dist` (emitted by the Vite build), not next to the sources webpack compiles.
+    new NormalModuleReplacementPlugin(
+      /^\.\/maplibre-gl-worker\.js$/,
+      path.resolve(__dirname, '../ts/dist/components/leaflet-map/modules/maplibre-gl-worker.js')
     ),
     new HtmlWebpackPlugin({
       template: 'public/index.html',
