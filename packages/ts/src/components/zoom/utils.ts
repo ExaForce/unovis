@@ -2,7 +2,7 @@
 import { ContinuousScale } from '@/types/scale'
 
 // Utils
-import { clamp, isString } from '@/utils/data'
+import { clamp } from '@/utils/data'
 
 /** Returns the domain of `scale` after zooming by the factor `k` (`k > 1` zooms in) and panning, so that
  * the point at `fromPx` (in the scale's range) ends up at `toPx`. With `fromPx === toPx` it's a zoom around
@@ -45,25 +45,4 @@ export function getMinStep (values: number[]): number | undefined {
     if (step > 0 && (minStep === undefined || step < minStep)) minStep = step
   }
   return minStep
-}
-
-/** Returns the readable text of a tooltip template's content (an HTML string or an element), with the text
- * of separate elements joined by spaces. HTML strings are parsed in an inert `<template>` element */
-export function getTextContent (content: string | HTMLElement | undefined | null): string {
-  if (!content) return ''
-
-  let root: Node = content as HTMLElement
-  if (isString(content)) {
-    const template = document.createElement('template')
-    template.innerHTML = content
-    root = template.content
-  }
-
-  const texts: string[] = []
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
-  while (walker.nextNode()) {
-    const text = walker.currentNode.textContent?.trim()
-    if (text) texts.push(text)
-  }
-  return texts.join(' ')
 }
