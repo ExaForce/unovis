@@ -147,9 +147,13 @@ export async function setupMap<T extends GenericDataRecord> (mapContainer: HTMLE
       // maplibre-gl locates its worker via `import.meta.url`, which bundlers can't reliably follow for a
       //   dependency (webpack ignores it; Vite emits `.mjs` files that stock servers won't run as a module
       //   worker), silently breaking tile parsing so only the style background renders. Unless the consumer
-      //   has set a worker URL themselves, start the worker from a Blob of our prebuilt self-contained bundle.
+      //   has set a worker URL themselves, start the worker from our prebuilt self-contained bundle: from a Blob
+      //   URL by default, or, with `useMaplibreWorkerBlob: false`, from a same-origin file shipped next to this
+      //   module (for CSPs without `blob:` in `worker-src`). The `new URL()` has to stay a literal for bundlers to emit the file
       if (!maplibre.getWorkerUrl()) {
-        maplibre.setWorkerUrl(await getMaplibreWorkerUrl(maplibre))
+        maplibre.setWorkerUrl(config.useMaplibreWorkerBlob
+          ? await getMaplibreWorkerUrl(maplibre)
+          : new URL('./maplibre-gl-worker.js', import.meta.url).href)
       }
       // eslint-disable-next-line no-case-declarations
       const { getMaplibreGLLayer } = await import('../renderer/mapboxgl-layer')
@@ -176,12 +180,21 @@ export async function setupMap<T extends GenericDataRecord> (mapContainer: HTMLE
     const canvasSelection = select(canvas).classed(s.mapboxglCanvas, true)
     const tilePaneSelection = select(leafletMap.getPanes().tilePane)
 
-    maplibreMap.on('mousemove', (event) => {
+    // We look up the feature under the pointer on the canvas' `pointermove` and `pointerdown` instead of MapLibre's `mousemove`,
+    // because Tooltip reads it on the map container's `pointermove` and `pointerdown` that happen before `mousemove`
+    // (and touches don't fire `mousemove` at all)
+    canvasSelection.on('pointermove.feature pointerdown.feature', (event: PointerEvent) => {
       const layerName = `${topoJSONLayer.featureName}-area`
       const layer = maplibreMap.getLayer(layerName)
       if (!layer) return
 
-      const features = maplibreMap.queryRenderedFeatures(event.point, { layers: [layerName] })
+      // The pointer position in the canvas coordinates, the same way as MapLibre calculates it (accounting for CSS scale)
+      const rect = canvas.getBoundingClientRect()
+      const point: [number, number] = [
+        (event.clientX - rect.left) / ((rect.width / canvas.offsetWidth) || 1) - canvas.clientLeft,
+        (event.clientY - rect.top) / ((rect.height / canvas.offsetHeight) || 1) - canvas.clientTop,
+      ]
+      const features = maplibreMap.queryRenderedFeatures(point, { layers: [layerName] })
       tilePaneSelection.datum(features[0])
       canvasSelection.classed(s.onFeatureHover, Boolean(features[0]))
     })

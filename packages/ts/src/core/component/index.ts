@@ -69,6 +69,11 @@ export class ComponentCore<
     this._colorFunction = colorFunction
   }
 
+  /** Set the sizing mode. Called automatically by containers. */
+  setSizing (sizing: Sizing | string): void {
+    this.sizing = sizing
+  }
+
   _setCustomAttributesThrottled = throttle(this._setCustomAttributes, 500)
 
   constructor (type = ComponentType.SVG) {
@@ -194,6 +199,8 @@ export class ComponentCore<
   public destroy (): void {
     if (this.isDestroyed()) return
 
+    this._setUpComponentEventsThrottled.cancel()
+    this._setCustomAttributesThrottled.cancel()
     this._onDestroy()
     this.g?.remove()
     this.element = undefined

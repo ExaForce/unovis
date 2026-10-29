@@ -56,6 +56,10 @@ export interface LeafletMapConfigInterface<Datum extends GenericDataRecord> exte
    * with `toDataURL()` or `drawImage()`. Costs an extra buffer copy per rendered frame.
    * Has no effect when renderer is `LeafletMapRenderer.Raster`. Default: `false` */
   preserveDrawingBuffer?: boolean;
+  /** Start the MapLibre worker from a Blob URL (requires `blob:` in CSP `worker-src`). Set to `false` to load it from the
+   * same-origin `maplibre-gl-worker.js` file next to the component instead; your bundler has to emit it, or call maplibre-gl's
+   * `setWorkerUrl()` before the map initializes. Has no effect with `LeafletMapRenderer.Raster`. Default: `true` */
+  useMaplibreWorkerBlob?: boolean;
 
   // Map events
   /** Function to be called after the map's async initialization is done. Default: `undefined` */
@@ -193,6 +197,7 @@ export const LeafletMapDefaultConfig: LeafletMapConfigInterface<GenericDataRecor
   styleDarkTheme: undefined,
   renderer: LeafletMapRenderer.MapLibre,
   preserveDrawingBuffer: false,
+  useMaplibreWorkerBlob: true,
 
   // Map events
   onMapInitialized: undefined,

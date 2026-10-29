@@ -22,12 +22,13 @@ export function getComponentCode (
 
   // Vue 3.3.4 has issue resolving complex Typescript, in this case when the type has `WithOptional`.
   // If the build is failing, add the respective component here.
-  const complexPropComponent = ['Timeline', 'Crosshair', 'Boxplot']
+  const complexPropComponent = ['Timeline', 'Crosshair', 'Boxplot', 'Zoom']
   const isComplexPropComponent = complexPropComponent.includes(componentName)
 
   return `<script setup lang="ts" ${genericsExtend}>
 // !!! This code was automatically generated. You should not change it !!!
-${importStatements.map(s => `import { ${s.elements.join(', ')} } from '${s.source}'`).join('\n  ')}${componentName === 'Timeline' ? '\nimport { XYComponentConfigInterface, StringAccessor } from "@unovis/ts"' : ''}
+
+${importStatements.map(s => `import { ${s.elements.join(', ')} } from '${s.source}'`).join('\n  ')}${componentName === 'Timeline' ? '\nimport { XYComponentConfigInterface } from \'@unovis/ts/core/xy-component/config\'\nimport { StringAccessor } from \'@unovis/ts/types/accessor\'' : ''}
 import { onMounted, onUnmounted, computed, ref, shallowRef, watch, nextTick${isStandAlone ? '' : ', inject'} } from 'vue'
 import { arePropsEqual, useForwardProps } from '../../utils/props'
 ${isStandAlone ? '' : `import { ${elementSuffix}AccessorKey } from '../../utils/context'\n`}

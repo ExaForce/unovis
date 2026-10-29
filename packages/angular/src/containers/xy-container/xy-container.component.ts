@@ -13,19 +13,18 @@ import {
 } from '@angular/core'
 
 // Vis
-import {
-  Annotations,
-  Axis,
-  ColorFunction,
-  ContinuousScale,
-  Crosshair,
-  Direction,
-  Spacing,
-  Tooltip,
-  XYComponentCore,
-  XYContainer,
-  XYContainerConfigInterface,
-} from '@unovis/ts'
+import { XYContainer } from '@unovis/ts/containers/xy-container'
+import { XYContainerConfigInterface } from '@unovis/ts/containers/xy-container/config'
+import { Annotations } from '@unovis/ts/components/annotations'
+import { Axis } from '@unovis/ts/components/axis'
+import { Crosshair } from '@unovis/ts/components/crosshair'
+import { Zoom } from '@unovis/ts/components/zoom'
+import { Tooltip } from '@unovis/ts/components/tooltip'
+import { ContinuousScale } from '@unovis/ts/types/scale'
+import { Direction } from '@unovis/ts/types/direction'
+import { Spacing } from '@unovis/ts/types/spacing'
+import { ColorFunction } from '@unovis/ts/types/accessor'
+import { XYComponentCore } from '@unovis/ts/core/xy-component'
 import { VisXYComponent } from '../../core'
 import { VisTooltipComponent } from '../../components/tooltip/tooltip.component'
 import { VisAnnotationsComponent } from '../../components/annotations/annotations.component'
@@ -183,12 +182,13 @@ export class VisXYContainerComponent<Datum> implements AfterViewInit, AfterConte
     const visComponents = this.visComponents.toArray().map(d => d.component)
 
     const crosshair = visComponents.find(c => c instanceof Crosshair) as Crosshair<Datum>
+    const zoom = visComponents.find(c => c instanceof Zoom) as Zoom<Datum>
     const tooltip = this.tooltipComponent?.component as Tooltip
     const xAxis = visComponents.find(c => c instanceof Axis && c?.config?.type === 'x') as Axis<Datum>
     const yAxis = visComponents.find(c => c instanceof Axis && c?.config?.type === 'y') as Axis<Datum>
     const annotations = this.annotationsComponent?.component as Annotations
 
-    const components = visComponents.filter(c => !(c instanceof Crosshair) && !(c instanceof Tooltip) && !(c instanceof Axis))
+    const components = visComponents.filter(c => !(c instanceof Crosshair) && !(c instanceof Zoom) && !(c instanceof Tooltip) && !(c instanceof Axis))
 
     return {
       components,
@@ -218,6 +218,7 @@ export class VisXYContainerComponent<Datum> implements AfterViewInit, AfterConte
       yDirection,
       ariaLabel,
       colorFunction,
+      zoom,
     }
   }
 
