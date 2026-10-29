@@ -1,6 +1,6 @@
 import { css } from '@/styles/emotion'
 import { extent, merge as mergeArrays } from 'd3-array'
-import { Selection } from 'd3-selection'
+import { Selection, select } from 'd3-selection'
 
 // Global CSS variables (side effects import)
 import '@/styles/index'
@@ -13,6 +13,7 @@ import { XYComponentConfigInterface } from '@/core/xy-component/config'
 // Components
 import type { Tooltip } from '@/components/tooltip'
 import { CrosshairDefaultConfig } from '@/components/crosshair/config'
+import type { CrosshairSeries } from '@/components/crosshair/types'
 
 // Data Model
 import { CoreDataModel } from '@/data-models/core'
@@ -20,15 +21,32 @@ import { CoreDataModel } from '@/data-models/core'
 // Types
 import { Spacing } from '@/types/spacing'
 import { AxisType } from '@/components/axis/types'
-import { ScaleDimension } from '@/types/scale'
+import { ContinuousScale, ScaleDimension } from '@/types/scale'
 import { Direction } from '@/types/direction'
 
 // Utils
-import { clamp, clean, flatten, isFunction } from '@/utils/data'
+import { clamp, clean, flatten, getNumber, isFunction, isNumber } from '@/utils/data'
 import { guid } from '@/utils/misc'
+import { constrainDomain, getMinStep, getTextContent, transformDomain } from './utils'
 
 // Config
 import { XYContainerDefaultConfig, XYContainerConfigInterface } from './config'
+
+// Constants
+import {
+  XY_KEYBOARD_PAGE_FRACTION,
+  XY_KEYBOARD_PAN_PADDING,
+  XY_ZOOM_AUTO_MIN_SPAN_STEPS,
+  XY_ZOOM_DRAG_THRESHOLD_PX,
+  XY_ZOOM_KEYBOARD_FACTOR,
+  XY_ZOOM_PINCH_WHEEL_MULTIPLIER,
+  XY_ZOOM_WHEEL_DELTA_MULTIPLIERS,
+  XY_ZOOM_WHEEL_MAX_EXPONENT,
+  XY_ZOOM_WHEEL_PAN_MULTIPLIERS,
+} from './constants'
+
+// Styles
+import * as s from './style'
 
 /** Configuration of any XY component. All fields are optional because `updateComponents` merges partial updates.
  * Concrete component config interfaces (e.g. `LineConfigInterface`) extend the base one,
@@ -46,6 +64,28 @@ export class XYContainer<Datum> extends ContainerCore {
   private _componentsBleed: Spacing = { top: 0, bottom: 0, left: 0, right: 0 }
   private _firstRender = true
   private _defaultTooltip: Tooltip | undefined
+
+  // Zoom
+  /** X domain set by zooming and panning. When `undefined`, the domain comes from `xDomain` or the data */
+  private _zoomDomain: [number, number] | undefined
+  /** Limits of zooming out and panning, updated on every render */
+  private _zoomExtent: [number, number] | undefined
+  /** X domain without the zoom (from `xDomain` or the data), updated on every render */
+  private _unzoomedXDomain: [number, number] | undefined
+  /** Automatic minimum span of the zoomed domain, calculated lazily once per render (`null` when not calculated yet) */
+  private _zoomAutoMinSpan: number | undefined | null = null
+  /** Zoom gestures render the chart without animations */
+  private _isZoomRenderPending = false
+  private _zoomDrag: { pointerId: number; startPx: number; scale: ContinuousScale; isActive: boolean } | undefined
+  private _zoomTouches = new Map<number, [number, number]>()
+  private _zoomPinch: { scale: ContinuousScale; fromPx: number; distance: number } | undefined
+
+  // Keyboard navigation
+  private _keyboardDatumIndex: number | undefined
+  private _keyboardSeriesId: string | undefined
+  private _isKeyboardCrosshairShown = false
+  private _liveRegion: Selection<HTMLDivElement, unknown, null, undefined> | undefined
+  private _hasOwnTabIndex: boolean
 
   constructor (element: HTMLElement, config?: XYContainerConfigInterface<Datum>, data?: Datum[]) {
     super(element)
@@ -67,6 +107,20 @@ export class XYContainer<Datum> extends ContainerCore {
       .attr('id', highlightFilterId)
       .attr('filterUnits', 'objectBoundingBox')
       .html('<feColorMatrix type="saturate" in="SourceGraphic" values="1.35"/>')
+
+    // Zoom and keyboard navigation. The zoom listeners go first, so the Crosshair can tell if a wheel event zoomed the chart
+    this.svg
+      .on('wheel.xy-zoom', this._onZoomWheel.bind(this))
+      .on('pointerdown.xy-zoom', this._onZoomPointerDown.bind(this))
+      .on('pointermove.xy-zoom', this._onZoomPointerMove.bind(this))
+      .on('pointerup.xy-zoom pointercancel.xy-zoom', this._onZoomPointerUp.bind(this))
+      .on('dblclick.xy-zoom', this._onZoomDoubleClick.bind(this))
+
+    this._hasOwnTabIndex = element.hasAttribute('tabindex')
+    select(element)
+      .on('keydown.xy-keyboard', this._onKeyDown.bind(this))
+      .on('focus.xy-keyboard', this._onFocus.bind(this))
+      .on('blur.xy-keyboard', this._onBlur.bind(this))
 
     if (config) {
       this.updateContainer(config, true)
@@ -129,6 +183,8 @@ export class XYContainer<Datum> extends ContainerCore {
     // Important: We still want to do `setData` for the components above even if the data hasn't changed
     // because calling `updateContainer` may add new components and we need to pass them the data
     if (hasDataUpdated) {
+      this._keyboardDatumIndex = undefined
+      this._isKeyboardCrosshairShown = false
       config.tooltip?.hide()
       // Before the first render there's nothing to hide, and `hide()` would render the crosshair before it gets the fallback accessors
       if (!this._firstRender) config.crosshair?.hide()
@@ -138,7 +194,12 @@ export class XYContainer<Datum> extends ContainerCore {
   }
 
   public updateContainer (containerConfig: XYContainerConfigInterface<Datum>, preventRender?: boolean): void {
+    const prevXDomain = this.config.xDomain
     super.updateContainer(containerConfig)
+
+    // A new `xDomain` value (compared by value, so re-renders of the framework wrappers don't reset the zoom) replaces the zoomed domain
+    const xDomain = this.config.xDomain
+    if (!this.config.zoom || prevXDomain?.[0] !== xDomain?.[0] || prevXDomain?.[1] !== xDomain?.[1]) this._zoomDomain = undefined
 
     const crosshair = containerConfig.crosshair
     const providedTooltip = containerConfig.tooltip === this._defaultTooltip ? undefined : containerConfig.tooltip
@@ -171,6 +232,8 @@ export class XYContainer<Datum> extends ContainerCore {
       crosshair.setContainer(this.svg)
       crosshair.tooltip = tooltip
     }
+
+    this._updateFocusability()
 
     // Sync the SVG children (clipping path, defs, axes, components, crosshair and annotations)
     // with the updated configuration, touching only the elements that changed.
@@ -220,6 +283,7 @@ export class XYContainer<Datum> extends ContainerCore {
   protected _preRender (): void {
     const { config } = this
     super._preRender()
+    this._zoomAutoMinSpan = null
 
     // Set the scales and update their domains once per render cycle
     // (the domains depend only on the data and the configuration, not on the sizing steps below)
@@ -244,6 +308,9 @@ export class XYContainer<Datum> extends ContainerCore {
     const { config } = this
     super._render()
 
+    const duration = this._isZoomRenderPending ? 0 : customDuration
+    this._isZoomRenderPending = false
+
     // Get chart total margin after auto margin calculations
     const margin = this._getMargin()
 
@@ -253,10 +320,10 @@ export class XYContainer<Datum> extends ContainerCore {
         .style('clip-path', c.clippable ? `url(#${this._clipPathId})` : null)
         .style('-webkit-clip-path', c.clippable ? `url(#${this._clipPathId})` : null)
 
-      c.render(customDuration)
+      c.render(duration)
     }
 
-    this._renderAxes(this._firstRender ? 0 : customDuration)
+    this._renderAxes(this._firstRender ? 0 : duration)
 
     // Clip Rect
     // Extending the clipping path to allow small overflow (e.g. Line will looks better that way when it touches the edges)
@@ -274,7 +341,9 @@ export class XYContainer<Datum> extends ContainerCore {
     const crosshair = config.crosshair
     // Let a touch drag move the Tooltip or the Crosshair instead of scrolling the page (see their `followTouchMove` options)
     const followTouchMove = crosshair?.config.followTouchMove || config.tooltip?.followsTouchMove()
-    this.svg.style('touch-action', followTouchMove ? 'pinch-zoom' : null)
+    // With `zoom`, the chart handles pinch gestures by itself
+    const touchAction = config.zoom ? (followTouchMove ? 'none' : 'pan-y') : (followTouchMove ? 'pinch-zoom' : null)
+    this.svg.style('touch-action', touchAction)
     if (crosshair) {
       const nonStackedComponents = this.components.filter(c => !c.stacked)
       const stackedComponents = this.components.filter(c => c.stacked)
@@ -348,6 +417,21 @@ export class XYContainer<Datum> extends ContainerCore {
         const hasDataProvided = componentsWithDomain.some(c => c.datamodel.data?.length > 0)
         if (config.preventEmptyDomain || (config.preventEmptyDomain === null && (!hasDataProvided || dimension === ScaleDimension.Y))) {
           domain[1] = domain[0] + 1
+        }
+      }
+
+      // Apply the zoomed X domain, keeping it within the data extent combined with the configured domain
+      if (dimension === ScaleDimension.X) {
+        this._unzoomedXDomain = [domain[0], domain[1]]
+        this._zoomExtent = [
+          config.zoomExtent?.[0] ?? Math.min(domain[0], min ?? domain[0]),
+          config.zoomExtent?.[1] ?? Math.max(domain[1], max ?? domain[1]),
+        ]
+
+        if (config.zoom && this._zoomDomain) {
+          this._zoomDomain = constrainDomain(this._zoomDomain, this._zoomExtent, this._getZoomMinSpan())
+          domain[0] = this._zoomDomain[0]
+          domain[1] = this._zoomDomain[1]
         }
       }
 
@@ -472,9 +556,340 @@ export class XYContainer<Datum> extends ContainerCore {
     return calculatedBleed
   }
 
+  /** Resets the zoom applied by the user, so the X domain comes from `xDomain` or the data again */
+  public resetZoom (event?: MouseEvent | KeyboardEvent): void {
+    if (!this._zoomDomain) return
+
+    this._zoomDomain = undefined
+    this.config.onZoom?.(undefined, event)
+    this.render()
+  }
+
+  private _getXScale (): ContinuousScale | undefined {
+    const { config } = this
+    return clean<XYComponentCore<Datum>>([...this.components, config.xAxis, config.crosshair])[0]?.xScale
+  }
+
+  /** The visible X domain, which may not have been rendered yet */
+  private _getVisibleXDomain (): [number, number] | undefined {
+    return this._zoomDomain ?? this._unzoomedXDomain
+  }
+
+  /** A copy of the X scale with the visible domain */
+  private _getZoomScale (): ContinuousScale | undefined {
+    const scale = this._getXScale()?.copy() as ContinuousScale | undefined
+    const domain = this._getVisibleXDomain()
+    if (scale && domain) scale.domain(domain)
+    return scale
+  }
+
+  private _getZoomMinSpan (): number {
+    const { config } = this
+    if (isNumber(config.zoomMinSpan)) return config.zoomMinSpan
+
+    if (this._zoomAutoMinSpan === null) {
+      const values = this.components
+        .filter(c => !c.config.excludeFromDomainCalculation && c.config.x && c.datamodel.data?.length)
+        .flatMap(c => c.datamodel.data.map((d, i) => getNumber(d, c.config.x, i)))
+      const step = getMinStep(values)
+      this._zoomAutoMinSpan = step === undefined ? undefined : step * XY_ZOOM_AUTO_MIN_SPAN_STEPS
+    }
+
+    return this._zoomAutoMinSpan ?? 0
+  }
+
+  private _isZoomed (): boolean {
+    const [d0, d1] = this._zoomDomain ?? []
+    const [e0, e1] = this._zoomExtent ?? []
+    return !!this._zoomDomain && (d1 - d0) < (e1 - e0) * (1 - Number.EPSILON * 4)
+  }
+
+  /** Converts a horizontal client (viewport) coordinate to the components' coordinate space */
+  private _getPlotX (clientX: number): number {
+    return clientX - this.element.getBoundingClientRect().left - this._getMargin().left
+  }
+
+  private _setZoomDomain (domain: [number, number], event?: WheelEvent | PointerEvent | MouseEvent | KeyboardEvent, anchor?: number, animate = false): void {
+    if (!this._zoomExtent || !domain.every(isFinite)) return
+
+    const newDomain = constrainDomain(domain, this._zoomExtent, this._getZoomMinSpan(), anchor)
+    const currentDomain = this._getVisibleXDomain()
+    if (newDomain[0] === currentDomain?.[0] && newDomain[1] === currentDomain?.[1]) return
+
+    this._zoomDomain = newDomain
+    this._isZoomRenderPending = this._isZoomRenderPending || !animate
+    this.config.onZoom?.(newDomain, event)
+    this.render()
+  }
+
+  private _isFocused (): boolean {
+    const root = this._container.getRootNode() as Document | ShadowRoot
+    return this._container.contains(root.activeElement)
+  }
+
+  private _onZoomWheel (event: WheelEvent): void {
+    const scale = this._getZoomScale()
+    // Trackpad pinch gestures come as wheel events with `ctrlKey`
+    const isPinch = event.ctrlKey || event.metaKey
+    if (!this.config.zoom || !scale || (!isPinch && !this._isFocused())) return
+
+    event.preventDefault()
+    const px = this._getPlotX(event.clientX)
+    const deltaMode = event.deltaMode ?? 0
+    const isPan = !isPinch && (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY))
+    if (isPan) {
+      // Not all browsers turn Shift + wheel into a horizontal scroll
+      const delta = (event.deltaX || event.deltaY) * (XY_ZOOM_WHEEL_PAN_MULTIPLIERS[deltaMode] ?? 1)
+      this._setZoomDomain(transformDomain(scale, 1, px, px - delta), event)
+    } else {
+      const exponent = -event.deltaY * (XY_ZOOM_WHEEL_DELTA_MULTIPLIERS[deltaMode] ?? 1) * (event.ctrlKey ? XY_ZOOM_PINCH_WHEEL_MULTIPLIER : 1)
+      const k = 2 ** clamp(exponent, -XY_ZOOM_WHEEL_MAX_EXPONENT, XY_ZOOM_WHEEL_MAX_EXPONENT)
+      this._setZoomDomain(transformDomain(scale, k, px, px), event, +scale.invert(px))
+    }
+  }
+
+  private _onZoomPointerDown (event: PointerEvent): void {
+    const scale = this._getZoomScale()
+    if (!this.config.zoom || !scale) return
+
+    if (event.pointerType === 'touch') {
+      // One finger moves the Crosshair, two fingers pinch and pan
+      this._zoomTouches.set(event.pointerId, [event.clientX, event.clientY])
+      if (this._zoomTouches.size !== 2) return
+
+      const [a, b] = [...this._zoomTouches.values()]
+      this._zoomPinch = { scale, fromPx: this._getPlotX((a[0] + b[0]) / 2), distance: Math.hypot(a[0] - b[0], a[1] - b[1]) }
+      this.config.crosshair?.hide(event)
+      this.config.tooltip?.hide()
+    } else if (event.button === 0 && this._isZoomed()) {
+      this._zoomDrag = { pointerId: event.pointerId, startPx: this._getPlotX(event.clientX), scale, isActive: false }
+    }
+  }
+
+  private _onZoomPointerMove (event: PointerEvent): void {
+    if (this._zoomTouches.has(event.pointerId)) {
+      this._zoomTouches.set(event.pointerId, [event.clientX, event.clientY])
+      const pinch = this._zoomPinch
+      if (!pinch) return
+
+      // Keep the Crosshair and the Tooltip from following the fingers while pinching
+      event.stopImmediatePropagation()
+      const [a, b] = [...this._zoomTouches.values()]
+      const distance = Math.hypot(a[0] - b[0], a[1] - b[1])
+      if (!distance || !pinch.distance) return
+
+      const toPx = this._getPlotX((a[0] + b[0]) / 2)
+      this._setZoomDomain(transformDomain(pinch.scale, distance / pinch.distance, pinch.fromPx, toPx), event, +pinch.scale.invert(pinch.fromPx))
+      return
+    }
+
+    const drag = this._zoomDrag
+    if (drag?.pointerId !== event.pointerId) return
+    // The button was released outside of the chart
+    if (!(event.buttons & 1)) {
+      this._zoomDrag = undefined
+      return
+    }
+
+    const px = this._getPlotX(event.clientX)
+    if (!drag.isActive) {
+      if (Math.abs(px - drag.startPx) < XY_ZOOM_DRAG_THRESHOLD_PX) return
+      drag.isActive = true
+      this.element.setPointerCapture?.(event.pointerId)
+      this.svg.style('cursor', 'grabbing')
+    }
+
+    this._setZoomDomain(transformDomain(drag.scale, 1, drag.startPx, px), event)
+  }
+
+  private _onZoomPointerUp (event: PointerEvent): void {
+    if (this._zoomTouches.delete(event.pointerId) && this._zoomTouches.size < 2) this._zoomPinch = undefined
+
+    if (this._zoomDrag?.pointerId === event.pointerId) {
+      if (this._zoomDrag.isActive) this.svg.style('cursor', null)
+      this._zoomDrag = undefined
+    }
+  }
+
+  private _onZoomDoubleClick (event: MouseEvent): void {
+    if (!this.config.zoom || !this._zoomDomain) return
+
+    event.preventDefault()
+    this.resetZoom(event)
+  }
+
+  private _isKeyboardNavigationEnabled (): boolean {
+    return !!(this.config.keyboardNavigation && this.config.crosshair)
+  }
+
+  /** Makes the chart a tab stop when it can be zoomed or navigated with the keyboard,
+   * and sets up the live region for the keyboard navigation announcements */
+  private _updateFocusability (): void {
+    const container = select(this._container)
+    const isKeyboardNavigationEnabled = this._isKeyboardNavigationEnabled()
+    if (!this._hasOwnTabIndex) container.attr('tabindex', this.config.zoom || isKeyboardNavigationEnabled ? 0 : null)
+
+    if (isKeyboardNavigationEnabled) {
+      this._liveRegion ??= container.append('div')
+        .attr('class', s.liveRegion)
+        .attr('aria-live', 'polite')
+        .attr('aria-atomic', true)
+    } else {
+      this._liveRegion?.remove()
+      this._liveRegion = undefined
+    }
+  }
+
+  /** Indices of the Crosshair data that keyboard navigation can reach, sorted by the x value:
+   * the ones within the zoom extent when `zoom` is enabled, or within the X domain otherwise */
+  private _getNavigableDataIndices (): number[] {
+    const { config: { crosshair } } = this
+    const data = crosshair.datamodel.data ?? []
+    const domain = this.config.zoom ? this._zoomExtent : this._getVisibleXDomain()
+    if (!domain) return []
+
+    const [min, max] = extent(domain)
+    return crosshair.getSortedDataIndices().filter(i => {
+      const x = getNumber(data[i], crosshair.accessors.x, i)
+      return x >= min && x <= max
+    })
+  }
+
+  private _onKeyDown (event: KeyboardEvent): void {
+    const { config } = this
+    // Ignore the keys pressed in other focusable elements inside the container (e.g. inputs rendered by the framework wrappers)
+    if (event.target !== this._container || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return
+
+    if (config.zoom && ['+', '=', '-'].includes(event.key)) {
+      const scale = this._getZoomScale()
+      if (!scale) return
+
+      // Zoom around the active data point or the center of the chart
+      const crosshair = config.crosshair
+      const datumIndex = this._isKeyboardCrosshairShown ? this._keyboardDatumIndex : undefined
+      const [r0, r1] = scale.range()
+      const px = datumIndex === undefined
+        ? (r0 + r1) / 2
+        : scale(getNumber(crosshair.datamodel.data[datumIndex], crosshair.accessors.x, datumIndex))
+      const k = event.key === '-' ? 1 / XY_ZOOM_KEYBOARD_FACTOR : XY_ZOOM_KEYBOARD_FACTOR
+
+      event.preventDefault()
+      this._setZoomDomain(transformDomain(scale, k, px, px), event, +scale.invert(px))
+      return
+    }
+
+    if (!this._isKeyboardNavigationEnabled()) return
+
+    const indices = this._getNavigableDataIndices()
+    if (!indices.length) return
+
+    const crosshair = config.crosshair
+    const last = indices.length - 1
+    const currentPosition = indices.indexOf(this._keyboardDatumIndex)
+    const position = this._isKeyboardCrosshairShown && currentPosition !== -1 ? currentPosition : undefined
+    const pageStep = Math.max(1, Math.round(indices.length * XY_KEYBOARD_PAGE_FRACTION))
+    let newPosition: number
+    switch (event.key) {
+      case 'ArrowRight': newPosition = position === undefined ? 0 : position + 1; break
+      case 'ArrowLeft': newPosition = position === undefined ? last : position - 1; break
+      case 'PageDown': newPosition = (position ?? -1) + pageStep; break
+      case 'PageUp': newPosition = (position ?? last + 1) - pageStep; break
+      case 'Home': newPosition = 0; break
+      case 'End': newPosition = last; break
+      case 'ArrowUp':
+      case 'ArrowDown': {
+        // The series are ordered from top to bottom
+        newPosition = position ?? 0
+        const series = crosshair.getSeries(indices[newPosition])
+        if (!series.length) return
+
+        const i = series.findIndex(d => d.id === this._keyboardSeriesId)
+        const next = event.key === 'ArrowUp' ? (i === -1 ? series.length - 1 : i - 1) : (i === -1 ? 0 : i + 1)
+        this._keyboardSeriesId = series[clamp(next, 0, series.length - 1)].id
+        break
+      }
+      case 'Escape':
+        if (!this._isKeyboardCrosshairShown) return
+        this._isKeyboardCrosshairShown = false
+        this._keyboardSeriesId = undefined
+        this._liveRegion?.text('')
+        crosshair.hide(event)
+        event.preventDefault()
+        return
+      default:
+        return
+    }
+
+    event.preventDefault()
+    this._showKeyboardDatum(indices[clamp(newPosition, 0, last)], event)
+  }
+
+  private _onFocus (): void {
+    // Show the Crosshair only when the chart gets focused with the keyboard, not on click
+    if (!this._isKeyboardNavigationEnabled() || !this._container.matches(':focus-visible')) return
+
+    const indices = this._getNavigableDataIndices()
+    const datumIndex = indices.includes(this._keyboardDatumIndex) ? this._keyboardDatumIndex : indices[0]
+    if (datumIndex !== undefined) this._showKeyboardDatum(datumIndex)
+  }
+
+  private _onBlur (): void {
+    if (!this._isKeyboardCrosshairShown) return
+
+    this._isKeyboardCrosshairShown = false
+    this._liveRegion?.text('')
+    this.config.crosshair?.hide()
+  }
+
+  private _showKeyboardDatum (datumIndex: number, event?: KeyboardEvent): void {
+    const { config } = this
+    const crosshair = config.crosshair
+    const datum = crosshair.datamodel.data[datumIndex]
+    const x = getNumber(datum, crosshair.accessors.x, datumIndex)
+    const series = crosshair.getSeries(datumIndex).find(d => d.id === this._keyboardSeriesId)
+
+    // Pan the zoomed chart to keep the data point visible
+    const domain = config.zoom ? this._getVisibleXDomain() : undefined
+    if (domain && (x < domain[0] || x > domain[1])) {
+      const padding = (domain[1] - domain[0]) * XY_KEYBOARD_PAN_PADDING
+      const shift = x < domain[0] ? x - padding - domain[0] : x + padding - domain[1]
+      this._setZoomDomain([domain[0] + shift, domain[1] + shift], event)
+    }
+
+    this._keyboardDatumIndex = datumIndex
+    this._isKeyboardCrosshairShown = true
+    crosshair.showAtDatum(datumIndex, series?.id, event)
+    this._liveRegion?.text(this._getKeyboardAnnouncement(datum, datumIndex, x, series))
+  }
+
+  private _getKeyboardAnnouncement (datum: Datum, datumIndex: number, x: number, series: CrosshairSeries | undefined): string {
+    const { config } = this
+    const crosshair = config.crosshair
+    const scale = this._getXScale()
+    const xValue = scale?.invert(scale.range()[0]) instanceof Date ? new Date(x) : x
+    if (config.keyboardAnnouncement) return config.keyboardAnnouncement(xValue, datum, datumIndex, series?.index)
+
+    const xText = config.xAxis?.config.tickFormat?.(xValue, 0, [xValue] as number[] | Date[]) ?? xValue.toLocaleString()
+    const formatY = (y: number): string => config.yAxis?.config.tickFormat?.(y, 0, [y]) ?? y.toLocaleString()
+    if (series) {
+      const seriesCount = (crosshair.accessors.yStacked?.length ?? 0) + (crosshair.accessors.y?.length ?? 0)
+      return `${xText}, series ${series.index + 1} of ${seriesCount}: ${formatY(series.value)}`
+    }
+
+    const templateText = getTextContent(crosshair.config.template(datum, x, crosshair.datamodel.data, datumIndex))
+    if (templateText) return templateText
+
+    const values = crosshair.getSeries(datumIndex).sort((a, b) => a.index - b.index).map(d => formatY(d.value))
+    return values.length ? `${xText}: ${values.join(', ')}` : xText
+  }
+
   public destroy (): void {
     const { components, config: { tooltip, crosshair, annotations, xAxis, yAxis } } = this
     super.destroy()
+
+    const container = select(this._container).on('.xy-keyboard', null)
+    if (!this._hasOwnTabIndex) container.attr('tabindex', null)
+    this._liveRegion?.remove()
 
     for (const c of components) c?.destroy()
     tooltip?.destroy()
