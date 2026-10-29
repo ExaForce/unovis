@@ -18,6 +18,7 @@ import { XYContainerConfigInterface } from '@unovis/ts/containers/xy-container/c
 import { Annotations } from '@unovis/ts/components/annotations'
 import { Axis } from '@unovis/ts/components/axis'
 import { Crosshair } from '@unovis/ts/components/crosshair'
+import { Zoom } from '@unovis/ts/components/zoom'
 import { Tooltip } from '@unovis/ts/components/tooltip'
 import { ContinuousScale } from '@unovis/ts/types/scale'
 import { Direction } from '@unovis/ts/types/direction'
@@ -128,38 +129,6 @@ export class VisXYContainerComponent<Datum> implements AfterViewInit, AfterConte
    * to the `onRenderComplete` callback. Default: `undefined` */
   @Input() bleed?: Spacing | ((components: XYComponentCore<Datum>[]) => Spacing)
 
-  /** Enables zooming and panning along the X axis:
-   * - the mouse wheel zooms once the chart has been clicked or focused, a horizontal scroll pans;
-   * - trackpad pinch and `Ctrl` / `⌘` + wheel zoom right away;
-   * - dragging with the mouse pans the zoomed chart;
-   * - on touch screens, two fingers pinch and pan (one finger keeps moving the Crosshair);
-   * - the `+` and `-` keys zoom when the chart is focused;
-   * - double click resets the zoom.
-   *
-   * The container applies the zoom by itself and reports it via `onZoom`. A new `xDomain` value replaces the zoomed domain.
-   * Set `scaleByDomain` to `true` to fit the Y domain to the visible data. Default: `false` */
-  @Input() zoom?: boolean
-  /** Limits of zooming out and panning. By default, the extent of the data combined with `xDomain`. Default: `undefined` */
-  @Input() zoomExtent?: [number | undefined, number | undefined]
-  /** Minimum width of the zoomed X domain in the data space. By default, two steps between the closest data points. Default: `undefined` */
-  @Input() zoomMinSpan?: number
-  /** Callback function to be called when the user zooms or pans the chart. Receives the new X domain,
-   * or `undefined` when the zoom has been reset, and the event that caused the change. Default: `undefined` */
-  @Input() onZoom?: (xDomain: [number, number] | undefined, event?: WheelEvent | PointerEvent | MouseEvent | KeyboardEvent) => void
-
-  /** Lets keyboard users explore the data when the chart has a Crosshair. The chart becomes a single tab stop:
-   * - `←` / `→` move the Crosshair between the data points, `Home` / `End` jump to the first and last ones,
-   *   `Page Up` / `Page Down` jump by a tenth of them;
-   * - `↑` / `↓` highlight the series above or below;
-   * - `Esc` hides the Crosshair.
-   *
-   * The active data point is announced to screen readers. When `zoom` is enabled, the chart pans to keep it visible. Default: `true` */
-  @Input() keyboardNavigation?: boolean = true
-  /** Custom screen reader announcement for the active data point. Receives the X value, the datum, its index, and
-   * the index of the highlighted series (in the order of the Crosshair circles: stacked first) or `undefined`.
-   * By default, the text of the Crosshair template or the X and Y values. Default: `undefined` */
-  @Input() keyboardAnnouncement?: (x: number | Date, datum: Datum, datumIndex: number, seriesIndex?: number) => string
-
   /** Alternative text description of the chart for accessibility purposes. It will be applied as an
    * `aria-label` attribute to the div element containing your chart. Default: `undefined`.
   */
@@ -209,17 +178,17 @@ export class VisXYContainerComponent<Datum> implements AfterViewInit, AfterConte
       xScale, xDomain, xDomainMinConstraint, xDomainMaxConstraint, xRange,
       yScale, yDomain, yDomainMinConstraint, yDomainMaxConstraint, yRange,
       yDirection, ariaLabel, colorFunction,
-      zoom, zoomExtent, zoomMinSpan, onZoom, keyboardNavigation, keyboardAnnouncement,
     } = this
     const visComponents = this.visComponents.toArray().map(d => d.component)
 
     const crosshair = visComponents.find(c => c instanceof Crosshair) as Crosshair<Datum>
+    const zoom = visComponents.find(c => c instanceof Zoom) as Zoom<Datum>
     const tooltip = this.tooltipComponent?.component as Tooltip
     const xAxis = visComponents.find(c => c instanceof Axis && c?.config?.type === 'x') as Axis<Datum>
     const yAxis = visComponents.find(c => c instanceof Axis && c?.config?.type === 'y') as Axis<Datum>
     const annotations = this.annotationsComponent?.component as Annotations
 
-    const components = visComponents.filter(c => !(c instanceof Crosshair) && !(c instanceof Tooltip) && !(c instanceof Axis))
+    const components = visComponents.filter(c => !(c instanceof Crosshair) && !(c instanceof Zoom) && !(c instanceof Tooltip) && !(c instanceof Axis))
 
     return {
       components,
@@ -250,11 +219,6 @@ export class VisXYContainerComponent<Datum> implements AfterViewInit, AfterConte
       ariaLabel,
       colorFunction,
       zoom,
-      zoomExtent,
-      zoomMinSpan,
-      onZoom,
-      keyboardNavigation,
-      keyboardAnnouncement,
     }
   }
 
