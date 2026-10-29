@@ -7,6 +7,7 @@ import { Annotations } from '@/components/annotations'
 import { Tooltip } from '@/components/tooltip'
 import { Axis } from '@/components/axis'
 import { Crosshair } from '@/components/crosshair'
+import { Zoom } from '@/components/zoom'
 
 // Types
 import { ContinuousScale } from '@/types/scale'
@@ -102,37 +103,8 @@ export interface XYContainerConfigInterface<Datum> extends ContainerConfigInterf
    * to the `onRenderComplete` callback. Default: `undefined` */
   bleed?: Spacing | ((components: XYComponentCore<Datum>[]) => Spacing);
 
-  /** Enables zooming and panning along the X axis:
-   * - the mouse wheel zooms once the chart has been clicked or focused, a horizontal scroll pans;
-   * - trackpad pinch and `Ctrl` / `⌘` + wheel zoom right away;
-   * - dragging with the mouse pans the zoomed chart;
-   * - on touch screens, two fingers pinch and pan (one finger keeps moving the Crosshair);
-   * - the `+` and `-` keys zoom when the chart is focused;
-   * - double click resets the zoom.
-   *
-   * The container applies the zoom by itself and reports it via `onZoom`. A new `xDomain` value replaces the zoomed domain.
-   * Set `scaleByDomain` to `true` to fit the Y domain to the visible data. Default: `false` */
-  zoom?: boolean;
-  /** Limits of zooming out and panning. By default, the extent of the data combined with `xDomain`. Default: `undefined` */
-  zoomExtent?: [number | undefined, number | undefined];
-  /** Minimum width of the zoomed X domain in the data space. By default, two steps between the closest data points. Default: `undefined` */
-  zoomMinSpan?: number;
-  /** Callback function to be called when the user zooms or pans the chart. Receives the new X domain,
-   * or `undefined` when the zoom has been reset, and the event that caused the change. Default: `undefined` */
-  onZoom?: (xDomain: [number, number] | undefined, event?: WheelEvent | PointerEvent | MouseEvent | KeyboardEvent) => void;
-
-  /** Lets keyboard users explore the data when the chart has a Crosshair. The chart becomes a single tab stop:
-   * - `←` / `→` move the Crosshair between the data points, `Home` / `End` jump to the first and last ones,
-   *   `Page Up` / `Page Down` jump by a tenth of them;
-   * - `↑` / `↓` highlight the series above or below;
-   * - `Esc` hides the Crosshair.
-   *
-   * The active data point is announced to screen readers. When `zoom` is enabled, the chart pans to keep it visible. Default: `true` */
-  keyboardNavigation?: boolean;
-  /** Custom screen reader announcement for the active data point. Receives the X value, the datum, its index, and
-   * the index of the highlighted series (in the order of the Crosshair circles: stacked first) or `undefined`.
-   * By default, the text of the Crosshair template or the X and Y values. Default: `undefined` */
-  keyboardAnnouncement?: (x: number | Date, datum: Datum, datumIndex: number, seriesIndex?: number) => string;
+  /** Zoom component that enables zooming and panning along the X axis. Default: `undefined` */
+  zoom?: Zoom<Datum> | undefined;
 
   /** Callback function to be called when the chart rendering is complete. Default: `undefined` */
   onRenderComplete?: (
@@ -175,13 +147,6 @@ export const XYContainerDefaultConfig: XYContainerConfigInterface<unknown> = {
 
   clipPathExtend: 2,
   bleed: undefined,
-
-  zoom: false,
-  zoomExtent: undefined,
-  zoomMinSpan: undefined,
-  onZoom: undefined,
-
-  keyboardNavigation: true,
-  keyboardAnnouncement: undefined,
+  zoom: undefined,
 }
 

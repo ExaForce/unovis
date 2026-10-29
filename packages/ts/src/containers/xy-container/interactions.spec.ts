@@ -5,27 +5,32 @@ import { XYContainer } from '@/containers/xy-container'
 import { XYContainerConfigInterface } from '@/containers/xy-container/config'
 import { Line } from '@/components/line'
 import { Crosshair } from '@/components/crosshair'
+import { CrosshairConfigInterface } from '@/components/crosshair/config'
+import { Zoom } from '@/components/zoom'
 import { Scale } from '@/types/scale'
 
 // Utils
-import { constrainDomain, getMinStep, getTextContent, transformDomain } from './utils'
+import { constrainDomain, getMinStep, transformDomain } from '@/components/zoom/utils'
+import { getTextContent } from '@/components/crosshair/utils'
 
 type Datum = { x: number; a: number; b: number }
-type ContainerSetup = { element: HTMLDivElement; container: XYContainer<Datum>; line: Line<Datum>; crosshair: Crosshair<Datum>; onZoom: ReturnType<typeof vi.fn> }
+type ContainerSetup = { element: HTMLDivElement; container: XYContainer<Datum>; line: Line<Datum>; crosshair: Crosshair<Datum>; zoom: Zoom<Datum>; onZoom: ReturnType<typeof vi.fn> }
+type SetUpOptions = { zoom?: boolean; crosshair?: CrosshairConfigInterface<Datum> }
 
 const data: Datum[] = Array.from({ length: 11 }, (_, i) => ({ x: i, a: i, b: 10 - i }))
 
-function setUp (config: XYContainerConfigInterface<Datum> = {}): ContainerSetup {
+function setUp (options: SetUpOptions = {}, config: XYContainerConfigInterface<Datum> = {}): ContainerSetup {
   const element = document.createElement('div')
   document.body.appendChild(element)
 
   const onZoom = vi.fn()
   const line = new Line<Datum>({ x: d => d.x, y: [d => d.a, d => d.b] })
-  const crosshair = new Crosshair<Datum>({ duration: 0 })
-  const container = new XYContainer<Datum>(element, { width: 500, height: 300, duration: 0, components: [line], crosshair, onZoom, ...config }, data)
+  const crosshair = new Crosshair<Datum>({ duration: 0, ...options.crosshair })
+  const zoom = options.zoom ? new Zoom<Datum>({ onZoom }) : undefined
+  const container = new XYContainer<Datum>(element, { width: 500, height: 300, duration: 0, components: [line], crosshair, zoom, ...config }, data)
   vi.advanceTimersToNextFrame()
 
-  return { element, container, line, crosshair, onZoom }
+  return { element, container, line, crosshair, zoom, onZoom }
 }
 
 const getDomain = (line: Line<Datum>): number[] => line.xScale.domain().map(Number)
@@ -164,8 +169,41 @@ describe('XYContainer zoom (jsdom)', () => {
     expect((d0 + d1) / 2).toBeCloseTo(5)
   })
 
+  it('leaves the wheel to the page without a Zoom', () => {
+    const { element, container, line } = setUp()
+    element.focus()
+
+    const event = dispatch(container.element, wheel({ deltaY: -100, clientX: getClientX(line, 5) }))
+    expect(event.defaultPrevented).toBe(false)
+    expect(getDomain(line)).toEqual([0, 10])
+  })
+
+  it('makes a chart with a Zoom but without a Crosshair focusable, and zooms it with + and -', () => {
+    const element = document.createElement('div')
+    document.body.appendChild(element)
+    const line = new Line<Datum>({ x: d => d.x, y: d => d.a })
+    const container = new XYContainer<Datum>(element, { width: 500, height: 300, components: [line], zoom: new Zoom<Datum>() }, data)
+    vi.advanceTimersToNextFrame()
+    expect(element.getAttribute('tabindex')).toBe('0')
+
+    dispatch(element, key('+'))
+    const [d0, d1] = getDomain(line)
+    expect(d1 - d0).toBeCloseTo(10 / 1.5)
+    expect((d0 + d1) / 2).toBeCloseTo(5)
+
+    container.updateContainer({ ...container.config, zoom: undefined })
+    vi.advanceTimersToNextFrame()
+    expect(element.hasAttribute('tabindex')).toBe(false)
+    expect(getDomain(line)).toEqual([0, 10])
+
+    // The removed Zoom doesn't handle the wheel anymore
+    element.focus()
+    const event = dispatch(container.element, wheel({ deltaY: -100, clientX: 100 }))
+    expect(event.defaultPrevented).toBe(false)
+  })
+
   it('replaces the zoomed domain with a new `xDomain` value', () => {
-    const { element, container, line } = setUp({ zoom: true, xDomain: [0, 10] })
+    const { element, container, line } = setUp({ zoom: true }, { xDomain: [0, 10] })
     element.focus()
     dispatch(container.element, wheel({ deltaY: -100, clientX: 100 }))
     const zoomed = getDomain(line)
@@ -195,11 +233,12 @@ describe('XYContainer keyboard navigation (jsdom)', () => {
   const getLiveRegion = (element: HTMLElement): HTMLElement => element.querySelector('[aria-live]')
 
   it('is enabled by default when there is a Crosshair', () => {
-    const { element, container } = setUp()
+    const { element, container, crosshair } = setUp()
     expect(element.getAttribute('tabindex')).toBe('0')
     expect(getLiveRegion(element)).not.toBeNull()
 
-    container.updateContainer({ ...container.config, keyboardNavigation: false })
+    crosshair.setConfig({ ...crosshair.config, keyboardNavigation: false })
+    container.updateContainer({ ...container.config })
     expect(element.hasAttribute('tabindex')).toBe(false)
     expect(getLiveRegion(element)).toBeNull()
   })
@@ -229,7 +268,7 @@ describe('XYContainer keyboard navigation (jsdom)', () => {
   })
 
   it('highlights the series from top to bottom', () => {
-    const { element, crosshair } = setUp({ keyboardAnnouncement: (x, d, i, series) => `${x} ${series}` })
+    const { element, crosshair } = setUp({ crosshair: { keyboardAnnouncement: (x, d, i, series) => `${x} ${series}` } })
 
     dispatch(element, key('ArrowRight'))
     dispatch(element, key('ArrowDown'))
