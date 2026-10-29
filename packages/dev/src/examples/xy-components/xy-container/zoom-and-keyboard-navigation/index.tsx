@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react'
 import { Scale } from '@unovis/ts'
-import { VisXYContainer, VisLine, VisArea, VisStackedBar, VisAxis, VisCrosshair, VisTooltip, VisBrush } from '@unovis/react'
+import { VisXYContainer, VisLine, VisArea, VisStackedBar, VisAxis, VisCrosshair, VisTooltip, VisBrush, VisZoom } from '@unovis/react'
 import { generateTimeSeriesDataRecords, TimeSeriesDataRecord } from '@src/utils/data'
 import { ExampleViewerDurationProps } from '@src/components/ExampleViewer/index'
 
@@ -47,9 +47,7 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
         height={300}
         xScale={xScale}
         xDomain={brushDomain}
-        zoom
         scaleByDomain
-        onZoom={onZoom}
         ariaLabel='Three random time series'
       >
         <VisLine x={x} y={y} duration={props.duration}/>
@@ -57,19 +55,21 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
         <VisAxis type='y' duration={props.duration}/>
         <VisCrosshair template={template} onCrosshairMove={(_x, _d, i, e) => setOnCrosshairMoveEvent(e ? `${e.type} ${i ?? ''}` : undefined)}/>
         <VisTooltip/>
+        <VisZoom onZoom={onZoom}/>
       </VisXYContainer>
-      <VisXYContainer<TimeSeriesDataRecord> data={data} height={60} xScale={xScaleOverview} keyboardNavigation={false}>
+      <VisXYContainer<TimeSeriesDataRecord> data={data} height={60} xScale={xScaleOverview}>
         <VisArea x={x} y={y[0]} duration={0}/>
         <VisBrush selection={zoomDomain ?? null} onBrushMove={onBrushMove} draggable/>
       </VisXYContainer>
 
       <h3>Stacked bars, Y domain from the whole dataset</h3>
-      <VisXYContainer<TimeSeriesDataRecord> data={data} height={250} zoom>
+      <VisXYContainer<TimeSeriesDataRecord> data={data} height={250}>
         <VisStackedBar x={x} y={y} duration={props.duration}/>
         <VisAxis type='x' tickFormat={formatDate} duration={props.duration}/>
         <VisAxis type='y' duration={props.duration}/>
         <VisCrosshair template={template}/>
         <VisTooltip/>
+        <VisZoom/>
       </VisXYContainer>
     </>
   )
