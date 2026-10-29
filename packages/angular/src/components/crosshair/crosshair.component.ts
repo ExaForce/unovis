@@ -167,11 +167,11 @@ export class VisCrosshairComponent<Datum> implements CrosshairConfigInterface<Da
    * - `x` is the horizontal position of the crosshair in the data space;
    * - `datum` is the nearest datum to the crosshair;
    * - `datumIndex` is the index of the nearest datum.
-   * - `event` is the event that triggered the crosshair move (pointer or wheel).
+   * - `event` is the event that triggered the crosshair move (pointer, wheel or keyboard).
    *
    * When the pointer goes out of the container, a touch ends and on wheel events, all the arguments are `undefined` except for `event`.
    * Default: `undefined` */
-  @Input() onCrosshairMove?: (x?: number | Date, datum?: Datum, datumIndex?: number, event?: MouseEvent | WheelEvent) => void
+  @Input() onCrosshairMove?: (x?: number | Date, datum?: Datum, datumIndex?: number, event?: MouseEvent | WheelEvent | KeyboardEvent) => void
 
   /** Force the crosshair to show at a specific position. Default: `undefined` */
   @Input() forceShowAt?: number | Date
