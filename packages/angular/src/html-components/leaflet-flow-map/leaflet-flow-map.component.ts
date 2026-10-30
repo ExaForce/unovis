@@ -1,25 +1,21 @@
 // !!! This code was automatically generated. You should not change it !!!
 import { Component, AfterViewInit, Input, SimpleChanges, ViewChild, ElementRef } from '@angular/core'
+import { LeafletFlowMap } from '@unovis/ts/components/leaflet-flow-map'
+import { LeafletFlowMapConfigInterface } from '@unovis/ts/components/leaflet-flow-map/config'
+import { GenericDataRecord } from '@unovis/ts/types/data'
+import { VisEventType, VisEventCallback } from '@unovis/ts/core/component/types'
 import {
-  LeafletFlowMap,
-  LeafletFlowMapConfigInterface,
-  GenericDataRecord,
-  VisEventType,
-  VisEventCallback,
   Bounds,
-  MapLibreStyleSpecs,
   LeafletMapRenderer,
   MapZoomState,
-  NumericAccessor,
-  StringAccessor,
-  GenericAccessor,
   LeafletMapPointShape,
-  ColorAccessor,
   LeafletMapPointDatum,
   LeafletMapClusterDatum,
   LeafletMapPointStyles,
-  Tooltip,
-} from '@unovis/ts'
+} from '@unovis/ts/components/leaflet-map/types'
+import { MapLibreStyleSpecs } from '@unovis/ts/components/leaflet-map/renderer/map-style'
+import { NumericAccessor, StringAccessor, GenericAccessor, ColorAccessor } from '@unovis/ts/types/accessor'
+import { Tooltip } from '@unovis/ts/components/tooltip'
 import { VisCoreComponent } from '../../core'
 
 @Component({
@@ -129,6 +125,11 @@ export class VisLeafletFlowMapComponent<PointDatum extends GenericDataRecord, Fl
    * with `toDataURL()` or `drawImage()`. Costs an extra buffer copy per rendered frame.
    * Has no effect when renderer is `LeafletMapRenderer.Raster`. Default: `false` */
   @Input() preserveDrawingBuffer?: boolean
+
+  /** Start the MapLibre worker from a Blob URL (requires `blob:` in CSP `worker-src`). Set to `false` to load it from the
+   * same-origin `maplibre-gl-worker.js` file next to the component instead; your bundler has to emit it, or call maplibre-gl's
+   * `setWorkerUrl()` before the map initializes. Has no effect with `LeafletMapRenderer.Raster`. Default: `true` */
+  @Input() useMaplibreWorkerBlob?: boolean
 
   /** Function to be called after the map's async initialization is done. Default: `undefined` */
   @Input() onMapInitialized?: (() => void)
@@ -313,8 +314,8 @@ export class VisLeafletFlowMapComponent<PointDatum extends GenericDataRecord, Fl
   }
 
   private getConfig (): LeafletFlowMapConfigInterface<PointDatum, FlowDatum> {
-    const { duration, events, attributes, width, height, flyToDuration, fitViewPadding, zoomDuration, initialBounds, fitBoundsOnUpdate, fitViewOnInit, fitViewOnUpdate, style, styleDarkTheme, accessToken, attribution, renderer, preserveDrawingBuffer, onMapInitialized, onMapMoveZoom, onMapMoveStart, onMapMoveEnd, onMapZoomStart, onMapZoomEnd, onMapClick, pointLongitude, pointLatitude, pointId, pointShape, pointColor, pointRadius, pointLabel, pointLabelColor, pointBottomLabel, pointCursor, pointRingWidth, selectedPointId, clusterColor, clusterRadius, clusterLabel, clusterLabelColor, clusterBottomLabel, clusterRingWidth, clusterBackground, clusterExpandOnClick, clusteringDistance, colorMap, topoJSONLayer, tooltip, ariaLabel, sourceLongitude, sourceLatitude, targetLongitude, targetLatitude, sourcePointRadius, sourcePointColor, flowParticleColor, flowParticleRadius, flowParticleSpeed, flowParticleDensity, onSourcePointClick, onSourcePointMouseEnter, onSourcePointMouseLeave } = this
-    const config = { duration, events, attributes, width, height, flyToDuration, fitViewPadding, zoomDuration, initialBounds, fitBoundsOnUpdate, fitViewOnInit, fitViewOnUpdate, style, styleDarkTheme, accessToken, attribution, renderer, preserveDrawingBuffer, onMapInitialized, onMapMoveZoom, onMapMoveStart, onMapMoveEnd, onMapZoomStart, onMapZoomEnd, onMapClick, pointLongitude, pointLatitude, pointId, pointShape, pointColor, pointRadius, pointLabel, pointLabelColor, pointBottomLabel, pointCursor, pointRingWidth, selectedPointId, clusterColor, clusterRadius, clusterLabel, clusterLabelColor, clusterBottomLabel, clusterRingWidth, clusterBackground, clusterExpandOnClick, clusteringDistance, colorMap, topoJSONLayer, tooltip, ariaLabel, sourceLongitude, sourceLatitude, targetLongitude, targetLatitude, sourcePointRadius, sourcePointColor, flowParticleColor, flowParticleRadius, flowParticleSpeed, flowParticleDensity, onSourcePointClick, onSourcePointMouseEnter, onSourcePointMouseLeave }
+    const { duration, events, attributes, width, height, flyToDuration, fitViewPadding, zoomDuration, initialBounds, fitBoundsOnUpdate, fitViewOnInit, fitViewOnUpdate, style, styleDarkTheme, accessToken, attribution, renderer, preserveDrawingBuffer, useMaplibreWorkerBlob, onMapInitialized, onMapMoveZoom, onMapMoveStart, onMapMoveEnd, onMapZoomStart, onMapZoomEnd, onMapClick, pointLongitude, pointLatitude, pointId, pointShape, pointColor, pointRadius, pointLabel, pointLabelColor, pointBottomLabel, pointCursor, pointRingWidth, selectedPointId, clusterColor, clusterRadius, clusterLabel, clusterLabelColor, clusterBottomLabel, clusterRingWidth, clusterBackground, clusterExpandOnClick, clusteringDistance, colorMap, topoJSONLayer, tooltip, ariaLabel, sourceLongitude, sourceLatitude, targetLongitude, targetLatitude, sourcePointRadius, sourcePointColor, flowParticleColor, flowParticleRadius, flowParticleSpeed, flowParticleDensity, onSourcePointClick, onSourcePointMouseEnter, onSourcePointMouseLeave } = this
+    const config = { duration, events, attributes, width, height, flyToDuration, fitViewPadding, zoomDuration, initialBounds, fitBoundsOnUpdate, fitViewOnInit, fitViewOnUpdate, style, styleDarkTheme, accessToken, attribution, renderer, preserveDrawingBuffer, useMaplibreWorkerBlob, onMapInitialized, onMapMoveZoom, onMapMoveStart, onMapMoveEnd, onMapZoomStart, onMapZoomEnd, onMapClick, pointLongitude, pointLatitude, pointId, pointShape, pointColor, pointRadius, pointLabel, pointLabelColor, pointBottomLabel, pointCursor, pointRingWidth, selectedPointId, clusterColor, clusterRadius, clusterLabel, clusterLabelColor, clusterBottomLabel, clusterRingWidth, clusterBackground, clusterExpandOnClick, clusteringDistance, colorMap, topoJSONLayer, tooltip, ariaLabel, sourceLongitude, sourceLatitude, targetLongitude, targetLatitude, sourcePointRadius, sourcePointColor, flowParticleColor, flowParticleRadius, flowParticleSpeed, flowParticleDensity, onSourcePointClick, onSourcePointMouseEnter, onSourcePointMouseLeave }
     const keys = Object.keys(config) as (keyof LeafletFlowMapConfigInterface<PointDatum, FlowDatum>)[]
     keys.forEach(key => { if (config[key] === undefined) delete config[key] })
 
