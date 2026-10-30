@@ -40,6 +40,8 @@ export const constraintData = generateDataRecords()
     {x: 20, y: -20, color: '#E2203A' }
   ])
 export const variedData = generateDataRecords(150).map(d => ({...d, y: Math.abs(Math.cos(d.x/(10*Math.PI)))*d.x}))
+export const durationData = orderedData.map(d => ({ x: d.x, y: d.y * 6000 }))
+export const formatDuration = ms => [Math.floor(ms / 60000) && `${Math.floor(ms / 60000)}m`, ms % 60000 && `${ms % 60000 / 1000}s`].filter(Boolean).join(' ') || '0'
 
 ## Basic Configuration
 _XY Container_ is designed as a container that manages multiple _XY Components_ at once, along with optional X and Y
@@ -246,6 +248,44 @@ const yScale = Scale.scalePow().exponent(2)
   const { Scale } = require('@unovis/ts')
   return (
     <XYWrapper {...xyContainerProps()} data={orderedData} yScale={Scale.scalePow().exponent(2)} excludeTabs/>
+  )
+}}
+</BrowserOnly>
+
+### Duration Scale `new`
+On top of the d3 scales, `Scale.scaleDuration()` is a linear scale over durations in **milliseconds** whose ticks land on
+whole units counted from zero: 1, 2, 5, 10, 20, 50, 100, 200 or 500 milliseconds, 1, 2, 5, 10, 15 or 30 seconds and minutes,
+1, 2, 3, 6 or 12 hours, 1, 2, 5, 10 or 20 days, then 5, 10, 20, 50 weeks and so on. A linear scale steps decimally instead,
+so a 0–300s axis gets labeled _1m 40s, 3m 20s, 5m_ rather than _1m, 2m, 3m, 4m, 5m_. Below a millisecond the steps stay decimal.
+`nice()` rounds the domain to the same steps, and an _Axis_ with `tickTextAdaptiveSets` fits its labels among them.
+
+`maxUnit` sets the largest unit of the steps, `DurationUnit.Week` by default. Past its own multiples, that unit goes on with
+1, 2 and 5 × 10^k: with `DurationUnit.Day`, a year gets 100- or 200-day steps instead of 10 or 20 weeks.
+
+The scale doesn't format the labels: pass a duration formatter, e.g. <a href='https://github.com/sindresorhus/pretty-ms' target='__blank'>pretty-ms</a>,
+as the axis `tickFormat`. pretty-ms doesn't print weeks, so keep its steps to days. Convert durations kept in other units
+to milliseconds in the accessor.
+
+```ts
+import { DurationUnit, Scale } from '@unovis/ts'
+import prettyMs from 'pretty-ms'
+
+const yScale = Scale.scaleDuration().maxUnit(DurationUnit.Day)
+const y = (d: Request) => d.latencySeconds * 1000
+const tickFormat = (ms: number) => prettyMs(ms)
+```
+
+<BrowserOnly>
+{() => {
+  const { Scale } = require('@unovis/ts')
+  return (
+    <XYWrapper {...xyContainerProps('Line')} data={durationData} yScale={Scale.scaleDuration()}
+      components={[
+        component('Line'),
+        { name: 'Axis', props: { type: 'x' }, key: 'xAxis' },
+        { name: 'Axis', props: { type: 'y', tickFormat: formatDuration }, key: 'yAxis' },
+      ]}
+      excludeTabs/>
   )
 }}
 </BrowserOnly>
