@@ -151,11 +151,11 @@ export function collideLabels<Datum> (
   nodes.forEach((node, i) => {
     if (!node._labelVisible) return
 
-    const candidates = data[i]._point.labelPositions
+    const { labelPosition, labelPositions } = data[i]._point
     let rect: Rect | undefined
-    const position = candidates.find((candidate, k) => {
+    const position = (labelPositions ?? [labelPosition]).find((candidate, k) => {
       const isCenter = isLabelPositionCenter(candidate)
-      if (isCenter && candidates.length === 1) return true
+      if (isCenter && !labelPositions) return true
       if (isCenter && !fitsInside(i)) return false
 
       rect = getEstimatedLabelBBox(data[i], candidate, xScale, yScale, fontSizePx)

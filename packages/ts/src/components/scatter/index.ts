@@ -18,6 +18,7 @@ import { NumericAccessor } from '@/types/accessor'
 import { Position } from '@/types/position'
 import { ContinuousScale } from '@/types/scale'
 import { ScaleDimension } from '@/types/scale-dimension'
+import { CrosshairPointOffset } from '@/core/xy-component/types'
 
 // Local Types
 import { ScatterPointGroupNode, ScatterPoint } from './types'
@@ -47,6 +48,7 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
   }
 
   private _pointData: ScatterPoint<Datum>[][] = []
+  private _pointOffsets: Map<number, [number, number]>[] = []
   private _points: Selection<SVGGElement, ScatterPoint<Datum>, SVGGElement, ScatterPoint<Datum>[]>
   private _sizeScale: ContinuousScale
   private _collideLabelsAnimFrameId: ReturnType<typeof requestAnimationFrame>
@@ -64,6 +66,11 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
   setData (data: Datum[]): void {
     super.setData(data)
     this._updateSizeScale()
+  }
+
+  getCrosshairPointOffset (index: number, yAccessorIndex: number): CrosshairPointOffset | undefined {
+    const circle = this.config.spreadAxis ? this._pointOffsets[yAccessorIndex]?.get(index) : undefined
+    return circle && { circle, lines: [0, 0] }
   }
 
   get bleed (): Spacing {
@@ -201,6 +208,7 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
       if (isSpreadX) d._point.xOffsetPx = offsets[i]
       else d._point.yOffsetPx = offsets[i]
     })
+    this._pointOffsets = this._pointData.map(group => new Map(group.map(d => [d._point.pointIndex, [d._point.xOffsetPx, d._point.yOffsetPx]])))
   }
 
   private _updateSizeScale (): void {
@@ -233,7 +241,7 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
         if (xValue == null || yValue == null) return acc
 
         const labelPosition = getValue(d, config.labelPosition, i)
-        const labelPositions = (isArray(labelPosition) ? labelPosition : [labelPosition]) as Position[]
+        const labelPositions = isArray(labelPosition) ? labelPosition as Position[] : undefined
 
         const pointSize = getNumber(d, config.size, i)
         const pointSizeScaled = config.sizeRange ? this._sizeScale(pointSize) : pointSize
@@ -259,7 +267,7 @@ export class Scatter<Datum> extends XYComponentCore<Datum, ScatterConfigInterfac
               shape: getString(d, config.shape, j) as SymbolType,
               label: getString(d, config.label, j),
               labelColor: getColor(d, config.labelColor, j, config.colorKeys?.[j], colorOptionsNoFallback),
-              labelPosition: labelPositions[0],
+              labelPosition: (labelPositions ? labelPositions[0] : labelPosition) as Position,
               labelPositions,
               cursor: getString(d, config.cursor, j),
               groupIndex: j,
