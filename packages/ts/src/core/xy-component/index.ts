@@ -11,6 +11,9 @@ import { filterDataByRange, getExtent, isArray } from '@/utils/data'
 import { NumericAccessor } from '@/types/accessor'
 import { ContinuousScale, Scale, ScaleDimension } from '@/types/scale'
 
+// Local Types
+import { CrosshairPointOffset } from './types'
+
 // Config
 import { XYComponentDefaultConfig, XYComponentConfigInterface } from './config'
 
@@ -98,5 +101,10 @@ export class XYComponentCore<
     const data = scaleByVisibleData ? filterDataByRange(datamodel.data, xDomain, config.x, true) : datamodel.data
     const yAccessors = (isArray(config.y) ? config.y : [config.y]) as NumericAccessor<Datum>[]
     return getExtent(data, ...yAccessors)
+  }
+
+  /** Where _Crosshair_ draws a datum's point, in pixels from its values; overridden by components that draw points elsewhere */
+  getCrosshairPointOffset (index: number, yAccessorIndex: number): CrosshairPointOffset | undefined {
+    return undefined
   }
 }

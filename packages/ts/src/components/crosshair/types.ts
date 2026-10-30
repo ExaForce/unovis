@@ -9,6 +9,7 @@ export type CrosshairCircle = {
   strokeWidth?: number;
   /** Size of the segment the circle belongs to. Among overlapping circles, the largest one is painted last */
   magnitude?: number;
+  offset?: [number, number];
 }
 
 export type CrosshairAccessors<Datum> = {

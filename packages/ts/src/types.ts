@@ -18,6 +18,7 @@ export * from '@/types/style'
 
 // Component Types
 export * from '@/core/component/types'
+export * from '@/core/xy-component/types'
 export * from '@/components/crosshair/types'
 export * from '@/components/axis/types'
 export * from '@/components/chord-diagram/types'
