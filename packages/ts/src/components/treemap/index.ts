@@ -16,9 +16,14 @@ import { getString, getNumber, isNumber, isFunction } from '@/utils/data'
 import { smartTransition } from '@/utils/d3'
 import { trimSVGText, wrapSVGText } from '@/utils/text'
 import { cssvar } from '@/utils/style'
+import { getGradient, getGradientFillValue } from '@/utils/gradient'
 
 // Types
 import { FitMode } from '@/types/text'
+import { GradientDirection } from '@/types/gradient'
+
+// Constants
+import { GRADIENT_TREEMAP_DEFAULT_STOPS } from '@/styles/gradients'
 
 // Config
 import { TreemapConfigInterface, TreemapDefaultConfig } from './config'
@@ -182,7 +187,7 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
     /* Render tiles */
     const tiles = this.tiles
       .selectAll<SVGGElement, TreemapNode<Datum>>(`g.${s.tileGroup}:not(.${s.tileExiting})`)
-      .data(visibleTiles, d => `${d.data.key}-${d.depth}`)
+      .data(visibleTiles, d => JSON.stringify(d.ancestors().map(node => node.data.key)))
 
     const tilesEnter = tiles.enter()
       .append('g')
@@ -206,7 +211,7 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
       .attr('y', d => d.y0)
       .attr('width', this._getTileWidth)
       .attr('height', this._getTileHeight)
-      .style('fill', d => d._fill)
+      .style('fill', (d, i) => this._getTileFill(d, i))
       .style('opacity', 0)
       .style('cursor', config.showTileClickAffordance ? d => !d.children ? 'pointer' : null : null)
 
@@ -223,7 +228,7 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
       .attr('y', 0)
 
     /* Update */
-    const tilesMerged = tiles.merge(tilesEnter)
+    const tilesMerged = tiles.merge(tilesEnter).order()
 
     // Update clipPath elements
     tilesMerged.select<SVGClipPathElement>('clipPath')
@@ -235,7 +240,7 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
 
     const tileRectsMerged = tilesMerged.select(`rect.${s.tile}`)
     smartTransition(tileRectsMerged, duration)
-      .style('fill', d => d._fill)
+      .style('fill', (d, i) => this._getTileFill(d, i))
       .style('opacity', 1)
       .attr('x', d => d.x0)
       .attr('y', d => d.y0)
@@ -281,9 +286,11 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
 
       const text = select(el)
       const maxLabelWidth = d.x1 - d.x0 - (config.labelOffsetX ?? 0) * 2
+      const shouldWrap = config.labelFit === FitMode.Wrap && isLeafNode
 
-      if (config.labelFit === FitMode.Wrap && isLeafNode) {
+      if (shouldWrap) {
         wrapSVGText(text, maxLabelWidth)
+        text.select('tspan').attr('y', 0)
       } else {
         trimSVGText(text, maxLabelWidth, config.labelTrimMode)
       }
@@ -347,5 +354,13 @@ export class Treemap<Datum> extends ComponentCore<Datum[], TreemapConfigInterfac
 
   private _getTileWidth (d: TreemapNode<Datum>): number {
     return Math.max(d.x1 - d.x0, 0.5)
+  }
+
+  private _getTileFill (d: TreemapNode<Datum>, i: number): string {
+    return getGradientFillValue(getGradient(d, this.config.tileGradient, i), d._fill, this.element, {
+      direction: GradientDirection.TopToBottom,
+      stops: GRADIENT_TREEMAP_DEFAULT_STOPS,
+      space: { x: 0, y: 0, width: this._width, height: this._height },
+    })
   }
 }

@@ -1,25 +1,21 @@
 // !!! This code was automatically generated. You should not change it !!!
 import { Component, AfterViewInit, Input, SimpleChanges, ViewChild, ElementRef } from '@angular/core'
+import { LeafletMap } from '@unovis/ts/components/leaflet-map'
+import { LeafletMapConfigInterface } from '@unovis/ts/components/leaflet-map/config'
+import { GenericDataRecord } from '@unovis/ts/types/data'
+import { VisEventType, VisEventCallback } from '@unovis/ts/core/component/types'
 import {
-  LeafletMap,
-  LeafletMapConfigInterface,
-  GenericDataRecord,
-  VisEventType,
-  VisEventCallback,
   Bounds,
-  MapLibreStyleSpecs,
   LeafletMapRenderer,
   MapZoomState,
-  NumericAccessor,
-  StringAccessor,
-  GenericAccessor,
   LeafletMapPointShape,
-  ColorAccessor,
   LeafletMapPointDatum,
   LeafletMapClusterDatum,
   LeafletMapPointStyles,
-  Tooltip,
-} from '@unovis/ts'
+} from '@unovis/ts/components/leaflet-map/types'
+import { MapLibreStyleSpecs } from '@unovis/ts/components/leaflet-map/renderer/map-style'
+import { NumericAccessor, StringAccessor, GenericAccessor, ColorAccessor } from '@unovis/ts/types/accessor'
+import { Tooltip } from '@unovis/ts/components/tooltip'
 import { VisCoreComponent } from '../../core'
 
 @Component({
@@ -129,6 +125,11 @@ export class VisLeafletMapComponent<Datum extends GenericDataRecord> implements 
    * with `toDataURL()` or `drawImage()`. Costs an extra buffer copy per rendered frame.
    * Has no effect when renderer is `LeafletMapRenderer.Raster`. Default: `false` */
   @Input() preserveDrawingBuffer?: boolean
+
+  /** Start the MapLibre worker from a Blob URL (requires `blob:` in CSP `worker-src`). Set to `false` to load it from the
+   * same-origin `maplibre-gl-worker.js` file next to the component instead; your bundler has to emit it, or call maplibre-gl's
+   * `setWorkerUrl()` before the map initializes. Has no effect with `LeafletMapRenderer.Raster`. Default: `true` */
+  @Input() useMaplibreWorkerBlob?: boolean
 
   /** Function to be called after the map's async initialization is done. Default: `undefined` */
   @Input() onMapInitialized?: (() => void)
@@ -274,8 +275,8 @@ export class VisLeafletMapComponent<Datum extends GenericDataRecord> implements 
   }
 
   private getConfig (): LeafletMapConfigInterface<Datum> {
-    const { duration, events, attributes, width, height, flyToDuration, fitViewPadding, zoomDuration, initialBounds, fitBoundsOnUpdate, fitViewOnInit, fitViewOnUpdate, style, styleDarkTheme, accessToken, attribution, renderer, preserveDrawingBuffer, onMapInitialized, onMapMoveZoom, onMapMoveStart, onMapMoveEnd, onMapZoomStart, onMapZoomEnd, onMapClick, pointLongitude, pointLatitude, pointId, pointShape, pointColor, pointRadius, pointLabel, pointLabelColor, pointBottomLabel, pointCursor, pointRingWidth, selectedPointId, clusterColor, clusterRadius, clusterLabel, clusterLabelColor, clusterBottomLabel, clusterRingWidth, clusterBackground, clusterExpandOnClick, clusteringDistance, colorMap, topoJSONLayer, tooltip, ariaLabel } = this
-    const config = { duration, events, attributes, width, height, flyToDuration, fitViewPadding, zoomDuration, initialBounds, fitBoundsOnUpdate, fitViewOnInit, fitViewOnUpdate, style, styleDarkTheme, accessToken, attribution, renderer, preserveDrawingBuffer, onMapInitialized, onMapMoveZoom, onMapMoveStart, onMapMoveEnd, onMapZoomStart, onMapZoomEnd, onMapClick, pointLongitude, pointLatitude, pointId, pointShape, pointColor, pointRadius, pointLabel, pointLabelColor, pointBottomLabel, pointCursor, pointRingWidth, selectedPointId, clusterColor, clusterRadius, clusterLabel, clusterLabelColor, clusterBottomLabel, clusterRingWidth, clusterBackground, clusterExpandOnClick, clusteringDistance, colorMap, topoJSONLayer, tooltip, ariaLabel }
+    const { duration, events, attributes, width, height, flyToDuration, fitViewPadding, zoomDuration, initialBounds, fitBoundsOnUpdate, fitViewOnInit, fitViewOnUpdate, style, styleDarkTheme, accessToken, attribution, renderer, preserveDrawingBuffer, useMaplibreWorkerBlob, onMapInitialized, onMapMoveZoom, onMapMoveStart, onMapMoveEnd, onMapZoomStart, onMapZoomEnd, onMapClick, pointLongitude, pointLatitude, pointId, pointShape, pointColor, pointRadius, pointLabel, pointLabelColor, pointBottomLabel, pointCursor, pointRingWidth, selectedPointId, clusterColor, clusterRadius, clusterLabel, clusterLabelColor, clusterBottomLabel, clusterRingWidth, clusterBackground, clusterExpandOnClick, clusteringDistance, colorMap, topoJSONLayer, tooltip, ariaLabel } = this
+    const config = { duration, events, attributes, width, height, flyToDuration, fitViewPadding, zoomDuration, initialBounds, fitBoundsOnUpdate, fitViewOnInit, fitViewOnUpdate, style, styleDarkTheme, accessToken, attribution, renderer, preserveDrawingBuffer, useMaplibreWorkerBlob, onMapInitialized, onMapMoveZoom, onMapMoveStart, onMapMoveEnd, onMapZoomStart, onMapZoomEnd, onMapClick, pointLongitude, pointLatitude, pointId, pointShape, pointColor, pointRadius, pointLabel, pointLabelColor, pointBottomLabel, pointCursor, pointRingWidth, selectedPointId, clusterColor, clusterRadius, clusterLabel, clusterLabelColor, clusterBottomLabel, clusterRingWidth, clusterBackground, clusterExpandOnClick, clusteringDistance, colorMap, topoJSONLayer, tooltip, ariaLabel }
     const keys = Object.keys(config) as (keyof LeafletMapConfigInterface<Datum>)[]
     keys.forEach(key => { if (config[key] === undefined) delete config[key] })
 
