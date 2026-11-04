@@ -1,4 +1,8 @@
+import { ExampleControls } from '@src/components/ExampleControls'
+import { useComponentState } from '@src/components/ExampleControls/useComponentState'
 import React, { useCallback, useEffect, useState } from 'react'
+import { randomNumberGenerator } from '@src/utils/data'
+import { usePlayback, PlaybackControl } from '@src/components/PlaybackControl'
 import { VisSingleContainer, VisGraph } from '@unovis/react'
 import { GraphLayoutType } from '@unovis/ts'
 
@@ -9,8 +13,9 @@ type NodeDatum = { id: string; label: string }
 type LinkDatum = { id: string; source: string; target: string; speed: number }
 
 export const component = (): React.ReactNode => {
-  const [showFlow, setShowFlow] = useState(true)
-  const [autoChange, setAutoChange] = useState(false)
+  const [playing, setPlaying] = usePlayback()
+  const [showFlow, setShowFlow] = useComponentState('graph', 'linkFlow', true)
+  const [autoChange, setAutoChange] = useComponentState('example', 'autoChange', false)
 
   // Simple node data
   const nodes: NodeDatum[] = [
@@ -32,26 +37,26 @@ export const component = (): React.ReactNode => {
 
   // Auto-change speeds every 2 seconds
   useEffect(() => {
-    if (!autoChange) return
+    if (!autoChange || !playing) return
 
     const interval = setInterval(() => {
       setLinks(currentLinks =>
         currentLinks.map(link => ({
           ...link,
-          speed: 10 + Math.random() * 40, // Random speed between 10-50
+          speed: 10 + randomNumberGenerator() * 40, // Random speed between 10-50
         }))
       )
     }, 2000)
 
     return () => clearInterval(interval)
-  }, [autoChange])
+  }, [autoChange, playing])
 
   // Manual speed change handlers
   const randomizeSpeeds = useCallback(() => {
     setLinks(currentLinks =>
       currentLinks.map(link => ({
         ...link,
-        speed: 10 + Math.random() * 40,
+        speed: 10 + randomNumberGenerator() * 40,
       }))
     )
   }, [])
@@ -70,6 +75,8 @@ export const component = (): React.ReactNode => {
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <ExampleControls components={['graph', 'example']}/>
+      <PlaybackControl playing={playing} onPlayingChange={setPlaying}/>
       <div style={{
         padding: '20px',
         backgroundColor: '#f5f5f5',
@@ -125,7 +132,7 @@ export const component = (): React.ReactNode => {
           layoutType={GraphLayoutType.Elk}
           nodeLabel={d => d.label}
           nodeSize={40}
-          linkFlow={showFlow}
+          linkFlow={showFlow && playing}
           linkFlowParticleSpeed={d => showFlow ? d.speed : undefined}
           linkFlowParticleSize={3}
           linkWidth={2}

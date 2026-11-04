@@ -1,7 +1,10 @@
+import { ExampleControls } from '@src/components/ExampleControls'
+import { useComponentState } from '@src/components/ExampleControls/useComponentState'
 import React, { useEffect, useState, useRef } from 'react'
 import { VisSingleContainer, VisTopoJSONMap, VisTopoJSONMapRef } from '@unovis/react'
 import { WorldMapTopoJSON } from '@unovis/ts/maps'
-import { FlowDataRecord } from '../flow-map'
+import { usePlayback, PlaybackControl } from '@src/components/PlaybackControl'
+import type { FlowDataRecord } from '../complex-demo'
 
 export const title = 'MapFitToPoints'
 export const subTitle = 'Adjust number of points to change view'
@@ -21,6 +24,7 @@ const FLOW_DATA: FlowDataRecord[] = [
 ]
 
 export const component = (): React.ReactNode => {
+  const [playing, setPlaying] = usePlayback()
   const points = [
     { id: 'Los Angeles', latitude: 34.0522, longitude: -118.2437 },
     { id: 'New York', latitude: 40.7128, longitude: -74.0060 },
@@ -31,7 +35,7 @@ export const component = (): React.ReactNode => {
     { id: 'Reykjavik', latitude: 64.1265, longitude: -21.8174 },
   ]
 
-  const [numPoints, setNumPoints] = useState(5)
+  const [numPoints, setNumPoints] = useComponentState('example', 'numPoints', 5)
   const [data, setData] = useState<{ points: typeof points[0][]; links: FlowDataRecord[] }>(() => ({
     points: points.slice(0, 5),
     links: FLOW_DATA,
@@ -49,6 +53,8 @@ export const component = (): React.ReactNode => {
 
   return (
     <div style={{ position: 'relative' }}>
+      <ExampleControls components={['example']}/>
+      <PlaybackControl playing={playing} onPlayingChange={setPlaying}/>
       <label>
         <input
           type='range'
@@ -68,7 +74,7 @@ export const component = (): React.ReactNode => {
           mapFitToPoints={true}
           zoomExtent={[0.5, 100]}
           pointLabel={d => d.id}
-          enableFlowAnimation={true}
+          enableFlowAnimation={playing}
           linkWidth={3}
           flowParticleRadius={1}
           flowParticleSpeed={0.08}

@@ -41,6 +41,14 @@ wrapper is generated from it.
 8. **Use the repo's type-check helpers.** For runtime type checks reach for the helpers in
    `@/utils/data` (`isString`, `isNumber`, `isFunction`, `isArray`, `isObject`, `isPlainObject`)
    instead of hand-writing `typeof x === 'string'`, `typeof x === 'function'`, or `Array.isArray(…)`.
+9. **Optimize screenshots before committing.** Run new or changed PNG screenshots and gallery
+   previews through a lossless PNG optimizer (for example, `oxipng`). Preserve their dimensions,
+   transparency, and appearance, and visually verify the optimized images before staging them.
+
+10. **Prefer direct imports.** Import individual components, enums, utilities, and types from their
+   defining modules instead of package root barrels. This reduces bundler/test dependency traversal,
+   startup time, and memory; final bundle savings depend on tree-shaking. Follow each package's
+   `AGENTS.md` for supported paths and framework exceptions. Use `import type` for types.
 
 ## Setup & commands
 
@@ -54,6 +62,17 @@ wrapper is generated from it.
 - Build (order matters — **core first**): `pnpm build:ts`, then `pnpm build:react` / `build:angular` / `build:svelte` / `build:vue` / `build:solid` / `build:website`. `pnpm build` does all of them.
 - Lint: `pnpm lint` (check) / `pnpm lint:fix` (autofix). `pre-commit` runs `lint-staged` on staged files automatically.
 - CI (`.github/workflows/pull_request.yml`) runs `pnpm build && pnpm build:dev` on every PR.
+- For visual fixes, follow the [agent workflow](../packages/dev/playwright/README.md#agent-workflow):
+  reproduce → capture before → fix → verify interactions → capture after. Use normal browser tools
+  with the same URL, viewport, and interaction state; review and share both screenshots.
+
+## Visual fixes
+
+Reproduce in the affected browser engine first. Compare branch-base and final screenshots with
+matching data, fonts, viewport, theme, and interaction state. Confirm servers and imports use the
+intended worktree. Prefer CSS over new measurements; check representative examples and actual
+clipping bounds before refreshing snapshots. Report exactly what was tested. For SVG text and
+clipping changes, check WebKit early; see the [visual-testing workflow](../packages/dev/playwright/README.md#agent-workflow).
 
 ## Commits
 
@@ -87,6 +106,9 @@ Full rules, the parser regex, the type-picking cheatsheet, and ~25 real examples
 - Branch from `main` (don't commit to `main` directly). The **F5 CLA bot** comments on first-time
   contributions; there is no DCO/sign-off requirement.
 - PR body uses a checklist (Dev examples / Wrappers / Gallery example / Docs) with screenshots.
+- Immediately before PR submission, run `pnpm cmds-report` from the repo root after final changes
+  and review the report. Fix failures introduced by the PR; document remaining failures and skipped
+  checks in the PR description. The runner has exclusions, so also complete the required CI checks.
 - Full procedure, the commit-grouping convention, and the body template: **`/open-pr`**.
 - Reference PRs: [#821 Boxplot](https://github.com/f5/unovis/pull/821),
   [#812 RadialBar](https://github.com/f5/unovis/pull/812).

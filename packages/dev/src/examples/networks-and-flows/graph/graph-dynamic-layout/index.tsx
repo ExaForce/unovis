@@ -1,21 +1,26 @@
+import { ExampleControls } from '@src/components/ExampleControls'
+import { useComponentState } from '@src/components/ExampleControls/useComponentState'
 import React, { useEffect, useMemo, useState } from 'react'
 import { VisSingleContainer, VisGraph } from '@unovis/react'
 import { GraphLayoutType } from '@unovis/ts'
 import { generateNodeLinkData, randomNumberGenerator } from '@src/utils/data'
 import { ExampleViewerDurationProps } from '@src/components/ExampleViewer/index'
+import { usePlayback, PlaybackControl } from '@src/components/PlaybackControl'
 
 export const title = 'Dynamic Layout'
 export const subTitle = 'Select Layout From Dropdown'
 
 export const component = (props: ExampleViewerDurationProps): React.ReactNode => {
-  const [data, setData] = useState(generateNodeLinkData(50))
+  const [playing, setPlaying] = usePlayback()
+  const [data, setData] = useState(() => generateNodeLinkData(50))
   const layouts = Object.values(GraphLayoutType)
   const initial = GraphLayoutType.Circular
-  const [layout, setLayout] = useState<string>(initial)
+  const [layout, setLayout] = useComponentState<string>('graph', 'layoutType', initial)
 
   // Generate new data every 2 seconds
   useEffect(() => {
-    setTimeout(() => {
+    if (!playing) return
+    const timeout = setTimeout(() => {
       const newData = generateNodeLinkData(10 + Math.floor(randomNumberGenerator() * 50))
 
       // Adding some random x, y values to the nodes for `GraphLayoutType.Precalculated`
@@ -26,7 +31,8 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
 
       setData(newData)
     }, 2000)
-  }, [data])
+    return () => clearTimeout(timeout)
+  }, [data, playing])
 
   const forceLayoutSettings = useMemo(() => ({
     fixNodePositionAfterSimulation: true,
@@ -34,7 +40,9 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
 
   return (
     <>
-      <select onChange={e => setLayout(e.target.value)} defaultValue={initial}>
+      <ExampleControls components={['graph']}/>
+      <PlaybackControl playing={playing} onPlayingChange={setPlaying}/>
+      <select onChange={e => setLayout(e.target.value)} value={layout}>
         {layouts.map(l => <option key={l} value={l}>{l}</option>)}
       </select>
       <VisSingleContainer data={data} height={900}>
