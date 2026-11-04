@@ -51,7 +51,7 @@ its environment at module load.
 | **`getBBox`, `getBoundingClientRect`, `getTotalLength`, `getPointAtLength`** | jsdom performs no layout at all. Text boxes come from real canvas metrics; shapes from attribute math; paths from `svg-path-bounds` / `svg-path-properties`; groups from the union of children mapped through their transforms. |
 | **`getComputedStyle` wrapper** | Unovis resolves its entire theme through `--vis-*` custom properties, which jsdom doesn't cascade. The wrapper resolves them from a parsed `:root` map (with dark-theme overrides) and synthesizes font properties. |
 | **Element sizing** | `clientWidth`/`clientHeight` are always 0 in jsdom; containers read them to size charts. |
-| **No-op `ResizeObserver`** | Containers construct one on every render. |
+| **No-op `ResizeObserver`** | Containers skip resize observation without one; the no-op keeps any other code that constructs one from throwing. |
 
 Fonts are provisioned once at startup: the pinned Inter release is downloaded
 (SHA-256 verified) into `~/.cache/unovis-ssr/fonts/` and registered with the
@@ -78,7 +78,7 @@ removes all of them:
 
 1. **Import external defs** — globally injected pattern definitions the chart
    references get copied into its own `<defs>`.
-2. **Inline the stylesheet** — emotion's rules are matched with
+2. **Inline the stylesheet** — the Unovis CSS rules are matched with
    `querySelectorAll` and written as inline styles, then the class attributes are
    dropped. Author inline styles always win; later rules override earlier ones.
 3. **Bake CSS variables** — every `var(--vis-*)` becomes a literal value for the

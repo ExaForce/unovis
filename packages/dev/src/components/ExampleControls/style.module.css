@@ -1,0 +1,6 @@
+.exampleControls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}

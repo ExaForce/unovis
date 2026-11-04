@@ -1,4 +1,7 @@
-import React, { useState } from 'react'
+import { ExampleControls } from '@src/components/ExampleControls'
+import { useComponentState } from '@src/components/ExampleControls/useComponentState'
+import { useComponentConfig } from '@src/components/ExampleControls/useComponentConfig'
+import React from 'react'
 import { treemapBinary, treemapDice, treemapResquarify, treemapSlice, treemapSliceDice, treemapSquarify } from 'd3-hierarchy'
 import { VisSingleContainer, VisTreemap } from '@unovis/react'
 import type { TreemapDatum, TreemapTileFunction } from '@unovis/ts'
@@ -40,16 +43,19 @@ const TILE_OPTIONS: { key: string; label: string; tile: TreemapTileFunction<Tree
 ]
 
 export const component = (): React.ReactElement => {
-  const [selectedKey, setSelectedKey] = useState('squarify')
+  const [selectedKey, setSelectedKey] = useComponentState('example', 'tile', 'squarify')
   const selected = TILE_OPTIONS.find(o => o.key === selectedKey)
+  const { hasOverride, reset } = useComponentConfig('treemap', { tileFunction: selected?.tile })
 
   return (
     <>
+      <ExampleControls components={['example', 'treemap']}/>
       <select
-        value={selectedKey}
-        onChange={(e) => setSelectedKey(e.target.value)}
-        style={{ marginBottom: 10, padding: '6px 10px' }}
+        value={hasOverride('tileFunction') ? 'custom' : selectedKey}
+        onChange={(e) => { setSelectedKey(e.target.value); reset(['tileFunction']) }}
+        style={{ marginBottom: 10 }}
       >
+        {hasOverride('tileFunction') && <option value='custom' disabled>Custom config</option>}
         {TILE_OPTIONS.map(({ key, label }) => (
           <option key={key} value={key}>{label}</option>
         ))}

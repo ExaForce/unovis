@@ -43,9 +43,12 @@
   "types": "./index.d.ts",
   "typings": "./index.d.ts",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./index.js",
+    "./dist/index.js"
+  ],
   "scripts": {
-    "build": "pnpm check && vite build && rm -rf dist/.cache && cp LICENSE README.md package.json ./dist",
+    "build": "pnpm check && vite build && rm -rf dist/.cache && cp LICENSE README.md AGENTS.md package.json ./dist",
     "check": "vue-tsc --noEmit",
     "generate": "tsx ./autogen/index.ts",
     "publish:dist": "cd ./dist; npm publish",

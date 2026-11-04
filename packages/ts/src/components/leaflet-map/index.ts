@@ -15,7 +15,6 @@ import { ComponentType } from '@/types/component'
 import { GenericDataRecord } from '@/types/data'
 
 // Utils
-import { ResizeObserver } from '@/utils/resize-observer'
 import { clamp, isNil, getNumber, getString, isString } from '@/utils/data'
 import { isDarkThemeEnabled } from '@/utils/style'
 import { constraintMapViewThrottled } from './renderer/mapboxgl-utils'
@@ -97,7 +96,7 @@ export class LeafletMap<Datum extends GenericDataRecord> extends ComponentCore<D
   private _currentZoomLevel: number | null = null
   private _firstRender = true
   private _isDarkThemeActive = false
-  private resizeObserver: ResizeObserver
+  private resizeObserver: ResizeObserver | undefined
   private themeObserver: MutationObserver
   private _renderDataAnimationFrameId: number | null = null
   private _flyToBoundsAnimationFrameId: number | null = null
@@ -106,7 +105,7 @@ export class LeafletMap<Datum extends GenericDataRecord> extends ComponentCore<D
   // eslint-disable-next-line @typescript-eslint/naming-convention
   static DEFAULT_CONTAINER_HEIGHT = 600
 
-  protected events = {
+  protected events: ComponentCore<unknown>['events'] = {
     [LeafletMap.selectors.point]: {
       mouseup: this._onPointMouseUp.bind(this),
       mousedown: this._onPointMouseDown.bind(this),
@@ -199,11 +198,13 @@ export class LeafletMap<Datum extends GenericDataRecord> extends ComponentCore<D
     this.setData(data ?? [])
 
     // When the container size changes we have to initiate map resize in order to update its dimensions
-    this.resizeObserver = new ResizeObserver(() => {
-      this._map?.leaflet?.invalidateSize()
-      this.config.tooltip?.hide()
-    })
-    this.resizeObserver.observe(container)
+    if (globalThis.ResizeObserver) {
+      this.resizeObserver = new ResizeObserver(() => {
+        this._map?.leaflet?.invalidateSize()
+        this.config.tooltip?.hide()
+      })
+      this.resizeObserver.observe(container)
+    }
 
     // If dark theme is enabled, update map's style when document body's class list changes
     if (this.config.styleDarkTheme) {
@@ -604,7 +605,7 @@ export class LeafletMap<Datum extends GenericDataRecord> extends ComponentCore<D
     if (clusterPoint) {
       const points: PointFeature<PointExpandedClusterProperties<Datum>>[] =
         clusterPoint.clusterIndex.getLeaves((clusterPoint.properties as LeafletMapClusterDatum<Datum>).cluster_id as number, Infinity)
-      const packPoints: {x: number; y: number; r: number }[] = points.map(p => ({
+      const packPoints = points.map<{ x: number; y: number; r: number }>(p => ({
         x: null,
         y: null,
         r: getPointRadius(p, config.pointRadius, this._map.leaflet.getZoom()) + padding,
@@ -822,7 +823,7 @@ export class LeafletMap<Datum extends GenericDataRecord> extends ComponentCore<D
 
     map?.stop()
     map?.remove()
-    this.resizeObserver.disconnect()
+    this.resizeObserver?.disconnect()
     this.themeObserver?.disconnect()
   }
 }

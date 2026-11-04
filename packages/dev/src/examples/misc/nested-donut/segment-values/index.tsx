@@ -1,4 +1,7 @@
-import React, { useCallback, useState } from 'react'
+import { ExampleControls } from '@src/components/ExampleControls'
+import { useComponentState } from '@src/components/ExampleControls/useComponentState'
+import { useComponentConfig } from '@src/components/ExampleControls/useComponentConfig'
+import React, { useCallback } from 'react'
 import { NestedDonut, NestedDonutSegment } from '@unovis/ts'
 import { VisSingleContainer, VisNestedDonut, VisTooltip } from '@unovis/react'
 import { ExampleViewerDurationProps } from '@src/components/ExampleViewer/index'
@@ -61,10 +64,14 @@ const sortFns: SortFn<NestedDonutSegment<Datum>>[] = [
   { label: 'By Child Count', compare: (a, b) => b.children.length - a.children.length },
 ]
 export const component = (props: ExampleViewerDurationProps): React.ReactNode => {
-  const [sort, setSort] = useState<SortFn<NestedDonutSegment<Datum>>>()
+  const [sortIndex, setSortIndex] = useComponentState('example', 'sortIndex', 0)
+  const sort = sortFns[sortIndex]
+  const { hasOverride, reset } = useComponentConfig('nestedDonut', { sort: sort?.compare })
   return (
     <div className={s.chart}>
-      Sort: <select onChange={e => setSort(sortFns[Number(e.target.value)])}>
+      <ExampleControls components={['example', 'nestedDonut']}/>
+      Sort: <select value={hasOverride('sort') ? 'custom' : sortIndex} onChange={e => { setSortIndex(Number(e.target.value)); reset(['sort']) }}>
+        {hasOverride('sort') && <option value='custom' disabled>Custom config</option>}
         {sortFns.map(({ label }, i) => <option key={label} value={i} label={label}/>)}
       </select>
       <VisSingleContainer data={nestedDonutData} height={600}>

@@ -1,12 +1,12 @@
 import { select } from 'd3-selection'
 import { Transition } from 'd3-transition'
 import { area, Area as AreaInterface, line, Line as LineInterface } from 'd3-shape'
-import { interpolatePath } from 'd3-interpolate-path'
 
 // Core
 import { XYComponentCore } from '@/core/xy-component'
 
 // Utils
+import { interpolatePath } from '@/utils/interpolate-path'
 import {
   getNumber,
   getString,
@@ -46,7 +46,7 @@ export class Area<Datum> extends XYComponentCore<Datum, AreaConfigInterface<Datu
   private _lineGen: LineInterface<AreaDatum>
   private _prevNegative: boolean[] | undefined // To help guessing the stack direction when an accessor was set to null or 0
 
-  events = {
+  events: XYComponentCore<Datum>['events'] = {
     [Area.selectors.area]: {},
   }
 

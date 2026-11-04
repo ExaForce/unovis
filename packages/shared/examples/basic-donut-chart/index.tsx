@@ -1,6 +1,7 @@
 /* eslint-disable import/no-unresolved, import/no-webpack-loader-syntax, @typescript-eslint/no-var-requires */
 import React from 'react'
 import type { Example } from '../types'
+import metadata from '../metadata.json'
 
 const pathname = 'basic-donut-chart'
 const example: Example = {
@@ -10,8 +11,7 @@ const example: Example = {
     return <Component />
   },
   pathname,
-  title: 'Basic Donut Chart',
-  description: <div>Data obtained from <a href="https://informationisbeautiful.net/visualizations/top-500-passwords-visualized/" target="_blank">information is beautiful</a></div>,
+  ...metadata[pathname],
   codeReact: require(`!!raw-loader!./${pathname}.tsx`).default,
   codeSolid: require(`!!raw-loader!./${pathname}-solid.tsx`).default,
   codeTs: require(`!!raw-loader!./${pathname}.ts`).default,
@@ -25,6 +25,7 @@ const example: Example = {
   data: require('!!raw-loader!./data').default,
   preview: require(`../_previews/${pathname}.png`).default,
   previewDark: require(`../_previews/${pathname}-dark.png`).default,
+  styles: require('!!raw-loader!./styles.css').default,
 }
 
 export default example

@@ -6,6 +6,7 @@ import { geoPath, GeoProjection, ExtendedFeatureCollection } from 'd3-geo'
 import { color } from 'd3-color'
 import { packSiblings } from 'd3-hierarchy'
 import { feature } from 'topojson-client'
+import type { Topology } from 'topojson-specification'
 
 // Core
 import { ComponentCore } from '@/core/component'
@@ -130,7 +131,7 @@ export class TopoJSONMap<
   private _sourcePoints: { x: number; y: number; radius: number; color: string; flowData: LinkDatum }[] = []
   private _animationId: number | null = null
 
-  events = {
+  events: ComponentCore<unknown>['events'] = {
     [TopoJSONMap.selectors.point]: {},
     [TopoJSONMap.selectors.feature]: {},
   }
@@ -308,7 +309,7 @@ export class TopoJSONMap<
     const { bleed, config, datamodel } = this
 
     this.g.attr('transform', `translate(${bleed.left}, ${bleed.top})`)
-    const mapData: TopoJSON.Topology = config.topojson
+    const mapData: Topology = config.topojson
     const featureName = config.mapFeatureName
     const featureObject = mapData?.objects?.[featureName]
     if (!featureObject) return
