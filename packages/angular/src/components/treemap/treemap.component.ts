@@ -1,20 +1,12 @@
 // !!! This code was automatically generated. You should not change it !!!
 import { Component, AfterViewInit, Input, SimpleChanges } from '@angular/core'
-import {
-  Treemap,
-  TreemapConfigInterface,
-  ContainerCore,
-  VisEventType,
-  VisEventCallback,
-  NumericAccessor,
-  StringAccessor,
-  TreemapNode,
-  ColorAccessor,
-  TreemapTileFunction,
-  TreemapDatum,
-  FitMode,
-  TrimMode,
-} from '@unovis/ts'
+import { Treemap } from '@unovis/ts/components/treemap'
+import { TreemapConfigInterface } from '@unovis/ts/components/treemap/config'
+import { ContainerCore } from '@unovis/ts/core/container'
+import { VisEventType, VisEventCallback } from '@unovis/ts/core/component/types'
+import { NumericAccessor, StringAccessor, ColorAccessor } from '@unovis/ts/types/accessor'
+import { TreemapNode, TreemapTileFunction, TreemapDatum } from '@unovis/ts/components/treemap/types'
+import { FitMode, TrimMode } from '@unovis/ts/types/text'
 import { VisCoreComponent } from '../../core'
 
 @Component({
@@ -117,7 +109,7 @@ export class VisTreemapComponent<Datum> implements TreemapConfigInterface<Datum>
   /** Label offset in the X direction. Default: `4` */
   @Input() labelOffsetX?: number
 
-  /** Label offset in the Y direction. Default: `4` */
+  /** Label offset in the Y direction. Default: `1` */
   @Input() labelOffsetY?: number
 
   /** How labels should fit within tiles: wrap or trim. Applicable only for leaf nodes. Default: `FitMode.Wrap` */

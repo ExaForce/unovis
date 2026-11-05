@@ -1,4 +1,4 @@
-import { css } from '@/styles/emotion'
+import { css } from '@/styles/css'
 
 // Utils
 import { getCssVarNames, injectGlobalCssVariables } from '@/utils/style'
@@ -71,6 +71,11 @@ export const segmentLabel = css`
   dominant-baseline: middle;
   user-select: none;
   font-size: var(--vis-nested-donut-segment-label-font-size);
+`
+
+export const centralBackground = css`
+  label: central-background;
+  fill: transparent;
 `
 
 export const centralLabel = css`

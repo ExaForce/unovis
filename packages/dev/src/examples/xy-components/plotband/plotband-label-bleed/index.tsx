@@ -1,5 +1,8 @@
-import React, { useState } from 'react'
-import { AxisType, PlotbandLabelOrientation, PlotbandLabelPosition, UnovisText } from '@unovis/ts'
+import { ExampleControls } from '@src/components/ExampleControls'
+import { useComponentState } from '@src/components/ExampleControls/useComponentState'
+import { useComponentConfig } from '@src/components/ExampleControls/useComponentConfig'
+import React from 'react'
+import { AxisType, PlotbandLabelOrientation, PlotbandLabelPosition, UnovisText, isString } from '@unovis/ts'
 import { VisLine, VisPlotband, VisXYContainer } from '@unovis/react'
 import { ExampleViewerDurationProps } from '@src/components/ExampleViewer/index'
 import { generateXYDataRecords, XYDataRecord } from '@src/utils/data'
@@ -34,12 +37,12 @@ function getBandExtent (axis: AxisType, placement: BandPlacement): [number, numb
 }
 
 export const component = (props: ExampleViewerDurationProps): React.ReactNode => {
-  const [labelText, setLabelText] = useState('Threshold')
-  const [labelSize, setLabelSize] = useState(12)
-  const [labelOffsetX, setLabelOffsetX] = useState(14)
-  const [labelOffsetY, setLabelOffsetY] = useState(14)
-  const [bandPlacement, setBandPlacement] = useState<BandPlacement>('domain end')
-  const [styledLabel, setStyledLabel] = useState(false)
+  const [labelText, setLabelText] = useComponentState('example', 'labelText', 'Threshold')
+  const [labelSize, setLabelSize] = useComponentState('plotband', 'labelSize', 12)
+  const [labelOffsetX, setLabelOffsetX] = useComponentState('plotband', 'labelOffsetX', 14)
+  const [labelOffsetY, setLabelOffsetY] = useComponentState('plotband', 'labelOffsetY', 14)
+  const [bandPlacement, setBandPlacement] = useComponentState<BandPlacement>('example', 'bandPlacement', 'domain end')
+  const [styledLabel, setStyledLabel] = useComponentState('example', 'styledLabel', false)
 
   // Styled multi-line label defined as `UnovisText` blocks: the block-level font size,
   // weight and color take priority over the `labelSize` / `labelColor` options
@@ -47,35 +50,57 @@ export const component = (props: ExampleViewerDurationProps): React.ReactNode =>
     { text: labelText, fontWeight: 600 },
     { text: 'styled sub-label', fontSize: 10, color: '#888888', marginTop: 2 },
   ]
+  const { config, hasOverride, reset } = useComponentConfig('plotband', {
+    labelText: styledLabel ? styledLabelBlocks : labelText,
+    from: undefined as number | undefined,
+    to: undefined as number | undefined,
+  })
+  const hasCustomExtent = hasOverride('from') || hasOverride('to')
 
   return (
     <>
+      <ExampleControls components={['example', 'plotband']}/>
       <div className={s.controls}>
         <label>
           Label Text:
-          <input type='text' value={labelText} onChange={e => setLabelText(e.target.value)}/>
+          <input type='text' value={hasOverride('labelText') ? (isString(config.labelText) ? config.labelText : JSON.stringify(config.labelText) ?? '') : labelText}
+            onChange={e => { setLabelText(e.target.value); reset(['labelText']) }}/>
         </label>
         <label>
           Plotband Extent:
-          <select value={bandPlacement} onChange={e => setBandPlacement(e.target.value as BandPlacement)}>
+          <select value={hasCustomExtent ? 'custom' : bandPlacement} onChange={e => { setBandPlacement(e.target.value as BandPlacement); reset(['from', 'to']) }}>
+            {hasCustomExtent && <option value='custom' disabled>Custom ({config.from ?? 'preset'}, {config.to ?? 'preset'})</option>}
             {bandPlacements.map(placement => <option key={placement} value={placement}>{placement}</option>)}
           </select>
         </label>
         <label>
           Label Size ({labelSize}):
-          <input type='range' min={8} max={32} value={labelSize} onChange={e => setLabelSize(Number(e.target.value))}/>
+          <input type='range'
+            min={Math.min(8, labelSize ?? 8)}
+            max={Math.max(32, labelSize ?? 32)}
+            step={Number.isInteger(labelSize) ? 1 : 'any'}
+            value={labelSize} onChange={e => setLabelSize(Number(e.target.value))}/>
         </label>
         <label>
           Offset X ({labelOffsetX}):
-          <input type='range' min={0} max={50} value={labelOffsetX} onChange={e => setLabelOffsetX(Number(e.target.value))}/>
+          <input type='range'
+            min={Math.min(0, labelOffsetX ?? 0)}
+            max={Math.max(50, labelOffsetX ?? 50)}
+            step={Number.isInteger(labelOffsetX) ? 1 : 'any'}
+            value={labelOffsetX} onChange={e => setLabelOffsetX(Number(e.target.value))}/>
         </label>
         <label>
           Offset Y ({labelOffsetY}):
-          <input type='range' min={0} max={50} value={labelOffsetY} onChange={e => setLabelOffsetY(Number(e.target.value))}/>
+          <input type='range'
+            min={Math.min(0, labelOffsetY ?? 0)}
+            max={Math.max(50, labelOffsetY ?? 50)}
+            step={Number.isInteger(labelOffsetY) ? 1 : 'any'}
+            value={labelOffsetY} onChange={e => setLabelOffsetY(Number(e.target.value))}/>
         </label>
         <label>
           Styled Label (UnovisText):
-          <input type='checkbox' checked={styledLabel} onChange={e => setStyledLabel(e.target.checked)}/>
+          <input type='checkbox' checked={hasOverride('labelText') ? !!config.labelText && !isString(config.labelText) : styledLabel}
+            onChange={e => { setStyledLabel(e.target.checked); reset(['labelText']) }}/>
         </label>
       </div>
 
