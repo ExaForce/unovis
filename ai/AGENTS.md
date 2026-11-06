@@ -41,6 +41,8 @@ wrapper is generated from it.
 8. **Use the repo's type-check helpers.** For runtime type checks reach for the helpers in
    `@/utils/data` (`isString`, `isNumber`, `isFunction`, `isArray`, `isObject`, `isPlainObject`)
    instead of hand-writing `typeof x === 'string'`, `typeof x === 'function'`, or `Array.isArray(…)`.
+9. **Prefer `type` over `interface`.** Declare object shapes and extensions of d3 types with `type`
+   (`type A = B & { … }`); `interface` stays for the existing `…ConfigInterface` component configs.
 
 ## Setup & commands
 

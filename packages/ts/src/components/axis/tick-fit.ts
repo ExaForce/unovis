@@ -28,7 +28,8 @@ export const mergeTickValues = (a: TickValues, b: TickValues): TickValues => {
  * Every coarser "nice" step is then a multiple of the mark step, so the label sets picked by
  * {@link findFittingTickValues} land on existing marks and label changes don't add or remove
  * ticks — visibility toggles animate in CSS with no tick lifecycle management.
- * Time scales are returned as is: their tick intervals don't form a nested ladder. */
+ * Time scales are returned as is: their tick intervals don't form a nested ladder. Neither do all
+ * duration steps (15s → 10s), so the finer set is taken only when it contains every value. */
 export function getNestedTickValues (scale: ContinuousScale, maxNumTicks: number, values: TickValues = scale.ticks(maxNumTicks)): TickValues {
   if (values.length < 2 || values[0] instanceof Date) return values
 
@@ -38,7 +39,9 @@ export function getNestedTickValues (scale: ContinuousScale, maxNumTicks: number
   if (Math.round(stepMantissa) !== 2) return values
 
   // Doubling the requested count makes d3 pick the next finer (1 × 10^k) step
-  return scale.ticks(maxNumTicks * 2)
+  const finerValues: TickValues = scale.ticks(maxNumTicks * 2)
+  const finerKeys = new Set(finerValues.map(tickKey))
+  return values.every(value => finerKeys.has(tickKey(value))) ? finerValues : values
 }
 
 /** Generates candidate tick sets in decreasing size, from `maxNumTicks` down to a single tick.
