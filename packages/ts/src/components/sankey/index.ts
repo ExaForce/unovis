@@ -1,4 +1,4 @@
-import { select, Selection, pointer } from 'd3-selection'
+import { select, Selection } from 'd3-selection'
 import { zoom, D3ZoomEvent, ZoomBehavior, zoomIdentity, ZoomTransform } from 'd3-zoom'
 import { sankey, SankeyGraph } from 'd3-sankey'
 import { extent, max, min, sum } from 'd3-array'
@@ -41,6 +41,7 @@ import {
   SANKEY_LABEL_BLOCK_PADDING,
   SANKEY_LABEL_SPACING,
 } from './modules/label'
+import { getZoomPivot } from './modules/zoom'
 
 export class Sankey<
   N extends SankeyInputNode,
@@ -424,13 +425,20 @@ export class Sankey<
       this._zoomScale = [hNext, vNext]
 
       // Pointer-centric compensation: keep the point under cursor fixed
-      const pos = sourceEvent ? pointer(sourceEvent, this.g.node()) : [this._width / 2, this._height / 2]
+      const pos = getZoomPivot(sourceEvent, this.g.node()) ?? [this._width / 2, this._height / 2]
+
+      // A pinch also moves the chart with the fingers: find where d3-zoom had the pivot point on the previous event
+      const isPinch = sourceEvent && 'touches' in sourceEvent && sourceEvent.touches.length > 1
+      const prevPos = isPinch ? [
+        this._prevZoomTransform.x + (pos[0] - transform.x) * this._prevZoomTransform.k / transform.k,
+        this._prevZoomTransform.y + (pos[1] - transform.y) * this._prevZoomTransform.k / transform.k,
+      ] : pos
 
       // Invert current mapping to get layout coordinates under pointer
       const panX = config.zoomPan?.[0] ?? this._pan[0]
       const panY = config.zoomPan?.[1] ?? this._pan[1]
-      const layoutX = minX + (pos[0] - bleed.left - panX - minX) / hCurrent
-      const layoutY = minY + (pos[1] - bleed.top - panY - minY) / vCurrent
+      const layoutX = minX + (prevPos[0] - bleed.left - panX - minX) / hCurrent
+      const layoutY = minY + (prevPos[1] - bleed.top - panY - minY) / vCurrent
 
       // Solve for new pan to keep pointer fixed after new scales
       if (!isVerticalOnly && !isFinite(config.zoomPan?.[0]) && zoomMode !== SankeyZoomMode.Y) {
