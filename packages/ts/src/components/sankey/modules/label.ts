@@ -69,6 +69,13 @@ export function estimateRequiredLabelWidth<N extends SankeyInputNode, L extends 
   return isSublabelInline ? inlineLabelAddWidth + (labelTextWidth + sublabelTextWidth) : labelAddWidth + Math.max(labelTextWidth, sublabelTextWidth)
 }
 
+export function hasLabelText<N extends SankeyInputNode, L extends SankeyInputLink> (
+  d: SankeyNode<N, L>,
+  config: SankeyConfigInterface<N, L>
+): boolean {
+  return `${getString(d, config.label) ?? ''}` !== '' || `${getString(d, config.subLabel) ?? ''}` !== ''
+}
+
 function getLabelBackground (
   width: number,
   height: number,

@@ -38,6 +38,7 @@ import {
   getLabelFontSize,
   getLabelOrientation,
   getSubLabelFontSize,
+  hasLabelText,
   SANKEY_LABEL_BLOCK_PADDING,
   SANKEY_LABEL_SPACING,
 } from './modules/label'
@@ -127,7 +128,8 @@ export class Sankey<
       this._populateLinkAndNodeValues()
       this._sankey.size([sankeyProbeSize, sankeyProbeSize])
       this._sankey({ nodes, links })
-      const requiredLabelHeight = labelFontSize * 2.5 + 2 * SANKEY_LABEL_BLOCK_PADDING // Assuming 2.5 lines per label
+      const hasLabels = nodes.some(d => hasLabelText(d, config))
+      const requiredLabelHeight = hasLabels ? labelFontSize * 2.5 + 2 * SANKEY_LABEL_BLOCK_PADDING : 0 // Assuming 2.5 lines per label
 
       const maxLayer = max(nodes, d => d.layer)
       const zeroLayerNodes = nodes.filter(d => d.layer === 0)
@@ -138,7 +140,7 @@ export class Sankey<
       const fallbackLabelMaxWidth = Math.min(this._width / 6, layerSpacing)
       const labelMaxWidth = config.labelMaxWidth || fallbackLabelMaxWidth
       const labelHorizontalPadding = 2 * SANKEY_LABEL_SPACING + 2 * SANKEY_LABEL_BLOCK_PADDING
-      const hasLabelsOnTheLeft = zeroLayerNodes.some(d => getLabelOrientation(d, sankeyProbeSize, config.labelPosition) === Position.Left)
+      const hasLabelsOnTheLeft = zeroLayerNodes.some(d => hasLabelText(d, config) && getLabelOrientation(d, sankeyProbeSize, config.labelPosition) === Position.Left)
 
       if (hasLabelsOnTheLeft) {
         const maxLeftLabelWidth = max(zeroLayerNodes, d => estimateRequiredLabelWidth(d, config, labelFontSize, subLabelFontSize, this.element as SVGElement))
@@ -146,7 +148,7 @@ export class Sankey<
       }
 
       let right = 0
-      const hasLabelsOnTheRight = maxLayerNodes.some(d => getLabelOrientation(d, sankeyProbeSize, config.labelPosition) === Position.Right)
+      const hasLabelsOnTheRight = maxLayerNodes.some(d => hasLabelText(d, config) && getLabelOrientation(d, sankeyProbeSize, config.labelPosition) === Position.Right)
       if (hasLabelsOnTheRight) {
         const maxRightLabelWidth = max(maxLayerNodes, d => estimateRequiredLabelWidth(d, config, labelFontSize, subLabelFontSize, this.element as SVGElement))
         right = min([labelMaxWidth, maxRightLabelWidth]) + labelHorizontalPadding

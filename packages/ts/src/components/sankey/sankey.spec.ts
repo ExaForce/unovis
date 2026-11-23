@@ -2,7 +2,9 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { ZoomBehavior } from 'd3-zoom'
 
 // Types
+import { Position } from '@/types/position'
 import { Spacing } from '@/types/spacing'
+import { VerticalAlign } from '@/types/text'
 
 // Local
 import { Sankey } from './index'
@@ -167,5 +169,40 @@ describe('Sankey zoom', () => {
     Object.defineProperty(event, 'touches', { value: [] })
     Object.defineProperty(event, 'changedTouches', { value: [] })
     expect(getZoomPivot(event as TouchEvent, g)).toBeUndefined()
+  })
+})
+
+describe('Sankey bleed', () => {
+  const getBleed = (config: SankeyConfigInterface<Node, Link>, label: (id: string) => string = id => `Node ${id.toUpperCase()}`): Spacing => {
+    const sankey = new Sankey<Node, Link>({ duration: 0, labelFontSize: 12, subLabelFontSize: 10, ...config })
+    sankey.setData({ nodes: nodes.map(d => ({ ...d, label: label(d.id) })), links: links.map(l => ({ ...l })) })
+    sankey.setSize(WIDTH, HEIGHT, WIDTH, HEIGHT)
+    return sankey.bleed
+  }
+
+  const expectBleed = (bleed: Spacing, expected: Spacing): void => {
+    for (const side of ['top', 'bottom', 'left', 'right'] as const) expect(bleed[side]).toBeCloseTo(expected[side])
+  }
+
+  it('reserves the same space as before for labels with text', () => {
+    // The label reserve is 43px high, a third of it at the middle alignment; "Node A" is 41.6px wide plus 33px of padding
+    expectBleed(getBleed({}), { top: 43 / 3, bottom: 43 / 3, left: 74.6, right: 74.6 })
+    expectBleed(getBleed({ labelVerticalAlign: VerticalAlign.Top }), { top: 0, bottom: 43, left: 74.6, right: 74.6 })
+    expectBleed(getBleed({ labelVerticalAlign: VerticalAlign.Bottom }), { top: 43, bottom: 0, left: 74.6, right: 74.6 })
+    expectBleed(getBleed({ selectedNodeIds: ['a'] }), { top: 4 + 43 / 3, bottom: 4 + 43 / 3, left: 74.6, right: 74.6 })
+    expectBleed(getBleed({ labelPosition: Position.Left }), { top: 43 / 3, bottom: 43 / 3, left: 74.6, right: 0 })
+    expectBleed(getBleed({ labelPosition: Position.Right }), { top: 43 / 3, bottom: 43 / 3, left: 0, right: 74.6 })
+    expectBleed(getBleed({ subLabel: 'Sub' }, () => ''), { top: 43 / 3, bottom: 43 / 3, left: 51.5, right: 51.5 })
+  })
+
+  it('reserves no label space when the labels have no text', () => {
+    expectBleed(getBleed({}, () => ''), { top: 0, bottom: 0, left: 0, right: 0 })
+    expectBleed(getBleed({ labelVerticalAlign: VerticalAlign.Top }, () => ''), { top: 0, bottom: 0, left: 0, right: 0 })
+    expectBleed(getBleed({ selectedNodeIds: ['a'] }, () => ''), { top: 4, bottom: 4, left: 4, right: 4 })
+  })
+
+  it('reserves label space only on the sides where a label has text', () => {
+    const bleed = getBleed({}, id => (['d', 'e'].includes(id) ? `Node ${id.toUpperCase()}` : ''))
+    expectBleed(bleed, { top: 43 / 3, bottom: 43 / 3, left: 0, right: 74.6 })
   })
 })
