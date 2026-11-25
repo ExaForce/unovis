@@ -12,7 +12,6 @@ import { cssvar } from '@/utils/style'
 import { GenericAccessor } from '@/types/accessor'
 import { FitMode, VerticalAlign } from '@/types/text'
 import { Position } from '@/types/position'
-import { Spacing } from '@/types/spacing'
 
 // Local Types
 import { SankeyInputLink, SankeyInputNode, SankeyNode, SankeySubLabelPlacement } from '../types'
@@ -25,6 +24,16 @@ import * as s from '../style'
 
 export const SANKEY_LABEL_SPACING = 10
 export const SANKEY_LABEL_BLOCK_PADDING = 6.5
+
+/** The width the labels can take at the current zoom */
+export type SankeyLabelSpace = {
+  /** The limit of the label width */
+  maxWidth: number;
+  /** The room, with the label padding, for the labels on the left of the first layer */
+  left: number;
+  /** The room, with the label padding, for the labels on the right of the last layer */
+  right: number;
+}
 
 export function getLabelFontSize<N extends SankeyInputNode, L extends SankeyInputLink> (
   config: SankeyConfigInterface<N, L>,
@@ -185,7 +194,7 @@ export function getLabelMaxWidth<N extends SankeyInputNode, L extends SankeyInpu
   labelOrientation: Position.Left | Position.Right,
   layerSpacing: number,
   sankeyMaxLayer: number,
-  bleed: Spacing
+  labelSpace: SankeyLabelSpace
 ): number {
   const labelHorizontalPadding = 2 * SANKEY_LABEL_SPACING + 2 * SANKEY_LABEL_BLOCK_PADDING
 
@@ -193,18 +202,18 @@ export function getLabelMaxWidth<N extends SankeyInputNode, L extends SankeyInpu
   // container edge, so the label doesn't spill into the bleed margin — it has roughly half of the
   // free horizontal space on its side.
   if (sankeyMaxLayer === 0) {
-    return clamp(layerSpacing / 2 - labelHorizontalPadding, 0, config.labelMaxWidth ?? Infinity)
+    return clamp(layerSpacing / 2 - labelHorizontalPadding, 0, labelSpace.maxWidth)
   }
 
   if (d.layer === 0 && labelOrientation === Position.Left) {
-    return bleed.left - labelHorizontalPadding
+    return labelSpace.left - labelHorizontalPadding
   }
 
   if (d.layer === sankeyMaxLayer && labelOrientation === Position.Right) {
-    return bleed.right - labelHorizontalPadding
+    return labelSpace.right - labelHorizontalPadding
   }
 
-  return clamp(layerSpacing - labelHorizontalPadding, 0, config.labelMaxWidth ?? Infinity)
+  return clamp(layerSpacing - labelHorizontalPadding, 0, labelSpace.maxWidth)
 }
 
 export function renderLabel<N extends SankeyInputNode, L extends SankeyInputLink> (
@@ -215,7 +224,7 @@ export function renderLabel<N extends SankeyInputNode, L extends SankeyInputLink
   duration: number,
   layerSpacing: number | undefined,
   sankeyMaxLayer: number,
-  bleed: Spacing,
+  labelSpace: SankeyLabelSpace,
   forceExpand = false
 ): { x: number; y: number; width: number; height: number; layer: number; selection: any; hidden?: boolean } {
   const labelTextSelection: Selection<SVGTextElement, SankeyNode<N, L>, SVGGElement, SankeyNode<N, L>> = labelGroup.select(`.${s.label}`)
@@ -245,7 +254,7 @@ export function renderLabel<N extends SankeyInputNode, L extends SankeyInputLink
     .attr('transform', `translate(${labelOrientationMult * labelPadding},${labelTranslateY})`)
     .style('cursor', (d: SankeyNode<N, L>) => getString(d, config.labelCursor))
 
-  const labelMaxWidth = getLabelMaxWidth(d, config, labelOrientation, layerSpacing, sankeyMaxLayer, bleed)
+  const labelMaxWidth = getLabelMaxWidth(d, config, labelOrientation, layerSpacing, sankeyMaxLayer, labelSpace)
   const labelWrapTrimWidth = isSublabelInline
     ? labelMaxWidth * (1 - (sublabelText ? config.subLabelToLabelInlineWidthRatio : 0))
     : labelMaxWidth

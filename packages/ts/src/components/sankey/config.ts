@@ -130,7 +130,7 @@ export interface SankeyConfigInterface<N extends SankeyInputNode, L extends Sank
   labelBackground?: boolean;
   /** Label fit mode (wrap or trim). Default: `FitMode.Trim` **/
   labelFit?: FitMode;
-  /** Maximum label with in pixels. Default: `70` */
+  /** Maximum label width in pixels at the zoom scale of 1. A horizontal zoom in scales it with the layers. Default: `70` */
   labelMaxWidth?: number;
   /** Whether to take the available space for the label. This property is used only if `labelMaxWidth` is not provided. Default: `false` */
   labelMaxWidthTakeAvailableSpace?: boolean;

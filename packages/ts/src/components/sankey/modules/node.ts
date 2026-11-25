@@ -25,7 +25,7 @@ import {
 import { SankeyConfigInterface } from '../config'
 
 // Helpers
-import { getLabelFontSize, getSubLabelFontSize, renderLabel } from './label'
+import { getLabelFontSize, getSubLabelFontSize, renderLabel, SankeyLabelSpace } from './label'
 
 // Styles
 import * as s from '../style'
@@ -126,7 +126,8 @@ export function updateNodes<N extends SankeyInputNode, L extends SankeyInputLink
   bleed: Spacing,
   hasLinks: boolean,
   duration: number,
-  layerSpacing: number
+  layerSpacing: number,
+  labelSpace: SankeyLabelSpace
 ): void {
   smartTransition(sel, duration)
     .attr('transform', d => `translate(${getNodeXPos(d, config, width, bleed, hasLinks)},${d.y0})`)
@@ -151,7 +152,7 @@ export function updateNodes<N extends SankeyInputNode, L extends SankeyInputLink
   // Label Rendering
   const maxLayer = max(sel.data(), d => d.layer)
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
-  renderNodeLabels(sel, config, width, duration, layerSpacing, maxLayer, bleed)
+  renderNodeLabels(sel, config, width, duration, layerSpacing, maxLayer, labelSpace)
 
   // Node Icon
   const nodeIcon = sel.select(`.${s.nodeIcon}`)
@@ -187,7 +188,7 @@ export function renderNodeLabels<N extends SankeyInputNode, L extends SankeyInpu
   duration: number,
   layerSpacing: number,
   sankeyMaxLayer: number,
-  bleed: Spacing
+  labelSpace: SankeyLabelSpace
 ): void {
   // Label Rendering
   const labelGroupSelection: Selection<SVGGElement, SankeyNode<N, L>, SVGGElement, unknown> = sel.select(`.${s.labelGroup}`)
@@ -202,7 +203,7 @@ export function renderNodeLabels<N extends SankeyInputNode, L extends SankeyInpu
       ? getXDistanceToNextNode(gSelection, datum, data, config, width)
       : layerSpacing
 
-    return renderLabel(gSelection, datum, config, width, duration, spacing, sankeyMaxLayer, bleed)
+    return renderLabel(gSelection, datum, config, width, duration, spacing, sankeyMaxLayer, labelSpace)
   })
 
   if (config.labelVisibility) {
@@ -272,7 +273,7 @@ export function onNodeMouseOver<N extends SankeyInputNode, L extends SankeyInput
   config: SankeyConfigInterface<N, L>,
   width: number,
   layerSpacing: number,
-  bleed: Spacing
+  labelSpace: SankeyLabelSpace
 ): void {
   const labelGroup = nodeSelection.raise()
     .select<SVGGElement>(`.${s.labelGroup}`)
@@ -283,7 +284,7 @@ export function onNodeMouseOver<N extends SankeyInputNode, L extends SankeyInput
 
   const maxLayer = max(data, d => d.layer)
   if ((config.labelExpandTrimmedOnHover && labelGroup.classed(s.labelTrimmed)) || labelGroup.classed(s.hidden)) {
-    renderLabel(labelGroup, d, config, width, 0, spacing, maxLayer, bleed, true)
+    renderLabel(labelGroup, d, config, width, 0, spacing, maxLayer, labelSpace, true)
   }
   labelGroup.classed(s.forceShow, true)
 }
@@ -295,7 +296,7 @@ export function onNodeMouseOut<N extends SankeyInputNode, L extends SankeyInputL
   config: SankeyConfigInterface<N, L>,
   width: number,
   layerSpacing: number,
-  bleed: Spacing
+  labelSpace: SankeyLabelSpace
 ): void {
   const labelGroup = nodeSelection.select<SVGGElement>(`.${s.labelGroup}`)
 
@@ -305,7 +306,7 @@ export function onNodeMouseOut<N extends SankeyInputNode, L extends SankeyInputL
 
   if (config.labelExpandTrimmedOnHover || labelGroup.classed(s.hidden)) {
     const maxLayer = max(data, d => d.layer)
-    renderLabel(labelGroup, d, config, width, 0, spacing, maxLayer, bleed, false)
+    renderLabel(labelGroup, d, config, width, 0, spacing, maxLayer, labelSpace, false)
   }
   labelGroup.classed(s.forceShow, false)
 }

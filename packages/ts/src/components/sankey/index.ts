@@ -41,6 +41,7 @@ import {
   hasLabelText,
   SANKEY_LABEL_BLOCK_PADDING,
   SANKEY_LABEL_SPACING,
+  SankeyLabelSpace,
 } from './modules/label'
 import { getZoomPivot } from './modules/zoom'
 
@@ -77,6 +78,7 @@ export class Sankey<
   private _prevZoomTransform: { x: number; y: number; k: number } = { x: 0, y: 0, k: 1 }
   private _animationFrameId: number | null = null
   private _bleedCached: Spacing | null = null
+  private _edgeLabelsCached: { maxWidth: number; left: number; right: number } | null = null
 
   // Events
   events = {
@@ -117,6 +119,7 @@ export class Sankey<
   get bleed (): Spacing {
     const { config, datamodel: { nodes, links } } = this
     let bleed: Spacing = { top: 0, bottom: 0, left: 0, right: 0 }
+    this._edgeLabelsCached = null
 
     if (nodes.length) {
       const labelFontSize = getLabelFontSize(config, this.element as SVGElement)
@@ -142,15 +145,17 @@ export class Sankey<
       const labelHorizontalPadding = 2 * SANKEY_LABEL_SPACING + 2 * SANKEY_LABEL_BLOCK_PADDING
       const hasLabelsOnTheLeft = zeroLayerNodes.some(d => hasLabelText(d, config) && getLabelOrientation(d, sankeyProbeSize, config.labelPosition) === Position.Left)
 
+      let maxLeftLabelWidth = 0
       if (hasLabelsOnTheLeft) {
-        const maxLeftLabelWidth = max(zeroLayerNodes, d => estimateRequiredLabelWidth(d, config, labelFontSize, subLabelFontSize, this.element as SVGElement))
+        maxLeftLabelWidth = max(zeroLayerNodes, d => estimateRequiredLabelWidth(d, config, labelFontSize, subLabelFontSize, this.element as SVGElement))
         left = min([labelMaxWidth, maxLeftLabelWidth]) + labelHorizontalPadding
       }
 
       let right = 0
       const hasLabelsOnTheRight = maxLayerNodes.some(d => hasLabelText(d, config) && getLabelOrientation(d, sankeyProbeSize, config.labelPosition) === Position.Right)
+      let maxRightLabelWidth = 0
       if (hasLabelsOnTheRight) {
-        const maxRightLabelWidth = max(maxLayerNodes, d => estimateRequiredLabelWidth(d, config, labelFontSize, subLabelFontSize, this.element as SVGElement))
+        maxRightLabelWidth = max(maxLayerNodes, d => estimateRequiredLabelWidth(d, config, labelFontSize, subLabelFontSize, this.element as SVGElement))
         right = min([labelMaxWidth, maxRightLabelWidth]) + labelHorizontalPadding
       }
 
@@ -169,6 +174,9 @@ export class Sankey<
         left: left + (hasLabelsOnTheLeft ? 0 : nodeSelectionRectBleed),
         right: right + (hasLabelsOnTheRight ? 0 : nodeSelectionRectBleed),
       }
+
+      // The width limit and the widths the edge labels need, to give them more room on a zoom
+      this._edgeLabelsCached = { maxWidth: labelMaxWidth, left: maxLeftLabelWidth, right: maxRightLabelWidth }
     }
 
 
@@ -266,7 +274,7 @@ export class Sankey<
     const nodeSelectionEnter = nodeSelection.enter().append('g').attr('class', s.nodeGroup)
     const sankeyWidth = this._getScaledWidth()
     nodeSelectionEnter.call(createNodes, this.config, sankeyWidth, bleed)
-    nodeSelection.merge(nodeSelectionEnter).call(updateNodes, config, sankeyWidth, bleed, this._hasLinks(), duration, nodeSpacing)
+    nodeSelection.merge(nodeSelectionEnter).call(updateNodes, config, sankeyWidth, bleed, this._hasLinks(), duration, nodeSpacing, this._getLabelSpace(bleed))
     nodeSelection.exit<SankeyNode<N, L>>()
       .attr('class', s.nodeExit)
       .call(removeNodes, config, duration)
@@ -313,7 +321,9 @@ export class Sankey<
     const viewportWidth = this.getWidth() - bleed.left - bleed.right
     const viewportHeight = this.getHeight() - bleed.top - bleed.bottom
 
-    const constrainedX = clamp(currentPan[0], viewportWidth - maxX, minX)
+    // The edge labels get wider on a zoom, and the pan goes as far as they do
+    const labelSpace = this._getLabelSpace(bleed, zoomScaleChange[0])
+    const constrainedX = clamp(currentPan[0], viewportWidth - maxX - (labelSpace.right - bleed.right), minX + (labelSpace.left - bleed.left))
     const constrainedY = clamp(currentPan[1], viewportHeight - maxY, minY)
 
     return [constrainedX, constrainedY]
@@ -754,13 +764,34 @@ export class Sankey<
     return datamodel.links.length > 0
   }
 
-  private _getLayerSpacing (nodes: SankeyNode<N, L>[]): number {
+  private _getLayerSpacing (nodes: SankeyNode<N, L>[], horizontalScaleChange = 1): number {
     const { config } = this
     if (!nodes?.length) return 0
 
     const firstLayerNode = nodes.find(d => d.layer === 0)
     const nextLayerNode = nodes.find(d => d.layer === firstLayerNode.layer + 1)
-    return nextLayerNode ? nextLayerNode.x0 - (firstLayerNode.x0 + config.nodeWidth) : this._width - firstLayerNode.x1
+    return nextLayerNode ? (nextLayerNode.x0 - firstLayerNode.x0) * horizontalScaleChange - config.nodeWidth : this._width - firstLayerNode.x1
+  }
+
+  /**
+   * `labelMaxWidth` is the limit at the zoom scale of 1, and a horizontal zoom in scales it as it scales the layers.
+   * The labels at the edges of the chart then get the room of a layer, when they need more than the bleed gives them.
+   * `horizontalScaleChange` is for the nodes that don't have the current zoom scale yet.
+   */
+  private _getLabelSpace (bleed: Spacing, horizontalScaleChange = 1): SankeyLabelSpace {
+    const { config, datamodel: { nodes } } = this
+    const edgeLabels = this._edgeLabelsCached
+    const zoomScale = isFinite(this._zoomScale[0]) ? Math.max(1, this._zoomScale[0]) : 1
+    const labelSpace = { maxWidth: (config.labelMaxWidth ?? Infinity) * zoomScale, left: bleed.left, right: bleed.right }
+    if (zoomScale === 1 || !edgeLabels || !this.getSankeyDepth()) return labelSpace
+
+    const labelHorizontalPadding = 2 * SANKEY_LABEL_SPACING + 2 * SANKEY_LABEL_BLOCK_PADDING
+    const layerSpacing = this._getLayerSpacing(nodes, isFinite(horizontalScaleChange) ? horizontalScaleChange : 1)
+    const layerLabelWidth = Math.min(layerSpacing - labelHorizontalPadding, edgeLabels.maxWidth * zoomScale)
+    if (edgeLabels.left) labelSpace.left = Math.max(bleed.left, Math.min(layerLabelWidth, edgeLabels.left) + labelHorizontalPadding)
+    if (edgeLabels.right) labelSpace.right = Math.max(bleed.right, Math.min(layerLabelWidth, edgeLabels.right) + labelHorizontalPadding)
+
+    return labelSpace
   }
 
   private _getScaledWidth (): number {
@@ -772,7 +803,7 @@ export class Sankey<
     const bleed = this._bleedCached ?? this.bleed
     const nodeSelection = select<SVGGElement, SankeyNode<N, L>>(event.currentTarget as SVGGElement)
     const sankeyWidth = this._getScaledWidth()
-    onNodeMouseOver(d, datamodel.nodes, nodeSelection, this.config, sankeyWidth, this._getLayerSpacing(this.datamodel.nodes), bleed)
+    onNodeMouseOver(d, datamodel.nodes, nodeSelection, this.config, sankeyWidth, this._getLayerSpacing(this.datamodel.nodes), this._getLabelSpace(bleed))
   }
 
   private _onNodeMouseOut (d: SankeyNode<N, L>, event: MouseEvent): void {
@@ -780,7 +811,7 @@ export class Sankey<
     const bleed = this._bleedCached ?? this.bleed
     const nodeSelection = select<SVGGElement, SankeyNode<N, L>>(event.currentTarget as SVGGElement)
     const sankeyWidth = this._getScaledWidth()
-    onNodeMouseOut(d, datamodel.nodes, nodeSelection, this.config, sankeyWidth, this._getLayerSpacing(this.datamodel.nodes), bleed)
+    onNodeMouseOut(d, datamodel.nodes, nodeSelection, this.config, sankeyWidth, this._getLayerSpacing(this.datamodel.nodes), this._getLabelSpace(bleed))
   }
 
   private _onNodeRectMouseOver (d: SankeyNode<N, L>): void {

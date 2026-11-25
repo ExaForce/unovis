@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest'
+import { select } from 'd3-selection'
 import { ZoomBehavior } from 'd3-zoom'
 
 // Types
@@ -18,6 +19,8 @@ type Link = { source: string; target: string; value: number }
 type SankeyInternals = {
   _zoomBehavior: ZoomBehavior<SVGGElement, unknown>;
   _bleedCached: Spacing;
+  _edgeLabelsCached: { maxWidth: number; left: number; right: number };
+  _getConstrainedPan: (pan: [number, number]) => [number, number];
 }
 
 const WIDTH = 600
@@ -204,5 +207,88 @@ describe('Sankey bleed', () => {
   it('reserves label space only on the sides where a label has text', () => {
     const bleed = getBleed({}, id => (['d', 'e'].includes(id) ? `Node ${id.toUpperCase()}` : ''))
     expectBleed(bleed, { top: 43 / 3, bottom: 43 / 3, left: 0, right: 74.6 })
+  })
+})
+
+describe('Sankey labels on a zoom', () => {
+  const LABEL_MAX_WIDTH = 60
+  const LABEL_PADDING = 33
+  const longLabel = (id: string): string => `A long label of the node ${id.toUpperCase()}`
+  const longNodes = nodes.map(d => ({ ...d, label: longLabel(d.id) }))
+
+  const renderLabelled = (config: SankeyConfigInterface<Node, Link>, data = { nodes: longNodes, links: links.map(l => ({ ...l })) }): Sankey<Node, Link> =>
+    renderSankey({ enableZoom: true, zoomMode: SankeyZoomMode.XY, labelMaxWidth: LABEL_MAX_WIDTH, labelExpandTrimmedOnHover: false, ...config }, data)
+
+  const labelTexts = (sankey: Sankey<Node, Link>): Record<string, string> => Object.fromEntries(
+    Array.from(sankey.element.querySelectorAll<SVGTextElement>(`.${Sankey.selectors.label}`))
+      .map(el => [(select(el).datum() as Node).id, el.textContent])
+  )
+
+  /** The pan at its limit on a side, and the room it leaves between the edge node and the edge of the chart */
+  const roomAtPanLimit = (sankey: Sankey<Node, Link>, side: 'left' | 'right'): number => {
+    const bleed = internals(sankey)._bleedCached
+    const pan = internals(sankey)._getConstrainedPan([side === 'right' ? -1e6 : 1e6, 0])
+    const layoutNodes = sankey.datamodel.nodes
+    return side === 'right'
+      ? WIDTH - (bleed.left + pan[0] + Math.max(...layoutNodes.map(d => d.x1)))
+      : bleed.left + pan[0] + Math.min(...layoutNodes.map(d => d.x0))
+  }
+
+  it('trims the labels to `labelMaxWidth` at the zoom scale of 1', () => {
+    const sankey = renderLabelled({ labelPosition: Position.Right })
+    const texts = labelTexts(sankey)
+    for (const d of longNodes) expect(texts[d.id]).not.toBe(d.label)
+    expect(roomAtPanLimit(sankey, 'right')).toBeCloseTo(LABEL_MAX_WIDTH + LABEL_PADDING)
+  })
+
+  it('gives the labels of every layer the room of a layer on a horizontal zoom in', () => {
+    const sankey = renderLabelled({ labelPosition: Position.Right })
+    sankey.setZoomScale(4, 1, 0)
+    const texts = labelTexts(sankey)
+    for (const d of longNodes) expect(texts[d.id]).toBe(d.label)
+  })
+
+  it('keeps the layout bleed, and lets the pan go as far as the last layer labels do', () => {
+    const sankey = renderLabelled({ labelPosition: Position.Right })
+    const bleed = { ...internals(sankey)._bleedCached }
+    sankey.setZoomScale(4, 1, 0)
+    expect(internals(sankey)._bleedCached).toEqual(bleed)
+
+    const neededWidth = internals(sankey)._edgeLabelsCached.right
+    expect(neededWidth).toBeGreaterThan(LABEL_MAX_WIDTH)
+    expect(roomAtPanLimit(sankey, 'right')).toBeCloseTo(neededWidth + LABEL_PADDING)
+    expect(roomAtPanLimit(sankey, 'left')).toBeCloseTo(0)
+  })
+
+  it('limits the labels to the zoomed `labelMaxWidth`', () => {
+    const sankey = renderLabelled({ labelPosition: Position.Right })
+    sankey.setZoomScale(1.5, 1, 0)
+    const texts = labelTexts(sankey)
+    for (const d of longNodes) expect(texts[d.id]).not.toBe(d.label)
+    expect(roomAtPanLimit(sankey, 'right')).toBeCloseTo(LABEL_MAX_WIDTH * 1.5 + LABEL_PADDING)
+  })
+
+  it('adds no room when the labels fit at the zoom scale of 1', () => {
+    const sankey = renderLabelled({ labelPosition: Position.Right, labelMaxWidth: 300 }, { nodes: nodes.map(d => ({ ...d })), links: links.map(l => ({ ...l })) })
+    const room = roomAtPanLimit(sankey, 'right')
+    sankey.setZoomScale(4, 1, 0)
+    expect(roomAtPanLimit(sankey, 'right')).toBeCloseTo(room)
+  })
+
+  it('gives the labels on the left of the first layer the same room', () => {
+    const sankey = renderLabelled({ labelPosition: Position.Left })
+    expect(roomAtPanLimit(sankey, 'left')).toBeCloseTo(LABEL_MAX_WIDTH + LABEL_PADDING)
+    sankey.setZoomScale(4, 1, 0)
+    const texts = labelTexts(sankey)
+    for (const d of longNodes) expect(texts[d.id]).toBe(d.label)
+    expect(roomAtPanLimit(sankey, 'left')).toBeCloseTo(internals(sankey)._edgeLabelsCached.left + LABEL_PADDING)
+  })
+
+  it('does not make the labels wider on a vertical zoom', () => {
+    const sankey = renderLabelled({ labelPosition: Position.Right })
+    sankey.setZoomScale(1, 4, 0)
+    const texts = labelTexts(sankey)
+    for (const d of longNodes) expect(texts[d.id]).not.toBe(d.label)
+    expect(roomAtPanLimit(sankey, 'right')).toBeCloseTo(LABEL_MAX_WIDTH + LABEL_PADDING)
   })
 })
