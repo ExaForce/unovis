@@ -105,6 +105,9 @@ When `XY` zoom mode is used, holding ⌘/Ctrl key will temporarily make zoom hor
 
 Smart pan constraints prevent panning beyond diagram bounds.
 
+`labelMaxWidth` is the label width limit at the zoom scale of 1. A horizontal zoom in scales the limit with the layers,
+so the labels get wider as the layers move apart. The pan goes as far as the labels of the first and the last layer do.
+
 <InputWrapper
   {...sankeyProps()}
   height={250}
