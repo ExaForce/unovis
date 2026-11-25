@@ -219,7 +219,7 @@ export class VisSankeyComponent<N extends SankeyInputNode, L extends SankeyInput
   /** Label fit mode (wrap or trim). Default: `FitMode.Trim` * */
   @Input() labelFit?: FitMode
 
-  /** Maximum label with in pixels. Default: `70` */
+  /** Maximum label width in pixels at the zoom scale of 1. A horizontal zoom in scales it with the layers. Default: `70` */
   @Input() labelMaxWidth?: number
 
   /** Whether to take the available space for the label. This property is used only if `labelMaxWidth` is not provided. Default: `false` */
